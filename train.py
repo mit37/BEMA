@@ -15,7 +15,7 @@ torch.manual_seed(42)
 with open("data/prepared.pkl", "rb") as f:
     data = pickle.load(f)
 
-vocab = data["vocab"]
+vocab_size = data["vocab_size"]
 max_len = data["max_len"]
 
 
@@ -88,7 +88,7 @@ def evaluate_calibration(model, loader, n_bins=10, label=""):
 
 def train_model():
     print(f"Device: {device}")
-    model = JevCloneEncoder(vocab_size=len(vocab), max_len=max_len).to(device)
+    model = JevCloneEncoder(vocab_size=vocab_size, max_len=max_len).to(device)
 
     # Class weighting for imbalance (747 spam vs 4825 ham)
     n_pos = sum(r["label"] for r in data["train"])
@@ -96,7 +96,7 @@ def train_model():
     pos_weight = torch.tensor([n_neg / n_pos]).to(device)
     criterion = nn.BCEWithLogitsLoss(pos_weight=pos_weight)
 
-    optimizer = torch.optim.AdamW(model.parameters(), lr=1e-3, weight_decay=1e-4)
+    optimizer = torch.optim.AdamW(model.parameters(), lr=3e-4, weight_decay=1e-4)
 
     EPOCHS = 15
     best_val_acc = 0
@@ -111,6 +111,7 @@ def train_model():
             logit = model(ids, mask)
             loss = criterion(logit, label)
             loss.backward()
+            torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
             optimizer.step()
             total_loss += loss.item() * ids.size(0)
 

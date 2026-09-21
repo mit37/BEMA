@@ -11,34 +11,33 @@ Usage:
     python3 serve.py --demo
 """
 import sys
-import re
 import pickle
 import json
 import torch
+from tokenizers import Tokenizer
 
 from model import JevCloneEncoder
 
 with open("data/prepared.pkl", "rb") as f:
     data = pickle.load(f)
-vocab = data["vocab"]
+vocab_size = data["vocab_size"]
 max_len = data["max_len"]
-stoi = {w: i for i, w in enumerate(vocab)}
+pad_id = data["pad_id"]
+tokenizer = Tokenizer.from_file("data/tokenizer.json")
 
 device = "cpu"
-model = JevCloneEncoder(vocab_size=len(vocab), max_len=max_len).to(device)
+model = JevCloneEncoder(vocab_size=vocab_size, max_len=max_len).to(device)
 model.load_state_dict(torch.load("jev_clone_calibrated.pt", map_location=device))
 model.eval()
 
 
-def tokenize(text):
-    return re.findall(r"[a-z0-9]+", text.lower())
-
-
 def encode(text):
-    toks = tokenize(text)[:max_len]
-    ids = [stoi.get(t, 1) for t in toks]
-    ids = ids + [0] * (max_len - len(ids))
-    mask = [1] * len(toks) + [0] * (max_len - len(toks))
+    enc = tokenizer.encode(text)
+    ids = enc.ids[:max_len]
+    mask = [1] * len(ids)
+    pad_n = max_len - len(ids)
+    ids = ids + [pad_id] * pad_n
+    mask = mask + [0] * pad_n
     return ids, mask
 
 

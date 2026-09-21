@@ -9,8 +9,11 @@ venv/
 *.pt
 *.pth
 
-# Prepared data cache (reproducible from prepare_data.py)
+# Prepared data cache (reproducible from prepare_data.py / prepare_multitask.py)
 data/prepared.pkl
+data/tokenizer.json
+data/prepared_multitask.pkl
+data/tokenizer_multitask.json
 eval_raw.pkl
 
 # OS

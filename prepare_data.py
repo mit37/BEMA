@@ -1,13 +1,21 @@
 """
 Prepare the SMS Spam Collection dataset (real, human-labeled ground truth —
 5,572 SMS messages labeled ham/spam by the original dataset curators, not
-LLM-generated) into train/val/test splits with a simple word-level vocab.
+LLM-generated) into train/val/test splits.
+
+Tokenization: byte-level BPE, trained from scratch on the TRAIN split only
+(no network access, no pretrained vocab — HuggingFace hub isn't reachable
+from this sandbox; see README "Where this stops being a Jev"). This is
+still a real improvement over a word-level split vocab: byte-level BPE has
+no true OOV/<unk> collapse (arbitrary text always decomposes to bytes) and
+captures subword structure (e.g. "u", "ur", "2" txt-speak) that a
+whole-word vocab with a frequency cutoff throws away.
 """
 import csv
-import re
 import random
-import json
 import pickle
+
+from tokenizers import ByteLevelBPETokenizer
 
 random.seed(42)
 
@@ -37,35 +45,42 @@ val = rows[n_train:n_train + n_val]
 test = rows[n_train + n_val:]
 print(f"Train: {len(train)}  Val: {len(val)}  Test: {len(test)}")
 
+# Train a byte-level BPE tokenizer on the TRAIN split only (no leakage,
+# no external vocab/weights).
+SPECIAL_TOKENS = ["<pad>", "<unk>"]
+VOCAB_SIZE = 4000
+MAX_LEN = 48
 
-def tokenize(text):
-    text = text.lower()
-    return re.findall(r"[a-z0-9]+", text)
+tmp_corpus_path = "data/_train_corpus.txt"
+with open(tmp_corpus_path, "w", encoding="utf-8") as f:
+    for text, _ in train:
+        f.write(text.replace("\n", " ") + "\n")
 
-
-# Build vocab from train split only (no leakage)
-vocab_counts = {}
-for text, _ in train:
-    for tok in tokenize(text):
-        vocab_counts[tok] = vocab_counts.get(tok, 0) + 1
-
-# Keep tokens seen at least twice
-vocab = ["<pad>", "<unk>"] + sorted(
-    [w for w, c in vocab_counts.items() if c >= 2],
-    key=lambda w: -vocab_counts[w],
+tokenizer = ByteLevelBPETokenizer()
+tokenizer.train(
+    files=[tmp_corpus_path],
+    vocab_size=VOCAB_SIZE,
+    min_frequency=2,
+    special_tokens=SPECIAL_TOKENS,
 )
-vocab = vocab[:5000]
-stoi = {w: i for i, w in enumerate(vocab)}
-print(f"Vocab size: {len(vocab)}")
+import os
+os.remove(tmp_corpus_path)
 
-MAX_LEN = 40
+pad_id = tokenizer.token_to_id("<pad>")
+assert pad_id == 0, f"expected <pad> at id 0, got {pad_id}"
+vocab_size = tokenizer.get_vocab_size()
+print(f"BPE vocab size: {vocab_size}")
+
+tokenizer.save("data/tokenizer.json")
 
 
 def encode(text):
-    toks = tokenize(text)[:MAX_LEN]
-    ids = [stoi.get(t, 1) for t in toks]
-    ids = ids + [0] * (MAX_LEN - len(ids))
-    mask = [1] * len(toks) + [0] * (MAX_LEN - len(toks))
+    enc = tokenizer.encode(text)
+    ids = enc.ids[:MAX_LEN]
+    mask = [1] * len(ids)
+    pad_n = MAX_LEN - len(ids)
+    ids = ids + [pad_id] * pad_n
+    mask = mask + [0] * pad_n
     return ids, mask
 
 
@@ -81,11 +96,12 @@ data = {
     "train": build_split(train),
     "val": build_split(val),
     "test": build_split(test),
-    "vocab": vocab,
+    "vocab_size": vocab_size,
     "max_len": MAX_LEN,
+    "pad_id": pad_id,
 }
 
 with open("data/prepared.pkl", "wb") as f:
     pickle.dump(data, f)
 
-print("Saved data/prepared.pkl")
+print("Saved data/prepared.pkl and data/tokenizer.json")
