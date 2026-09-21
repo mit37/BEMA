@@ -30,26 +30,34 @@ Reviews Score task, not STS-B.
   §3), with temperature scaling reliably cutting ECE by 40-75% depending
   on the run. This is the strongest, most reproducible result in the repo.
 - **Multi-class decisions (Choice) work at real scale.** 77 real classes
-  (BANKING77), 81-83% accuracy from a from-scratch toy encoder — a
+  (BANKING77), 82% accuracy from a from-scratch toy encoder — a
   legitimately hard task, not a toy 3-5-class demo, and calibration
-  (isotonic regression, in this case) cut ECE from 0.0438 to 0.0189.
+  (isotonic regression, in this case) cut ECE from 0.0210 to 0.0113.
+- **A working Score head, on the second dataset tried.** Amazon Fine
+  Food Reviews (real 1-5 star ratings from the reviewer, normalized;
+  see the dataset-replacement note above) gets Pearson r=0.53 on
+  held-out test, with training MAE improving steadily across all 12
+  epochs (0.262→0.177) rather than the flat, stuck curve the earlier
+  STS-B attempt showed. Not a strong result by NLP-sentiment-model
+  standards (0.7+ is common there), but a real, generalizing one — see
+  §2 for the STS-B failure this replaced and why the new dataset worked
+  better architecturally as well as legally.
 - **One shared encoder genuinely serves multiple typed heads.** The
   architectural claim — one `encode()` forward pass, multiple typed
   questions answered from the same pooled state — is real in this repo,
   not just asserted: `model.py`'s `forward_all()` computes the trunk once
   and reads off three separate heads from it, and `serve_multitask.py`
   demonstrates this working end-to-end on live text.
-- **Calibration method choice matters, and no single method dominates.**
-  The Phase 4 sweep (`calibration_sweep.py`, `results_log.csv`) found
-  Platt scaling beat temperature scaling for the binary head (ECE 0.0088
-  vs 0.0129) while isotonic regression beat it for the multi-class head
-  (0.0189 vs 0.0315). A serious implementation of this category should
-  not assume temperature scaling is always the right calibration method.
-  (A real bug in the multi-class isotonic implementation was found and
-  fixed during a later review pass -- see §3's note on this repo's own
-  review process -- which changed this number slightly without changing
-  the qualitative conclusion.)
-- **Inference is fast**, as claimed. 1.51ms mean CPU latency for a single
+- **Calibration method choice matters, and no single method dominates —
+  and can even hurt.** The Phase 4 sweep (`calibration_sweep.py`,
+  `results_log.csv`) found Platt scaling beat temperature scaling for
+  the binary head (ECE 0.0030 vs 0.0046) while for the multi-class head,
+  temperature scaling actually made ECE WORSE than doing nothing (0.0210
+  raw -> 0.0371), and isotonic regression was the only method that
+  helped (0.0113). A serious implementation of this category should not
+  assume temperature scaling is always safe, let alone always best — on
+  this run, for this task, it was actively counterproductive.
+- **Inference is fast**, as claimed. ~1.4ms mean CPU latency for a single
   example across all three typed heads, in one forward pass, on a toy
   model with no GPU. See §4 for why this number needs a caveat despite
   being real.
@@ -57,13 +65,13 @@ Reviews Score task, not STS-B.
   head's confidence.** Evaluated on real, human-written text the spam
   model was never trained on (BANKING77 customer-support questions, which
   are provably never spam by how the dataset was built), mean confidence
-  dropped from 0.983 (in-distribution) to 0.909 on this real OOD text —
+  dropped from 0.978 (in-distribution) to 0.904 on this real OOD text —
   a same-metric, appropriately-calibrated-looking degradation under
-  shift. (An earlier draft of this document also cited "accuracy dropped
-  from 97.37% to 95.24%" as a matching before/after pair; that 95.24%
-  figure is actually a pure true-negative rate on an all-ham OOD set,
-  not the same statistic as the 97.37% blended in-distribution accuracy,
-  so it has been removed as a direct comparison here — see README.md's
+  shift. (An earlier draft of this document also cited a matching
+  accuracy before/after pair; that OOD figure is actually a pure
+  true-negative rate on an all-ham OOD set, not the same statistic as
+  the blended in-distribution accuracy, so it has been removed as a
+  direct comparison here — see README.md's
   Phase 5 section for the corrected framing.) The confidence result is
   the calibration promise actually holding up somewhere it wasn't fit.
 
@@ -188,7 +196,7 @@ much this toy reproduction actually demonstrates:
 | Non-autoregressive, single forward pass | **Yes, fully.** Architecturally real: one `encode()` call, typed heads read from it. | High |
 | Fixed-schema output ("cannot emit malformed output") | **Yes, fully.** Structural, not learned — heads are fixed-shape linear projections. | High |
 | Calibrated confidence that tracks real accuracy | **Mostly, for the Noul task specifically.** True for Noul/Choice on in-distribution data across multiple calibration methods; for Noul, now backed by a real 3-seed uncertainty range (calibrated ECE 0.0039-0.0070, §3) rather than one number. Choice and Score have not had the same multi-seed treatment. Explicitly does NOT hold for "confident but wrong on out-of-scope input" (see §5). | Medium-High for Noul, Medium for Choice/Score |
-| Multiple typed decision shapes (Noul/Choice/Score) | <!-- SCORE_ROW_PLACEHOLDER --> | Low-Medium |
+| Multiple typed decision shapes (Noul/Choice/Score) | **All three now show real, working signal.** Score (Amazon Fine Food Reviews, r=0.53) is weaker than Noul/Choice but genuinely learns and generalizes, unlike the STS-B attempt it replaced (r=0.29, flat training curve). None reach a "production-grade" bar, but none is a dead task either. | Low-Medium |
 | Speed/cost advantage over LLMs (40-200x claimed) | **Not independently verified.** This repo's own model is fast (1.51ms/example measured), but there is no LLM API in this sandbox to benchmark against directly — the comparison uses a documented industry reference figure for LLM latency, not a live measurement. The *shape* of the claim (a small non-autoregressive forward pass beats an LLM API round-trip) is directionally very plausible and structurally makes sense, but "40-200x" specifically is Jev's number, not something this repo measured against a real LLM. | Low (weakest-evidenced claim in this repo) |
 | Domain breadth / general-purpose typed questions over arbitrary schemas | **No.** Three narrow, single-domain tasks (spam/ham, 77 banking intents, food-review star ratings), each needing its own dataset and largely its own calibration. Jev's actual product claim is schema generality across arbitrary domains without per-domain retraining — nothing here demonstrates that. | Very Low |
 
@@ -217,7 +225,10 @@ more time"):**
   sentence pair.** The STS-B-era finding that a naive concat+meanpool
   architecture actively hurts a sentence-pair task (§2, historical) no
   longer applies now that the Score task is single-text star-rating
-  regression -- there's no pair to mishandle. <!-- SCORE_BOTTLENECK_PLACEHOLDER -->
+  regression -- there's no pair to mishandle. The remaining gap between
+  r=0.53 and a "strong" sentiment-regression result is most plausibly
+  the same encoder-capacity/no-pretrained-weights bottleneck named
+  above, not a new architecture problem specific to this dataset.
 - **Small held-out test sets (800-3,080 examples per task).** Enough for
   point estimates, not enough (without bootstrapping, which wasn't done)
   for tight confidence intervals on ECE or accuracy.

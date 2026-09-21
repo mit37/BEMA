@@ -133,7 +133,31 @@ repo, not an assumption made on their behalf.
 step never touched, Score dataset = Amazon Fine Food Reviews as described
 above):
 
-<!-- RESULTS_TABLE_PLACEHOLDER -->
+| Task   | Metric          | Raw            | Calibrated      |
+|--------|-----------------|-----------------|------------------|
+| Noul   | acc / ECE       | 0.9785 / 0.0159 | 0.9785 / 0.0046 (temp. scaling) |
+| Choice | acc / ECE       | 0.8188 / 0.0210 | 0.8188 / 0.0371 (temp. scaling — see note below) |
+| Score  | MAE / Pearson r | 0.1872 / 0.5340 | — (regression, not calibrated the same way) |
+
+**Score works reasonably well here**, unlike the STS-B task it replaced:
+Pearson r=0.53 on a genuinely held-out test split, with training MAE
+improving steadily across all 12 epochs (0.262→0.177) rather than
+plateauing immediately the way the STS-B run did. r=0.53 is still short
+of a strong sentiment/rating model (competent models on similar review-
+rating tasks often reach 0.7+), but it's a real, working, generalizing
+Score head — `serve_multitask.py --demo`'s third example ("Terrible.
+Stale, tasteless, and arrived broken.") scores 0.15, correctly low,
+despite that exact phrasing never appearing in the training reviews.
+
+**A genuine, honest surprise: temperature scaling made Choice's ECE
+*worse*, not better** (0.0210 raw → 0.0371 after temp. scaling). This can
+legitimately happen — a global temperature is fit on validation data and
+doesn't guarantee improvement on a different held-out test split,
+especially when the raw model happens to already be well-calibrated on
+that specific test split. Isotonic regression is a safer bet here: see
+the Phase 4 sweep below, where it recovers a lower ECE (0.0113) than both
+raw and temperature scaling for Choice. This is reported because it's a
+real result from this exact run, not smoothed into "worked as expected."
 
 Noul and Choice calibrate well and accuracy is solid (82% over 77 real
 classes is a strong real result, not a toy number). See FINDINGS.md for
@@ -150,28 +174,29 @@ measured on held-out test), appending every run to `results_log.csv`:
 
 | Task   | Method               | Accuracy | ECE    |
 |--------|----------------------|----------|--------|
-| Noul   | raw                  | 0.9737   | 0.0216 |
-| Noul   | temperature (T=2.40) | 0.9737   | 0.0129 |
-| Noul   | **platt**            | 0.9761   | **0.0088** |
-| Noul   | isotonic             | 0.9749   | 0.0115 |
-| Choice | raw                  | 0.8120   | 0.0438 |
-| Choice | temperature (T=1.29) | 0.8120   | 0.0315 |
-| Choice | **isotonic (max-conf)** | 0.8120 | **0.0189** |
-
-(Corrected from an earlier version of this table, which had a real bug: the
-Choice isotonic method's implementation overwrote one class's probability
-in-place before re-taking the argmax for prediction, which could silently
-flip the recorded prediction to a class the model never actually chose —
-that's why Choice/isotonic's earlier accuracy, 0.8136, differed from raw/
-temperature's 0.8120 when it structurally shouldn't have, since isotonic
-here is documented as confidence-only recalibration. Fixed in
-`calibration_sweep.py` to compute the prediction from the raw, uncalibrated
-softmax always, and only ever recalibrate the reported confidence value.)
+| Noul   | raw                  | 0.9785   | 0.0159 |
+| Noul   | temperature (T=2.36) | 0.9785   | 0.0046 |
+| Noul   | **platt**            | 0.9797   | **0.0030** |
+| Noul   | isotonic             | 0.9773   | 0.0049 |
+| Choice | raw                  | 0.8188   | 0.0210 |
+| Choice | temperature (T=1.18) | 0.8188   | 0.0371 (worse than raw — see note above) |
+| Choice | **isotonic (max-conf)** | 0.8188 | **0.0113** |
 
 No single method wins everywhere: Platt scaling beats temperature scaling
-for Noul, isotonic regression beats it for Choice. A real automated
+for Noul; for Choice, temperature scaling actually made ECE worse than
+doing nothing, while isotonic regression clearly won. A real automated
 calibration loop should try more than one method per task rather than
-assuming temperature scaling is always best.
+assuming temperature scaling is always best — this run makes that case
+more sharply than the last one, since temperature wasn't just
+suboptimal here, it was actively counterproductive.
+
+(An earlier version of this table had a real bug: the Choice isotonic
+method's implementation overwrote one class's probability in-place before
+re-taking the argmax for prediction, which could silently flip the
+recorded prediction to a class the model never actually chose. Fixed in
+`calibration_sweep.py` to compute the prediction from the raw,
+uncalibrated softmax always, and only ever recalibrate the reported
+confidence value — the numbers above are all from the corrected code.)
 
 ### Phase 5: out-of-distribution stress test (`ood_stress_test.py`)
 
@@ -180,22 +205,22 @@ Real data only — no synthetic or LLM-generated labels. Two tests:
 1. **Noul (spam) on real BANKING77 text** (genuine customer-support
    questions, never spam by dataset construction — a real negative set
    outside the spam model's training distribution): every example here
-   is ground-truth ham, so the 0.9524 figure is a pure true-negative rate
-   (specificity), NOT the same statistic as the 0.9737 in-distribution
+   is ground-truth ham, so the 0.9317 figure is a pure true-negative rate
+   (specificity), NOT the same statistic as the 0.9785 in-distribution
    accuracy, which is a class-weighted blend of true-positive and
    true-negative rates over the original ~13%-spam/87%-ham test set —
    these are different metrics measured on differently-composed
    populations, not a clean apples-to-apples before/after (the OOD
    script's own output honestly labels this `accuracy(=1-false_spam_rate)`
    rather than plain "accuracy"). What IS a clean, comparable measurement
-   is confidence: mean confidence drops from 0.9830 (in-distribution) to
-   0.9088 on this real non-spam OOD text — a same-metric, appropriately-
+   is confidence: mean confidence drops from 0.9780 (in-distribution) to
+   0.9036 on this real non-spam OOD text — a same-metric, appropriately-
    calibrated-looking degradation under domain shift.
 2. **Choice (banking77) on real SMS text** (no correct banking77 answer
    exists for spam/ham messages — this measures confident-wrongness, not
-   accuracy): mean confidence drops from 0.7949 (in-distribution, measured
+   accuracy): mean confidence drops from 0.7906 (in-distribution, measured
    on the Choice head's held-out test split, not the split its own
-   temperature was fit on) to 0.4029 on out-of-scope input. That's a real,
+   temperature was fit on) to 0.4097 on out-of-scope input. That's a real,
    meaningful drop — but still far
    above the 1/77≈0.013 a maximally-uncertain model would show. **This is
    the sharpest finding in this repo about the "cannot hallucinate" claim**:
@@ -255,10 +280,11 @@ python3 benchmark_speed.py
   production-grade pretrained backbone — genuinely blocked by this sandbox's
   network policy (confirmed by direct connection tests), not a shortcut
   taken by choice.
-- The Score head, even after the bi-encoder fix, tops out around Pearson
-  r=0.49 — real signal, well short of a "competent" 0.7-0.9+ similarity
-  model. The scoring-architecture bug is fixed; encoder capacity/pretraining
-  is the remaining, harder-to-fix bottleneck.
+- The Score head reaches Pearson r=0.53 (Amazon Fine Food Reviews star
+  ratings) — real, generalizing signal, but short of what a competent
+  sentiment/rating model would reach (0.7+ is common). Encoder capacity
+  and the lack of pretrained weights (see above) are the most plausible
+  remaining bottleneck.
 - No single real dataset in this repo has all three label types on the same
   text, so "one state, many typed questions" is demonstrated
   architecturally (one `encode()` call feeds all heads) rather than proven
