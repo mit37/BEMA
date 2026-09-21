@@ -9,7 +9,7 @@ Usage:
     python3 serve_multitask.py --demo
     python3 serve_multitask.py noul "Some SMS text"
     python3 serve_multitask.py choice "I still haven't gotten my new card"
-    python3 serve_multitask.py score "A dog is running." "A dog is playing."
+    python3 serve_multitask.py score "This was the best coffee I've ever had."
 """
 import sys
 import pickle
@@ -79,16 +79,13 @@ def decide_all(text: str) -> dict:
 DEMO_EXAMPLES = [
     "WINNER!! You have been selected to receive a $900 prize reward, call 08712300220 to claim now!",
     "I still haven't received my new card, I ordered it two weeks ago.",
-    "A man is playing a large flute. <sep> A man is playing a flute.",
+    "Terrible. Stale, tasteless, and arrived broken. Would not buy again.",
 ]
 
 if __name__ == "__main__":
     if len(sys.argv) > 1 and sys.argv[1] == "--demo":
         for text in DEMO_EXAMPLES:
             print(json.dumps({"text": text, **decide_all(text)}, indent=None))
-    elif len(sys.argv) > 2 and sys.argv[1] == "score":
-        text = f"{sys.argv[2]} <sep> {sys.argv[3]}"
-        print(json.dumps({"text": text, **decide_all(text)}, indent=2))
     elif len(sys.argv) > 2:
         text = " ".join(sys.argv[2:])
         print(json.dumps({"text": text, **decide_all(text)}, indent=2))

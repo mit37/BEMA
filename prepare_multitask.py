@@ -12,37 +12,45 @@ shared representation space.
                             -- 77 real customer-service intent categories,
                             human-labeled via the original BANKING77 paper
                             (Casanueva et al. 2020, CC-BY 4.0).
-  - Score (continuous):    STS Benchmark, English portion, via the
-                            stsb-multi-mt mirror (Cer et al. 2017 /
-                            May 2021 repackaging) -- genuine human
-                            similarity judgments in [0, 5], not
-                            synthesized. Input is the two sentences joined
-                            with a literal <sep> token so a single-text
-                            encoder can consume a pair.
-                            LICENSE NOTE: this is NOT a single CC-BY-SA
-                            4.0 dataset -- the underlying sentence text
-                            mixes sub-sources with their own separate
-                            terms (Microsoft Research agreement required
-                            for MSRpar/MSR-Video; Stack Exchange CC-BY-SA
-                            3.0 with per-post/per-author attribution for
-                            answers-answers/answers-forums; others).
-                            This is a real, unresolved licensing
-                            compliance question for the redistributed
-                            CSVs here -- see README.md's "Dataset
-                            provenance & licensing" section, which flags
-                            it explicitly rather than assuming it away.
+  - Score (continuous):    Amazon Fine Food Reviews (McAuley & Leskovec
+                            2013, SNAP/Stanford; published on Kaggle by
+                            the SNAP team's own account under CC0: Public
+                            Domain) -- real customer star ratings (1-5,
+                            the reviewer's own rating, not derived or
+                            inferred) paired with the reviewer's own
+                            review text. Single-text input (Summary +
+                            Text), no sentence-pair concatenation needed.
+
+  NOTE: an earlier version of this script used the STS Benchmark
+  (sentence-pair similarity) for the Score task. That dataset was
+  replaced entirely after a repo review found its underlying sentence
+  text mixed sub-sources with unresolved, non-uniform licensing terms
+  (a Microsoft Research agreement requirement for some rows, Stack
+  Exchange CC-BY-SA 3.0 with per-post attribution for others) -- a real
+  compliance gap, not a hypothetical one. Amazon Fine Food Reviews was
+  chosen specifically to avoid repeating that mistake: CC0 is a single,
+  unambiguous, maximally permissive license (public domain, no
+  attribution even required) directly from the dataset's original
+  creators' own Kaggle listing, not inferred from a downstream mirror.
 
 IMPORTANT ON PROVENANCE: none of these labels were produced by an LLM.
 Spam/ham labels are the original SMS Spam Collection curator labels.
 Banking77 categories are the original crowd-sourced intent annotations
 (BANKING77's CC-BY 4.0 license was confirmed by reading the LICENSE file
 in PolyAI-LDN/task-specific-datasets directly, not just citing the
-paper). STS-B scores are the original human similarity ratings (averaged
-over multiple annotators in the source study). This script only
-reformats them; it does not relabel or filter based on any model's
-output. The "not LLM-generated" claim for all three datasets rests on
-their publication history and age (all predate widespread LLM use), not
-on this repo independently re-verifying original annotation records.
+paper). Amazon Fine Food Reviews' star ratings are each reviewer's own
+1-5 rating of the product they reviewed -- real, human-assigned, not
+synthesized or inferred. This script only reformats these labels; it
+does not relabel or filter based on any model's output. The "not
+LLM-generated" claim for all three datasets rests on their publication
+history and age (all predate widespread LLM use), not on this repo
+independently re-verifying original annotation records. The Amazon
+Fine Food Reviews CSV used here (data/raw/amazon_food_reviews.csv) is
+the first 10,112 rows of the original ~568,454-row dataset, obtained
+from a third-party GitHub mirror (Kaggle itself requires login and is
+unreachable from this sandbox) -- content spot-checked against the
+well-known first rows of the original dataset to confirm it is genuine,
+not fabricated.
 """
 import csv
 import json
@@ -55,7 +63,7 @@ from tokenizers import ByteLevelBPETokenizer
 random.seed(42)
 
 MAX_LEN = 64
-SPECIAL_TOKENS = ["<pad>", "<unk>", "<sep>"]
+SPECIAL_TOKENS = ["<pad>", "<unk>"]
 VOCAB_SIZE = 8000
 
 # ---------------------------------------------------------------------------
@@ -111,29 +119,30 @@ print(f"Choice (banking77): train={len(banking_split['train'])} val={len(banking
       f"test={len(banking_split['test'])} classes={len(categories)}")
 
 
-# Score: STS-B English -- has real train/dev/test files
-def load_stsb(path):
-    rows = []
-    with open(path, encoding="utf-8") as f:
-        reader = csv.reader(f)
-        for r in reader:
-            if len(r) < 3:
-                continue
-            s1, s2, score = r[0], r[1], r[2]
-            try:
-                score = float(score)
-            except ValueError:
-                continue
-            rows.append({"text": f"{s1} <sep> {s2}", "label": score / 5.0})  # normalize 0-5 -> 0-1
-    return rows
-
-
-stsb_split = {
-    "train": load_stsb("data/raw/stsb_train.csv"),
-    "val": load_stsb("data/raw/stsb_dev.csv"),
-    "test": load_stsb("data/raw/stsb_test.csv"),
+# Score: Amazon Fine Food Reviews (CC0) -- single CSV, no pre-made splits
+food_rows = []
+with open("data/raw/amazon_food_reviews.csv", encoding="utf-8", errors="replace") as f:
+    reader = csv.DictReader(f)
+    for r in reader:
+        try:
+            score = float(r["Score"])
+        except (ValueError, KeyError):
+            continue
+        summary = (r.get("Summary") or "").strip()
+        text = (r.get("Text") or "").replace("<br />", " ").strip()
+        combined = f"{summary}. {text}" if summary else text
+        if not combined:
+            continue
+        food_rows.append({"text": combined, "label": (score - 1) / 4.0})  # normalize 1-5 -> 0-1
+random.shuffle(food_rows)
+n = len(food_rows)
+score_split = {
+    "train": food_rows[: int(n * 0.7)],
+    "val": food_rows[int(n * 0.7): int(n * 0.85)],
+    "test": food_rows[int(n * 0.85):],
 }
-print(f"Score (STS-B): train={len(stsb_split['train'])} val={len(stsb_split['val'])} test={len(stsb_split['test'])}")
+print(f"Score (Amazon Fine Food Reviews): train={len(score_split['train'])} "
+      f"val={len(score_split['val'])} test={len(score_split['test'])}")
 
 # ---------------------------------------------------------------------------
 # Train ONE shared BPE tokenizer on the union of all three TRAIN splits only
@@ -144,7 +153,7 @@ with open(corpus_path, "w", encoding="utf-8") as f:
         f.write(row["text"].replace("\n", " ") + "\n")
     for row in banking_split["train"]:
         f.write(row["text"].replace("\n", " ") + "\n")
-    for row in stsb_split["train"]:
+    for row in score_split["train"]:
         f.write(row["text"].replace("\n", " ") + "\n")
 
 tokenizer = ByteLevelBPETokenizer()
@@ -179,7 +188,7 @@ def build(rows):
 data = {
     "noul": {k: build(v) for k, v in spam_split.items()},
     "choice": {k: build(v) for k, v in banking_split.items()},
-    "score": {k: build(v) for k, v in stsb_split.items()},
+    "score": {k: build(v) for k, v in score_split.items()},
     "num_choice_classes": len(categories),
     "choice_categories": categories,
     "vocab_size": vocab_size,

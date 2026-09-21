@@ -46,7 +46,8 @@ class JevCloneEncoder(nn.Module):
     - choice_head: present only if num_choice_classes is given. Logits over
       a fixed real label set (e.g. the 77 BANKING77 intent categories).
     - score_head: present only if enable_score=True. Single logit whose
-      sigmoid is a continuous Score in [0, 1] (e.g. STS-B similarity).
+      sigmoid is a continuous Score in [0, 1] (e.g. a normalized 1-5 star
+      rating).
 
     Each head is a fixed-shape linear projection -- it cannot emit anything
     outside its declared output shape. This is the "cannot produce a type

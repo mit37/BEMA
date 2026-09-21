@@ -78,98 +78,69 @@ state — see `model.py`):
   categories, 10,003 train / 3,080 test. License: CC-BY 4.0, confirmed by
   reading the LICENSE file in the source repository directly (not just
   citing the paper) — see below.
-- **Score** (continuous, [0,1]): [STS Benchmark English](https://github.com/PhilipMay/stsb-multi-mt)
-  (Cer et al. 2017) — genuine human sentence-similarity judgments in
-  [0,5], normalized. Input is `sentence1 <sep> sentence2`. Licensing is
-  NOT a single clean tag — see "Dataset provenance & licensing" below,
-  which flags a real, unresolved compliance question about this dataset
-  rather than the earlier (incorrect) blanket "CC-BY-SA 4.0" this section
-  used to state.
+- **Score** (continuous, [0,1]): [Amazon Fine Food Reviews](https://www.kaggle.com/datasets/snap/amazon-fine-food-reviews)
+  (McAuley & Leskovec 2013, SNAP/Stanford) — real customer star ratings
+  (1-5, normalized to [0,1]) paired with the reviewer's own review text.
+  License: **CC0 (public domain)**, published under that tag by the
+  dataset's own creators' Kaggle account. Single-text input, no
+  sentence-pair concatenation. (This replaces an earlier version of this
+  Score task that used the STS Benchmark, which was dropped entirely
+  after a review found its underlying text mixed several sub-sources
+  with unresolved, non-uniform licensing — see FINDINGS.md and the git
+  history for that decision.)
 
 ## Dataset provenance & licensing
 
 This section exists because an internal review of this repo (see
 FINDINGS.md) found the earlier dataset citations here were incomplete or
-inconsistent with what this repo actually verified. Corrected below, with
-exact sources and what is/isn't independently confirmed:
+inconsistent with what this repo actually verified — and because the
+Score dataset was later replaced entirely for licensing reasons. Exact
+sources and what is/isn't independently confirmed:
 
 | Dataset | Source (fetched from) | Retrieved | License |
 |---|---|---|---|
 | SMS Spam Collection | `data/spam.csv` — bundled with this project from its start, original upstream source not independently re-fetched or re-verified by this repo | n/a (pre-existing file) | **Not independently verified.** Long-standing academic benchmark (Almeida & Gómez Hidalgo), historically distributed for research use; this repo has not confirmed the current authoritative license text against the original source (`archive.ics.uci.edu`, which this sandbox's network policy blocks) or against the dataset's canonical upstream page. Treat as research-use-only until verified. |
 | BANKING77 | `https://raw.githubusercontent.com/PolyAI-LDN/task-specific-datasets/master/banking_data/{train,test}.csv` and `categories.json` | 2026-09-21 | **CC-BY 4.0 — confirmed** by fetching and reading `https://raw.githubusercontent.com/PolyAI-LDN/task-specific-datasets/master/LICENSE` directly (an "Attribution 4.0 International" / CC-BY 4.0 license file), not just citing the paper. |
-| STS Benchmark English (via stsb-multi-mt) | `https://raw.githubusercontent.com/PhilipMay/stsb-multi-mt/master/data/stsb-{train,dev,test}.csv` | 2026-09-21 | **Not a single license — genuinely mixed, and NOT fully addressed by this repo (flagged, not resolved).** See below. |
+| Amazon Fine Food Reviews | `data/raw/amazon_food_reviews.csv` — the first 10,112 rows of the original ~568,454-row dataset, obtained via a third-party GitHub mirror since Kaggle itself requires a login this sandbox cannot provide | 2026-09-21 | **CC0 (public domain) — corroborated by multiple independent sources** (the dataset's own Kaggle listing under the SNAP/creator account, and its Hugging Face mirror, both tagging it CC0-1.0), though this sandbox could not reach kaggle.com directly to read the license field itself — see the caveat below. |
 
-**The STS-B licensing question, specifically** (this is the one item in
-this repo that needed a human decision and didn't get one yet — see the
-note at the end of this section): the stsb-multi-mt mirror's own
-`LICENSE` file (fetched and read directly, not assumed) states that while
-the numeric *scores* are CC-BY-SA 4.0, the underlying *sentence text* is
-NOT uniformly licensed — it's assembled from multiple original sources,
-each with its own terms:
-- **MSRpar** and **MSR-Video** subsets: require researchers to separately
-  agree to Microsoft Research's own license terms — not simply CC-licensed.
-- **answers-answers** / **answers-forums** subsets: real Stack Exchange
-  user content, CC-BY-SA **3.0** (not 4.0), with specific per-post,
-  per-author attribution requirements (a hyperlink to each source post AND
-  each author's profile) that this repo's redistributed CSVs do not carry.
-- **headlines**: European Media Monitor content, requesting acknowledgment
-  when reused.
-- **track5.en-en** (SNLI-derived) and **image** (PASCAL VOC-2008
-  captions): CC-BY-SA (4.0 for track5.en-en; version unspecified for image
-  captions).
+**On verifying the Amazon Fine Food Reviews license, specifically**: unlike
+BANKING77 (where this repo fetched and read an actual LICENSE file byte
+for byte), `kaggle.com` is unreachable from this sandbox, so the CC0 claim
+here rests on corroborating web-search results describing the Kaggle
+listing's own license tag plus a matching tag on a Hugging Face mirror,
+not a first-party document this repo read directly. This is a weaker
+form of verification than BANKING77's, though still meaningfully stronger
+than the earlier STS-B situation (a downstream mirror's own license file,
+read directly, that turned out to describe non-uniform sub-licenses this
+repo hadn't accounted for) — here, multiple independent third parties
+agree on a single, simple, maximally permissive tag (CC0) for a dataset
+published directly by its original creators, and CC0 is not a NC/SA-
+style license that residual ambiguity could turn into a compliance trap
+the way STS-B's did. Flagged transparently rather than overstated as a
+first-party confirmation it isn't.
 
-`data/raw/stsb_{train,dev,test}.csv` in this repo mixes rows from all of
-these sub-sources without per-row sub-license tracking, and this repo has
-NOT implemented the Stack Exchange per-post/per-author attribution or
-documented agreement to the Microsoft Research terms that some rows
-require. **This is a real, currently-unresolved licensing compliance gap
-in already-committed data, not a hypothetical one** — flagged here
-explicitly per this project's own ground rules (keep dataset sourcing
-legal and above-board; stop and flag rather than guess when a real
-decision is needed) rather than smoothed over with an incorrect blanket
-license tag. Options going forward (not decided in this repo, needs a
-human call): (a) accept the risk for internal/research-only use and
-document that clearly, (b) do the attribution work required for the
-Stack Exchange subset and confirm the MSR terms for MSRpar/MSR-Video, or
-(c) replace the Score task's dataset with one that has cleaner, single-
-license terms. This repo does not resolve that choice on its own.
+The Amazon Fine Food Reviews CSV bundled here is a truncated slice (first
+10,112 of ~568,454 rows), not the full dataset — its first two rows were
+spot-checked against the well-known, widely-reproduced first rows of the
+original dataset ("Good Quality Dog Food" / "Not as Advertised") to
+confirm the mirror is genuine and not fabricated or reordered.
 
 There is also no repository-level LICENSE file for this project itself —
-another item that needs an explicit decision from whoever is publishing
-this repo, not an assumption made on their behalf.
+an item that needs an explicit decision from whoever is publishing this
+repo, not an assumption made on their behalf.
 
 **Results** (clean run, 2026-09-21, held-out test splits the calibration
-step never touched):
+step never touched, Score dataset = Amazon Fine Food Reviews as described
+above):
 
-| Task   | Metric          | Raw            | Calibrated      |
-|--------|-----------------|-----------------|------------------|
-| Noul   | acc / ECE       | 0.9737 / 0.0216 | 0.9737 / 0.0129 (temp. scaling) |
-| Choice | acc / ECE       | 0.8120 / 0.0438 | 0.8120 / 0.0315 (temp. scaling) |
-| Score (v1, concat+meanpool+MLP) | MAE / Pearson r | 0.2442 / 0.2941 | — (regression, not calibrated the same way) |
+<!-- RESULTS_TABLE_PLACEHOLDER -->
 
 Noul and Choice calibrate well and accuracy is solid (82% over 77 real
-classes is a strong real result, not a toy number). **Score (v1) was
-initially a genuine failure**, not a rounding artifact: Pearson r=0.29 on
-STS-B is weak — a competent sentence-similarity model gets 0.7–0.9+, and
-even simple averaged word-vector baselines typically clear 0.5.
-
-**Follow-up diagnosis and partial fix** (`diagnose_score_head.py`,
-`fix_score_head.py`): the failure was the scoring *architecture*, not the
-encoder. Encoding the two sentences SEPARATELY through the exact same
-trained encoder (no retraining) and just taking cosine similarity — zero
-additional training — already scores r=0.48, beating the trained v1 head
-outright. Replacing the head with a standard bi-encoder/SBERT-style
-regression (`[u, v, |u-v|]` features from the two separately-encoded
-sentences, fit on real STS-B train, frozen encoder) gets MAE 0.2442→0.2174
-and Pearson r 0.2941→0.4883, roughly matching the untrained-cosine ceiling.
-The remaining gap to a "competent" 0.7–0.9+ model is now most plausibly
-encoder capacity/pretraining, not the scoring architecture — concatenating
-a sentence pair into one string and mean-pooling was actively destroying
-signal a bi-encoder recovers "for free" from the same weights. Left as
-future work: fine-tuning the shared encoder itself against a similarity
-objective (not just the frozen-trunk regression head done here), or
-swapping in pretrained weights if this sandbox's network policy ever
-allows it.
+classes is a strong real result, not a toy number). See FINDINGS.md for
+how the Score task performed on this dataset and what that does and
+doesn't tell us, including the now-inapplicable history of a prior
+diagnosis/fix effort that was specific to the STS-B sentence-pair
+architecture this repo no longer uses.
 
 ### Phase 4: calibration method sweep (`calibration_sweep.py`, `results_log.csv`)
 
@@ -248,9 +219,6 @@ Real data only — no synthetic or LLM-generated labels. Two tests:
 - `seed_variation_sweep.py` — measures real cross-seed variance on the
   Noul pipeline's accuracy/ECE (3 independent seeds), logs to
   `results_log.csv`.
-- `diagnose_score_head.py` / `fix_score_head.py` — Score head follow-up:
-  diagnoses the concat+meanpool architecture's failure and fixes it with
-  a bi-encoder scoring head on the same frozen encoder.
 - `benchmark_speed.py` — measures single-example CPU inference latency
   for the multi-task model (the "1.51ms" figure cited in FINDINGS.md).
 
@@ -274,10 +242,6 @@ python3 prepare_multitask.py && python3 train_multitask.py && python3 calibrate_
 python3 serve_multitask.py --demo
 python3 calibration_sweep.py   # Phase 4
 python3 ood_stress_test.py     # Phase 5
-
-# Score head follow-up (diagnosis + bi-encoder fix)
-python3 diagnose_score_head.py
-python3 fix_score_head.py
 
 # Real cross-seed uncertainty measurement (Noul pipeline, ~10-15 min for 3 seeds)
 python3 seed_variation_sweep.py

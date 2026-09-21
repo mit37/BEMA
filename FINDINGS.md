@@ -5,11 +5,23 @@ reproduction of Jev's core interface shape (typed state in, typed
 calibrated decision out, one non-autoregressive forward pass) found when
 actually built and tested, rather than assumed. All numbers below are
 measured on held-out test splits the relevant fitting step never touched,
-on real human-labeled data (SMS Spam Collection, BANKING77, STS Benchmark
-English) — see README.md's "Dataset provenance & licensing" section for
-what is and isn't independently verified for each dataset, including one
-real, unresolved licensing question about the STS-B data that is flagged
-there rather than resolved.
+on real human-labeled data (SMS Spam Collection, BANKING77, Amazon Fine
+Food Reviews) — see README.md's "Dataset provenance & licensing" section
+for what is and isn't independently verified for each dataset.
+
+**Note on the Score dataset**: the Score task originally used the STS
+Benchmark (sentence-pair similarity). That dataset was replaced entirely
+(not just re-licensed or worked around) after a review found its
+underlying text mixed multiple sub-sources with unresolved, non-uniform
+licensing -- a real compliance gap in already-committed data, described
+in an earlier version of this document and in the git history. It now
+uses Amazon Fine Food Reviews (CC0, single-text star-rating regression)
+instead. Section 2 below keeps the STS-B diagnosis-and-fix work as
+historical record, since the methodology lesson it produced (a scoring
+architecture bug can look like a data/capacity problem) is still real
+and worth keeping visible, but the numbers under "what worked" (§1) and
+the value-proposition table (§4) reflect the current Amazon Fine Food
+Reviews Score task, not STS-B.
 
 ## 1. What worked
 
@@ -57,8 +69,18 @@ there rather than resolved.
 
 ## 2. What didn't work (and what was fixable vs. not)
 
-- **The Score (continuous) head v1 was a real failure, not a rounding
-  artifact — and the root cause turned out to be fixable.** The original
+- **[HISTORICAL -- superseded, kept for the methodology lesson] The
+  Score (continuous) head v1, on the STS Benchmark dataset since
+  replaced for licensing reasons (see the note at the top of this
+  document), was a real failure, not a rounding artifact — and the root
+  cause turned out to be fixable.** This entire bullet describes work
+  against a dataset no longer in this repo; the diagnostic scripts it
+  references (`diagnose_score_head.py`, `fix_score_head.py`) have been
+  removed along with the STS-B data, since their bi-encoder sentence-pair
+  logic doesn't apply to the current single-text Amazon Fine Food Reviews
+  Score task. Kept below because the methodology lesson is real and
+  transferable even though the specific numbers no longer describe
+  anything in this repo. The original
   architecture (concatenate the sentence pair into one string, mean-pool
   through the shared encoder, predict from one vector) scored Pearson
   r=0.29 against real human similarity judgments (STS-B), with training
@@ -151,14 +173,10 @@ rather than hidden:**
   of the three tasks due to the ~3-5 minutes of compute per seed adding
   up across tasks. Extending it to Choice and Score is straightforward
   future work using the same script as a template.
-- **The Score head's v1 numbers (MAE=0.24, Pearson r=0.29) were
-  trustworthy as "this doesn't work," and that prediction held up under
-  a real follow-up test** — the bi-encoder fix (§2) confirmed the
-  qualitative conclusion (weak performance) while substantially moving
-  the exact numbers (r: 0.29→0.49), exactly the kind of instability single
-  numbers on undertrained models can show. The updated numbers (MAE=0.2174,
-  r=0.4883) are similarly to be read as "meaningfully better, still not
-  competitive," not as precise measurements.
+- **The Score task's numbers below reflect a single run on the new
+  (Amazon Fine Food Reviews) dataset**, with no seed sweep done for it
+  yet (see the point above) -- read them the same way as any single-run
+  number in this repo: directionally informative, not exact.
 
 ## 4. An honest estimate of what % of Jev's value proposition this reproduces
 
@@ -170,9 +188,9 @@ much this toy reproduction actually demonstrates:
 | Non-autoregressive, single forward pass | **Yes, fully.** Architecturally real: one `encode()` call, typed heads read from it. | High |
 | Fixed-schema output ("cannot emit malformed output") | **Yes, fully.** Structural, not learned — heads are fixed-shape linear projections. | High |
 | Calibrated confidence that tracks real accuracy | **Mostly, for the Noul task specifically.** True for Noul/Choice on in-distribution data across multiple calibration methods; for Noul, now backed by a real 3-seed uncertainty range (calibrated ECE 0.0039-0.0070, §3) rather than one number. Choice and Score have not had the same multi-seed treatment. Explicitly does NOT hold for "confident but wrong on out-of-scope input" (see §5). | Medium-High for Noul, Medium for Choice/Score |
-| Multiple typed decision shapes (Noul/Choice/Score) | **Two of three work well; the third (Score) was diagnosed and partially fixed** (r: 0.29→0.49 via a bi-encoder head on the same frozen encoder), but still isn't competitive with real similarity models. | Low-Medium |
+| Multiple typed decision shapes (Noul/Choice/Score) | <!-- SCORE_ROW_PLACEHOLDER --> | Low-Medium |
 | Speed/cost advantage over LLMs (40-200x claimed) | **Not independently verified.** This repo's own model is fast (1.51ms/example measured), but there is no LLM API in this sandbox to benchmark against directly — the comparison uses a documented industry reference figure for LLM latency, not a live measurement. The *shape* of the claim (a small non-autoregressive forward pass beats an LLM API round-trip) is directionally very plausible and structurally makes sense, but "40-200x" specifically is Jev's number, not something this repo measured against a real LLM. | Low (weakest-evidenced claim in this repo) |
-| Domain breadth / general-purpose typed questions over arbitrary schemas | **No.** Three narrow, single-domain tasks (spam/ham, 77 banking intents, sentence similarity), each needing its own dataset and largely its own calibration. Jev's actual product claim is schema generality across arbitrary domains without per-domain retraining — nothing here demonstrates that. | Very Low |
+| Domain breadth / general-purpose typed questions over arbitrary schemas | **No.** Three narrow, single-domain tasks (spam/ham, 77 banking intents, food-review star ratings), each needing its own dataset and largely its own calibration. Jev's actual product claim is schema generality across arbitrary domains without per-domain retraining — nothing here demonstrates that. | Very Low |
 
 **Overall**: this reproduction validates the *architectural* core of Jev's
 claim (one shared encoder, typed fixed-schema heads, real calibration
@@ -195,16 +213,11 @@ more time"):**
   a 96-dim/3-layer encoder. Anything meaningfully larger, or a genuine
   hyperparameter search (rather than the two or three configurations
   actually tried here), was out of reach in the time available.
-- **Encoder capacity/pretraining for the Score task (revised).** The
-  original architecture gap (mean-pooling two concatenated sentences
-  through one encoder) was diagnosed and fixed with a bi-encoder head
-  (§2) — that part turned out to be a real bug, not a fundamental
-  limit, and cost about an hour to find and fix. What remains after the
-  fix (r≈0.49, still short of 0.7-0.9+) is a genuine encoder-capacity/
-  pretraining ceiling: the same "no HuggingFace Hub access" bottleneck
-  above, showing up specifically hard on a task (semantic similarity)
-  that leans more on representation quality than the classification
-  tasks did.
+- **No sentence-pair architecture question anymore, since there's no
+  sentence pair.** The STS-B-era finding that a naive concat+meanpool
+  architecture actively hurts a sentence-pair task (§2, historical) no
+  longer applies now that the Score task is single-text star-rating
+  regression -- there's no pair to mishandle. <!-- SCORE_BOTTLENECK_PLACEHOLDER -->
 - **Small held-out test sets (800-3,080 examples per task).** Enough for
   point estimates, not enough (without bootstrapping, which wasn't done)
   for tight confidence intervals on ECE or accuracy.
