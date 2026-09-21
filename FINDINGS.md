@@ -43,21 +43,32 @@ English) — see README.md for full dataset provenance and licensing.
   rather than staying falsely confident while wrong. That's the
   calibration promise actually holding up somewhere it wasn't fit.
 
-## 2. What didn't work
+## 2. What didn't work (and what was fixable vs. not)
 
-- **The Score (continuous) head is a real failure, not a rounding
-  artifact.** Pearson r=0.29 against real human similarity judgments
-  (STS-B). A competent sentence-similarity model scores 0.7-0.9+; even
-  weak baselines (averaged word vectors) typically clear 0.5. Training
-  MAE barely moved across 12 epochs (0.2657 → 0.2559) — the model
-  essentially isn't learning this task. Root cause, most likely:
-  mean-pooling a naively concatenated sentence pair through a small,
-  from-scratch, byte-level-BPE encoder with no cross-sentence attention
-  structure just isn't expressive enough for semantic similarity. This
-  needs either a much larger/pretrained encoder or a proper sentence-pair
-  architecture (cross-attention, or a Siamese/bi-encoder with a learned
-  distance metric) — neither of which this toy setup has, and neither of
-  which is a quick fix.
+- **The Score (continuous) head v1 was a real failure, not a rounding
+  artifact — and the root cause turned out to be fixable.** The original
+  architecture (concatenate the sentence pair into one string, mean-pool
+  through the shared encoder, predict from one vector) scored Pearson
+  r=0.29 against real human similarity judgments (STS-B), with training
+  MAE barely moving across 12 epochs (0.2657 → 0.2559). A follow-up
+  diagnostic (`diagnose_score_head.py`) isolated the cause precisely: encode
+  the two sentences SEPARATELY through the exact same trained encoder, with
+  ZERO additional training, and plain cosine similarity between the two
+  pooled vectors already scores r=0.48 — beating the trained v1 head
+  outright. The scoring *architecture*, not the encoder's representations,
+  was the bottleneck; concatenating the pair into one string and mean-
+  pooling was actively destroying signal the encoder had already captured.
+  Replacing it with a standard bi-encoder/SBERT-style regression head
+  (`[u, v, |u-v|]` features, Reimers & Gurevych 2019, `fix_score_head.py`)
+  on the SAME frozen encoder brought MAE to 0.2174 and Pearson r to 0.4883
+  — matching the untrained-cosine ceiling. r≈0.49 is still short of a
+  "competent" 0.7-0.9+ similarity model, and that remaining gap is now most
+  plausibly encoder capacity/pretraining (a harder, more expensive fix,
+  not attempted here) rather than a scoring-architecture bug (which was
+  fixable, and was fixed, in about an hour of follow-up work). The lesson:
+  a "this task doesn't work" result is worth one round of architectural
+  diagnosis before being written off as a data/compute ceiling — sometimes
+  it's neither.
 - **A naive "make the encoder bigger" attempt made things measurably
   worse before it got better.** Doubling encoder size at the original
   learning rate (1e-3, no gradient clipping) caused visible training
@@ -112,11 +123,14 @@ the code/README rather than hidden:**
   computed). Before anyone relies on a specific ECE number as a real
   guarantee, it needs bootstrapped or cross-validated uncertainty bounds,
   which this toy-scale project did not have the scope to add.
-- **The Score head's numbers (MAE=0.24, Pearson r=0.29) are trustworthy
-  as "this doesn't work," not trustworthy as a precise measurement of how
-  badly** — with a model this undertrained on this task, small
-  architecture or hyperparameter changes could plausibly move these
-  numbers substantially without changing the qualitative conclusion.
+- **The Score head's v1 numbers (MAE=0.24, Pearson r=0.29) were
+  trustworthy as "this doesn't work," and that prediction held up under
+  a real follow-up test** — the bi-encoder fix (§2) confirmed the
+  qualitative conclusion (weak performance) while substantially moving
+  the exact numbers (r: 0.29→0.49), exactly the kind of instability single
+  numbers on undertrained models can show. The updated numbers (MAE=0.2174,
+  r=0.4883) are similarly to be read as "meaningfully better, still not
+  competitive," not as precise measurements.
 
 ## 4. An honest estimate of what % of Jev's value proposition this reproduces
 
@@ -128,7 +142,7 @@ much this toy reproduction actually demonstrates:
 | Non-autoregressive, single forward pass | **Yes, fully.** Architecturally real: one `encode()` call, typed heads read from it. | High |
 | Fixed-schema output ("cannot emit malformed output") | **Yes, fully.** Structural, not learned — heads are fixed-shape linear projections. | High |
 | Calibrated confidence that tracks real accuracy | **Partially.** True for Noul/Choice on in-distribution data across multiple calibration methods. Not measured with statistical rigor (no CI on ECE). Explicitly does NOT hold for "confident but wrong on out-of-scope input" (see §5). | Medium |
-| Multiple typed decision shapes (Noul/Choice/Score) | **Two of three work.** Score is a real, unresolved failure at this scale. | Low-Medium |
+| Multiple typed decision shapes (Noul/Choice/Score) | **Two of three work well; the third (Score) was diagnosed and partially fixed** (r: 0.29→0.49 via a bi-encoder head on the same frozen encoder), but still isn't competitive with real similarity models. | Low-Medium |
 | Speed/cost advantage over LLMs (40-200x claimed) | **Not independently verified.** This repo's own model is fast (1.51ms/example measured), but there is no LLM API in this sandbox to benchmark against directly — the comparison uses a documented industry reference figure for LLM latency, not a live measurement. The *shape* of the claim (a small non-autoregressive forward pass beats an LLM API round-trip) is directionally very plausible and structurally makes sense, but "40-200x" specifically is Jev's number, not something this repo measured against a real LLM. | Low (weakest-evidenced claim in this repo) |
 | Domain breadth / general-purpose typed questions over arbitrary schemas | **No.** Three narrow, single-domain tasks (spam/ham, 77 banking intents, sentence similarity), each needing its own dataset and largely its own calibration. Jev's actual product claim is schema generality across arbitrary domains without per-domain retraining — nothing here demonstrates that. | Very Low |
 
@@ -153,11 +167,16 @@ more time"):**
   a 96-dim/3-layer encoder. Anything meaningfully larger, or a genuine
   hyperparameter search (rather than the two or three configurations
   actually tried here), was out of reach in the time available.
-- **No sentence-pair architecture for the Score task.** This isn't a
-  data or compute problem, it's an architecture gap — mean-pooling two
-  concatenated sentences through one encoder is a known-weak approach
-  for semantic similarity, and fixing it needs a different model
-  structure, not just more of the same training.
+- **Encoder capacity/pretraining for the Score task (revised).** The
+  original architecture gap (mean-pooling two concatenated sentences
+  through one encoder) was diagnosed and fixed with a bi-encoder head
+  (§2) — that part turned out to be a real bug, not a fundamental
+  limit, and cost about an hour to find and fix. What remains after the
+  fix (r≈0.49, still short of 0.7-0.9+) is a genuine encoder-capacity/
+  pretraining ceiling: the same "no HuggingFace Hub access" bottleneck
+  above, showing up specifically hard on a task (semantic similarity)
+  that leans more on representation quality than the classification
+  tasks did.
 - **Small held-out test sets (800-3,080 examples per task).** Enough for
   point estimates, not enough (without bootstrapping, which wasn't done)
   for tight confidence intervals on ECE or accuracy.

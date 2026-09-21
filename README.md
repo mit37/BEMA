@@ -74,20 +74,31 @@ step never touched):
 |--------|-----------------|-----------------|------------------|
 | Noul   | acc / ECE       | 0.9737 / 0.0216 | 0.9737 / 0.0129 (temp. scaling) |
 | Choice | acc / ECE       | 0.8120 / 0.0438 | 0.8120 / 0.0315 (temp. scaling) |
-| Score  | MAE / Pearson r | 0.2442 / 0.2941 | — (regression, not calibrated the same way) |
+| Score (v1, concat+meanpool+MLP) | MAE / Pearson r | 0.2442 / 0.2941 | — (regression, not calibrated the same way) |
 
 Noul and Choice calibrate well and accuracy is solid (82% over 77 real
-classes is a strong real result, not a toy number). **Score is a genuine
-failure**, not a rounding artifact: Pearson r=0.29 on STS-B is weak — a
-competent sentence-similarity model gets 0.7–0.9+, and even simple averaged
-word-vector baselines typically clear 0.5. Training MAE barely moved across
-12 epochs (0.2657 → 0.2559). The likely cause: mean-pooling two
-concatenated sentences through a small from-scratch byte-level-BPE encoder
-with no cross-sentence attention structure just isn't expressive enough for
-semantic similarity — this task needs either a bigger/pretrained encoder or
-a proper sentence-pair architecture (e.g. cross-attention or a
-Siamese/bi-encoder with a learned distance), neither of which this toy setup
-has. Reported honestly rather than hidden or reframed as "future work."
+classes is a strong real result, not a toy number). **Score (v1) was
+initially a genuine failure**, not a rounding artifact: Pearson r=0.29 on
+STS-B is weak — a competent sentence-similarity model gets 0.7–0.9+, and
+even simple averaged word-vector baselines typically clear 0.5.
+
+**Follow-up diagnosis and partial fix** (`diagnose_score_head.py`,
+`fix_score_head.py`): the failure was the scoring *architecture*, not the
+encoder. Encoding the two sentences SEPARATELY through the exact same
+trained encoder (no retraining) and just taking cosine similarity — zero
+additional training — already scores r=0.48, beating the trained v1 head
+outright. Replacing the head with a standard bi-encoder/SBERT-style
+regression (`[u, v, |u-v|]` features from the two separately-encoded
+sentences, fit on real STS-B train, frozen encoder) gets MAE 0.2442→0.2174
+and Pearson r 0.2941→0.4883, roughly matching the untrained-cosine ceiling.
+The remaining gap to a "competent" 0.7–0.9+ model is now most plausibly
+encoder capacity/pretraining, not the scoring architecture — concatenating
+a sentence pair into one string and mean-pooling was actively destroying
+signal a bi-encoder recovers "for free" from the same weights. Left as
+future work: fine-tuning the shared encoder itself against a similarity
+objective (not just the frozen-trunk regression head done here), or
+swapping in pretrained weights if this sandbox's network policy ever
+allows it.
 
 ### Phase 4: calibration method sweep (`calibration_sweep.py`, `results_log.csv`)
 
@@ -158,6 +169,10 @@ python3 prepare_multitask.py && python3 train_multitask.py && python3 calibrate_
 python3 serve_multitask.py --demo
 python3 calibration_sweep.py   # Phase 4
 python3 ood_stress_test.py     # Phase 5
+
+# Score head follow-up (diagnosis + bi-encoder fix)
+python3 diagnose_score_head.py
+python3 fix_score_head.py
 ```
 
 ## Where this stops being "a Jev"
@@ -165,9 +180,10 @@ python3 ood_stress_test.py     # Phase 5
   production-grade pretrained backbone — genuinely blocked by this sandbox's
   network policy (confirmed by direct connection tests), not a shortcut
   taken by choice.
-- The Score head does not work well (Pearson r=0.29) — this architecture
-  cannot yet demonstrate a working continuous-decision type, only a binary
-  and a multi-class one.
+- The Score head, even after the bi-encoder fix, tops out around Pearson
+  r=0.49 — real signal, well short of a "competent" 0.7-0.9+ similarity
+  model. The scoring-architecture bug is fixed; encoder capacity/pretraining
+  is the remaining, harder-to-fix bottleneck.
 - No single real dataset in this repo has all three label types on the same
   text, so "one state, many typed questions" is demonstrated
   architecturally (one `encode()` call feeds all heads) rather than proven
