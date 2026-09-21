@@ -44,52 +44,6 @@ val_loader = DataLoader(val_ds, batch_size=64)
 test_loader = DataLoader(test_ds, batch_size=64)
 
 device = "cuda" if torch.cuda.is_available() else "cpu"
-print(f"Device: {device}")
-
-model = JevCloneEncoder(vocab_size=len(vocab), max_len=max_len).to(device)
-
-# Class weighting for imbalance (747 spam vs 4825 ham)
-n_pos = sum(r["label"] for r in data["train"])
-n_neg = len(data["train"]) - n_pos
-pos_weight = torch.tensor([n_neg / n_pos]).to(device)
-criterion = nn.BCEWithLogitsLoss(pos_weight=pos_weight)
-
-optimizer = torch.optim.AdamW(model.parameters(), lr=1e-3, weight_decay=1e-4)
-
-EPOCHS = 15
-best_val_acc = 0
-best_state = None
-
-for epoch in range(EPOCHS):
-    model.train()
-    total_loss = 0
-    for ids, mask, label in train_loader:
-        ids, mask, label = ids.to(device), mask.to(device), label.to(device)
-        optimizer.zero_grad()
-        logit = model(ids, mask)
-        loss = criterion(logit, label)
-        loss.backward()
-        optimizer.step()
-        total_loss += loss.item() * ids.size(0)
-
-    model.eval()
-    correct, n = 0, 0
-    with torch.no_grad():
-        for ids, mask, label in val_loader:
-            ids, mask, label = ids.to(device), mask.to(device), label.to(device)
-            logit = model(ids, mask)
-            pred = (torch.sigmoid(logit) > 0.5).float()
-            correct += (pred == label).sum().item()
-            n += label.size(0)
-    val_acc = correct / n
-    print(f"Epoch {epoch+1:2d}  train_loss={total_loss/len(train_ds):.4f}  val_acc={val_acc:.4f}")
-    if val_acc > best_val_acc:
-        best_val_acc = val_acc
-        best_state = {k: v.clone() for k, v in model.state_dict().items()}
-
-model.load_state_dict(best_state)
-torch.save(model.state_dict(), "jev_clone.pt")
-print(f"\nBest val acc: {best_val_acc:.4f} — saved jev_clone.pt")
 
 
 def evaluate_calibration(model, loader, n_bins=10, label=""):
@@ -132,10 +86,62 @@ def evaluate_calibration(model, loader, n_bins=10, label=""):
     return acc, ece, all_probs, all_preds, all_labels
 
 
-print("\n" + "=" * 50)
-print("CALIBRATION CHECK — BEFORE any calibration fix")
-print("=" * 50)
-test_acc, test_ece, probs, preds, labels = evaluate_calibration(model, test_loader, label="test (uncalibrated)")
+def train_model():
+    print(f"Device: {device}")
+    model = JevCloneEncoder(vocab_size=len(vocab), max_len=max_len).to(device)
 
-with open("eval_raw.pkl", "wb") as f:
-    pickle.dump({"acc": test_acc, "ece": test_ece, "probs": probs, "preds": preds, "labels": labels}, f)
+    # Class weighting for imbalance (747 spam vs 4825 ham)
+    n_pos = sum(r["label"] for r in data["train"])
+    n_neg = len(data["train"]) - n_pos
+    pos_weight = torch.tensor([n_neg / n_pos]).to(device)
+    criterion = nn.BCEWithLogitsLoss(pos_weight=pos_weight)
+
+    optimizer = torch.optim.AdamW(model.parameters(), lr=1e-3, weight_decay=1e-4)
+
+    EPOCHS = 15
+    best_val_acc = 0
+    best_state = None
+
+    for epoch in range(EPOCHS):
+        model.train()
+        total_loss = 0
+        for ids, mask, label in train_loader:
+            ids, mask, label = ids.to(device), mask.to(device), label.to(device)
+            optimizer.zero_grad()
+            logit = model(ids, mask)
+            loss = criterion(logit, label)
+            loss.backward()
+            optimizer.step()
+            total_loss += loss.item() * ids.size(0)
+
+        model.eval()
+        correct, n = 0, 0
+        with torch.no_grad():
+            for ids, mask, label in val_loader:
+                ids, mask, label = ids.to(device), mask.to(device), label.to(device)
+                logit = model(ids, mask)
+                pred = (torch.sigmoid(logit) > 0.5).float()
+                correct += (pred == label).sum().item()
+                n += label.size(0)
+        val_acc = correct / n
+        print(f"Epoch {epoch+1:2d}  train_loss={total_loss/len(train_ds):.4f}  val_acc={val_acc:.4f}")
+        if val_acc > best_val_acc:
+            best_val_acc = val_acc
+            best_state = {k: v.clone() for k, v in model.state_dict().items()}
+
+    model.load_state_dict(best_state)
+    torch.save(model.state_dict(), "jev_clone.pt")
+    print(f"\nBest val acc: {best_val_acc:.4f} — saved jev_clone.pt")
+    return model
+
+
+if __name__ == "__main__":
+    model = train_model()
+
+    print("\n" + "=" * 50)
+    print("CALIBRATION CHECK — BEFORE any calibration fix")
+    print("=" * 50)
+    test_acc, test_ece, probs, preds, labels = evaluate_calibration(model, test_loader, label="test (uncalibrated)")
+
+    with open("eval_raw.pkl", "wb") as f:
+        pickle.dump({"acc": test_acc, "ece": test_ece, "probs": probs, "preds": preds, "labels": labels}, f)

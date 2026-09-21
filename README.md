@@ -12,9 +12,18 @@ one forward pass — no token generation.
   with a typed "Noul" head (binary decision) and Score output.
 - **Calibration**: temperature scaling (Guo et al. 2017) fit on a held-out
   validation split, measured against a separate held-out test split.
-- **Results**: 97.4% test accuracy; Expected Calibration Error (ECE) dropped
-  from 0.0238 (raw) to 0.0081 (calibrated) — a 66% reduction, meaning the
-  confidence scores now roughly mean what they claim to mean.
+- **Results** (verified by a clean re-run of the pipeline on 2026-09-21, seed
+  fixed at 42): 97.13% test accuracy; Expected Calibration Error (ECE) dropped
+  from 0.0231 (raw) to 0.0131 (calibrated) — a 43.4% reduction, meaning the
+  confidence scores now more closely track empirical accuracy, though not as
+  cleanly as an earlier run of this code reported (97.4% acc, ECE
+  0.0238→0.0081, 66% reduction). Despite the fixed seed, exact numbers are
+  NOT bit-reproducible run to run in this environment (likely PyTorch/CPU
+  non-determinism in the transformer encoder's attention op) — treat the
+  qualitative result (calibration meaningfully improves ECE without hurting
+  accuracy) as the reliable claim, not the specific decimal values. Re-run
+  `train.py` + `calibrate.py` yourself for current numbers rather than
+  trusting either figure quoted here.
 
 ## Files
 - `prepare_data.py` — loads spam.csv, builds vocab, train/val/test splits
@@ -25,7 +34,7 @@ one forward pass — no token generation.
 
 ## Run it
 ```
-pip install torch transformers scikit-learn pandas
+pip install -r requirements.txt
 python3 prepare_data.py
 python3 train.py
 python3 calibrate.py
