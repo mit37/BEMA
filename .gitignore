@@ -1,0 +1,17 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+
+# Model checkpoints (large, reproducible from train.py/calibrate.py)
+*.pt
+*.pth
+
+# Prepared data cache (reproducible from prepare_data.py)
+data/prepared.pkl
+eval_raw.pkl
+
+# OS
+.DS_Store
