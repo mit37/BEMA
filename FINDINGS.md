@@ -101,28 +101,36 @@ English) — see README.md for full dataset provenance and licensing.
 - The Choice head's 81-83% accuracy on 77 real classes is a solid,
   reproducible number from a genuinely small toy encoder.
 
-**Not trustworthy as exact figures, and this is explicitly documented in
-the code/README rather than hidden:**
+**Not trustworthy as exact figures, but now with a real measured range
+instead of a guess — this is explicitly documented in the code/README
+rather than hidden:**
 - **Run-to-run exact values are not bit-reproducible even with a fixed
-  seed.** Three separate clean re-runs of the single-task spam pipeline
-  in this same environment, same seed (42), produced accuracy ranging
-  97.13%-97.85% and ECE reduction ranging 43%-75%. This is very likely
-  PyTorch/CPU non-determinism in the transformer attention implementation
-  across environment/library versions, not a code bug — but it means any
-  single decimal number quoted from a single run (including in this
-  document, including in earlier commits' messages) should be treated as
-  "roughly this, within a few points," not exact. Anyone building on this
-  work should re-run the pipeline and look at the range, not trust one
-  number.
-- **All calibration numbers come from ONE held-out split per dataset, not
-  cross-validation or repeated splits.** A single 70/15/15 train/val/test
-  split (spam) or the dataset's own provided splits (BANKING77, STS-B)
-  each give one ECE estimate. With test sets in the 800-3,000 example
-  range, the ECE estimates themselves have non-trivial variance that this
-  repo does not quantify (no bootstrap confidence intervals were
-  computed). Before anyone relies on a specific ECE number as a real
-  guarantee, it needs bootstrapped or cross-validated uncertainty bounds,
-  which this toy-scale project did not have the scope to add.
+  seed**, and `seed_variation_sweep.py` now quantifies this properly for
+  the spam task instead of leaving it as an anecdote: 3 independent
+  seeds (42, 123, 2024), each with its own data split, tokenizer, and
+  training run, gave calibrated accuracy 0.9785-0.9833 (mean 0.9801, std
+  0.0023) and calibrated ECE 0.0039-0.0070 (mean 0.0054, std 0.0013).
+  That's a tight, reassuring range — accuracy varies by well under a
+  percentage point, and calibrated ECE stays under 0.007 in every run.
+  Earlier single-run numbers in this repo's own commit history (e.g. an
+  early run showing 97.13% acc / ECE 0.0131, another showing 97.85% /
+  0.0039) sit at the edges of or slightly outside this 3-seed range,
+  which is itself informative: a 3-seed sweep narrows the honest
+  uncertainty band a lot compared to one run, but three seeds is still
+  a small sample, and single historical numbers can land just outside
+  it. Treat any single decimal number in this repo (including this one)
+  as "within this measured range," not as an exact guarantee — and note
+  this sweep was run once, for one task (Noul); the Choice and Score
+  heads have not had the same treatment and their numbers carry the
+  same un-quantified uncertainty this section describes.
+- **Calibration numbers otherwise still come from ONE held-out split per
+  dataset**, not cross-validation or bootstrapping within a single split.
+  The seed sweep above measures cross-run variance (different splits
+  entirely), which is a stronger and more honest signal than a
+  within-split bootstrap would have been, but it was only done for one
+  of the three tasks due to the ~3-5 minutes of compute per seed adding
+  up across tasks. Extending it to Choice and Score is straightforward
+  future work using the same script as a template.
 - **The Score head's v1 numbers (MAE=0.24, Pearson r=0.29) were
   trustworthy as "this doesn't work," and that prediction held up under
   a real follow-up test** — the bi-encoder fix (§2) confirmed the
@@ -141,7 +149,7 @@ much this toy reproduction actually demonstrates:
 |---|---|---|
 | Non-autoregressive, single forward pass | **Yes, fully.** Architecturally real: one `encode()` call, typed heads read from it. | High |
 | Fixed-schema output ("cannot emit malformed output") | **Yes, fully.** Structural, not learned — heads are fixed-shape linear projections. | High |
-| Calibrated confidence that tracks real accuracy | **Partially.** True for Noul/Choice on in-distribution data across multiple calibration methods. Not measured with statistical rigor (no CI on ECE). Explicitly does NOT hold for "confident but wrong on out-of-scope input" (see §5). | Medium |
+| Calibrated confidence that tracks real accuracy | **Mostly, for the Noul task specifically.** True for Noul/Choice on in-distribution data across multiple calibration methods; for Noul, now backed by a real 3-seed uncertainty range (calibrated ECE 0.0039-0.0070, §3) rather than one number. Choice and Score have not had the same multi-seed treatment. Explicitly does NOT hold for "confident but wrong on out-of-scope input" (see §5). | Medium-High for Noul, Medium for Choice/Score |
 | Multiple typed decision shapes (Noul/Choice/Score) | **Two of three work well; the third (Score) was diagnosed and partially fixed** (r: 0.29→0.49 via a bi-encoder head on the same frozen encoder), but still isn't competitive with real similarity models. | Low-Medium |
 | Speed/cost advantage over LLMs (40-200x claimed) | **Not independently verified.** This repo's own model is fast (1.51ms/example measured), but there is no LLM API in this sandbox to benchmark against directly — the comparison uses a documented industry reference figure for LLM latency, not a live measurement. The *shape* of the claim (a small non-autoregressive forward pass beats an LLM API round-trip) is directionally very plausible and structurally makes sense, but "40-200x" specifically is Jev's number, not something this repo measured against a real LLM. | Low (weakest-evidenced claim in this repo) |
 | Domain breadth / general-purpose typed questions over arbitrary schemas | **No.** Three narrow, single-domain tasks (spam/ham, 77 banking intents, sentence similarity), each needing its own dataset and largely its own calibration. Jev's actual product claim is schema generality across arbitrary domains without per-domain retraining — nothing here demonstrates that. | Very Low |
