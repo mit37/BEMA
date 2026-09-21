@@ -15,6 +15,7 @@ data/tokenizer.json
 data/prepared_multitask.pkl
 data/tokenizer_multitask.json
 eval_raw.pkl
+ood_results.pkl
 
 # OS
 .DS_Store
