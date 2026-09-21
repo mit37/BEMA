@@ -187,17 +187,17 @@ def run_seed(seed):
 
     raw_acc, raw_ece = evaluate(calibrated=False)
     cal_acc, cal_ece = evaluate(calibrated=True)
-    return raw_acc, raw_ece, cal_acc, cal_ece, T.item()
+    return raw_acc, raw_ece, cal_acc, cal_ece, T.item(), len(data["test"])
 
 
 if __name__ == "__main__":
     results = []
     for seed in SEEDS:
         print(f"\n=== seed={seed} ===")
-        raw_acc, raw_ece, cal_acc, cal_ece, T = run_seed(seed)
+        raw_acc, raw_ece, cal_acc, cal_ece, T, n_test = run_seed(seed)
         print(f"raw:  acc={raw_acc:.4f} ece={raw_ece:.4f}")
-        print(f"cal:  acc={cal_acc:.4f} ece={cal_ece:.4f}  (T={T:.3f})")
-        results.append((seed, raw_acc, raw_ece, cal_acc, cal_ece, T))
+        print(f"cal:  acc={cal_acc:.4f} ece={cal_ece:.4f}  (T={T:.3f}, n_test={n_test})")
+        results.append((seed, raw_acc, raw_ece, cal_acc, cal_ece, T, n_test))
 
     raw_accs = [r[1] for r in results]
     raw_eces = [r[2] for r in results]
@@ -206,7 +206,12 @@ if __name__ == "__main__":
 
     def stats(xs):
         m = sum(xs) / len(xs)
-        var = sum((x - m) ** 2 for x in xs) / len(xs)
+        # Sample variance (Bessel's correction, divide by n-1): the mean is
+        # itself estimated from these same n points, so dividing by n would
+        # be the biased population-variance estimator and understate std
+        # for small n (about 18% low at n=3).
+        denom = len(xs) - 1 if len(xs) > 1 else 1
+        var = sum((x - m) ** 2 for x in xs) / denom
         return m, var ** 0.5, min(xs), max(xs)
 
     print("\n" + "=" * 70)
@@ -222,7 +227,7 @@ if __name__ == "__main__":
         writer = csv.writer(f)
         if not file_exists:
             writer.writerow(["timestamp_utc", "task", "method", "accuracy", "ece", "n_test"])
-        for seed, raw_acc, raw_ece, cal_acc, cal_ece, T in results:
-            writer.writerow([ts, "noul_seed_sweep", f"raw(seed={seed})", f"{raw_acc:.4f}", f"{raw_ece:.4f}", 836])
-            writer.writerow([ts, "noul_seed_sweep", f"temperature(seed={seed},T={T:.3f})", f"{cal_acc:.4f}", f"{cal_ece:.4f}", 836])
+        for seed, raw_acc, raw_ece, cal_acc, cal_ece, T, n_test in results:
+            writer.writerow([ts, "noul_seed_sweep", f"raw(seed={seed})", f"{raw_acc:.4f}", f"{raw_ece:.4f}", n_test])
+            writer.writerow([ts, "noul_seed_sweep", f"temperature(seed={seed},T={T:.3f})", f"{cal_acc:.4f}", f"{cal_ece:.4f}", n_test])
     print(f"\nAppended {2*len(SEEDS)} rows to {RESULTS_PATH}")

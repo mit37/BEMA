@@ -129,10 +129,15 @@ def evaluate_binary(logits, labels, get_conf):
     return acc, ece_from_conf_correct(conf, correct)
 
 
-def evaluate_multiclass(logits, labels, get_probs):
-    probs = get_probs(logits)
-    preds = probs.argmax(axis=-1)
-    conf = probs.max(axis=-1)
+def evaluate_multiclass(logits, labels, get_preds_conf):
+    """get_preds_conf(logits) -> (preds, conf). Kept as two explicit arrays,
+    not a recalibrated probability matrix whose argmax is taken -- isotonic
+    regression recalibrates the CONFIDENCE value only and must never be
+    allowed to silently change which class was predicted (see calibration_sweep.py
+    git history: an earlier version overwrote one class's probability in
+    place and re-took argmax over the doctored array, which could flip the
+    recorded prediction to a class the model never actually chose)."""
+    preds, conf = get_preds_conf(logits)
     correct = (preds == labels).astype(int)
     acc = correct.mean()
     return acc, ece_from_conf_correct(conf, correct)
@@ -162,33 +167,41 @@ def sweep_task(task_name, val_logits, val_labels, test_logits, test_labels, mult
         acc, ece = evaluate_binary(test_logits, test_labels, lambda l: iso.predict(sigmoid(l)))
         results.append(("isotonic", acc, ece))
     else:
-        raw_acc, raw_ece = evaluate_multiclass(test_logits, test_labels, softmax)
+        def raw_preds_conf(l):
+            p = softmax(l)
+            return p.argmax(axis=-1), p.max(axis=-1)
+
+        raw_acc, raw_ece = evaluate_multiclass(test_logits, test_labels, raw_preds_conf)
         results.append(("raw", raw_acc, raw_ece))
 
         T = fit_temperature_multiclass(val_logits, val_labels)
-        acc, ece = evaluate_multiclass(test_logits, test_labels, lambda l: softmax(l / T))
+
+        def temp_preds_conf(l):
+            p = softmax(l / T)
+            return p.argmax(axis=-1), p.max(axis=-1)
+
+        acc, ece = evaluate_multiclass(test_logits, test_labels, temp_preds_conf)
         results.append((f"temperature(T={T:.3f})", acc, ece))
 
         # Isotonic regression on the max-softmax confidence only (1-D),
-        # a common simplification for multi-class ECE calibration -- note
-        # this recalibrates confidence, not the full class distribution.
+        # a common simplification for multi-class ECE calibration. This
+        # recalibrates the CONFIDENCE VALUE ONLY -- the prediction (argmax)
+        # always comes from the raw, uncalibrated softmax and is never
+        # touched by the isotonic fit, so isotonic scaling cannot change
+        # which class is reported as predicted.
         val_probs = softmax(val_logits)
         val_conf = val_probs.max(axis=-1)
         val_correct = (val_probs.argmax(axis=-1) == val_labels).astype(int)
         iso = IsotonicRegression(out_of_bounds="clip")
         iso.fit(val_conf, val_correct)
 
-        def iso_probs(l):
+        def iso_preds_conf(l):
             p = softmax(l)
-            top = p.argmax(axis=-1)
-            conf = iso.predict(p.max(axis=-1))
-            # Rescale so the reported "probs" still sum sensibly for eval_multiclass
-            out = p.copy()
-            for i, t in enumerate(top):
-                out[i, t] = conf[i]
-            return out
+            preds = p.argmax(axis=-1)  # prediction: always from raw softmax
+            conf = iso.predict(p.max(axis=-1))  # confidence: isotonic-recalibrated
+            return preds, conf
 
-        acc, ece = evaluate_multiclass(test_logits, test_labels, iso_probs)
+        acc, ece = evaluate_multiclass(test_logits, test_labels, iso_preds_conf)
         results.append(("isotonic(max-conf)", acc, ece))
 
     return results

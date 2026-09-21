@@ -114,10 +114,14 @@ with torch.no_grad():
         conf, pred = probs.max(dim=-1)
         choice_confs_on_junk.extend(conf.tolist())
 
-choice_val_loader = DataLoader(TaskDataset(data["choice"]["val"], torch.long), batch_size=64)
+# Use the TEST split, not val -- choice_temperature was fit on val
+# (calibrate_multitask.py), so val is not a clean held-out baseline here.
+# This mirrors how Test 1's Noul in-distribution baseline correctly uses
+# the test split rather than the split its own temperature was fit on.
+choice_indist_loader = DataLoader(TaskDataset(data["choice"]["test"], torch.long), batch_size=64)
 choice_confs_in_dist = []
 with torch.no_grad():
-    for ids, mask, label in choice_val_loader:
+    for ids, mask, label in choice_indist_loader:
         ids, mask = ids.to(device), mask.to(device)
         pooled = model.encode(ids, mask)
         logits = model.choice_head(pooled) / model.choice_temperature

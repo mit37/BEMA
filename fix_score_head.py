@@ -144,12 +144,34 @@ with torch.no_grad():
     test_mae = (test_pred - y_test_d).abs().mean().item()
     test_pearson = torch.corrcoef(torch.stack([test_pred.cpu(), y_test]))[0, 1].item()
 
+# Recompute the two comparison baselines dynamically against THIS run's
+# frozen encoder and THIS run's test pairs, rather than hardcoding numbers
+# from a specific earlier run (which would silently go stale after any
+# retraining of the shared encoder).
+import torch.nn.functional as F
+
+cos_test = F.cosine_similarity(u_test, v_test)
+cos_pearson = torch.corrcoef(torch.stack([cos_test.cpu(), y_test]))[0, 1].item()
+
+with torch.no_grad():
+    concat_preds = []
+    for s1, s2, score in test_pairs:
+        ids, mask = encode(f"{s1} <sep> {s2}")
+        ids_t = torch.tensor([ids], dtype=torch.long).to(device)
+        mask_t = torch.tensor([mask], dtype=torch.long).to(device)
+        pooled = model.encode(ids_t, mask_t)
+        pred = torch.sigmoid(model.score_head(pooled).squeeze(-1))
+        concat_preds.append(pred.item())
+    concat_preds_t = torch.tensor(concat_preds)
+    concat_mae = (concat_preds_t - y_test).abs().mean().item()
+    concat_pearson = torch.corrcoef(torch.stack([concat_preds_t, y_test]))[0, 1].item()
+
 print("\n" + "=" * 60)
 print("Score head architecture comparison (all on the SAME frozen encoder, same held-out test set)")
 print("=" * 60)
 print(f"{'Approach':40s} {'MAE':>8s} {'Pearson r':>10s}")
-print(f"{'Original concat+meanpool+MLP (trained)':40s} {0.2442:>8.4f} {0.2941:>10.4f}")
-print(f"{'Untrained cosine sim (no training at all)':40s} {'n/a':>8s} {0.4838:>10.4f}")
+print(f"{'Original concat+meanpool+MLP (trained)':40s} {concat_mae:>8.4f} {concat_pearson:>10.4f}")
+print(f"{'Untrained cosine sim (no training at all)':40s} {'n/a':>8s} {cos_pearson:>10.4f}")
 print(f"{'Bi-encoder SBERT-features MLP (trained)':40s} {test_mae:>8.4f} {test_pearson:>10.4f}")
 
 torch.save(biencoder_head.state_dict(), "score_biencoder_head.pt")
