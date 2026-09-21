@@ -6,7 +6,10 @@ calibrated decision out, one non-autoregressive forward pass) found when
 actually built and tested, rather than assumed. All numbers below are
 measured on held-out test splits the relevant fitting step never touched,
 on real human-labeled data (SMS Spam Collection, BANKING77, STS Benchmark
-English) — see README.md for full dataset provenance and licensing.
+English) — see README.md's "Dataset provenance & licensing" section for
+what is and isn't independently verified for each dataset, including one
+real, unresolved licensing question about the STS-B data that is flagged
+there rather than resolved.
 
 ## 1. What worked
 
@@ -17,7 +20,7 @@ English) — see README.md for full dataset provenance and licensing.
 - **Multi-class decisions (Choice) work at real scale.** 77 real classes
   (BANKING77), 81-83% accuracy from a from-scratch toy encoder — a
   legitimately hard task, not a toy 3-5-class demo, and calibration
-  (isotonic regression, in this case) cut ECE from 0.0438 to 0.0198.
+  (isotonic regression, in this case) cut ECE from 0.0438 to 0.0189.
 - **One shared encoder genuinely serves multiple typed heads.** The
   architectural claim — one `encode()` forward pass, multiple typed
   questions answered from the same pooled state — is real in this repo,
@@ -28,20 +31,29 @@ English) — see README.md for full dataset provenance and licensing.
   The Phase 4 sweep (`calibration_sweep.py`, `results_log.csv`) found
   Platt scaling beat temperature scaling for the binary head (ECE 0.0088
   vs 0.0129) while isotonic regression beat it for the multi-class head
-  (0.0198 vs 0.0315). A serious implementation of this category should
+  (0.0189 vs 0.0315). A serious implementation of this category should
   not assume temperature scaling is always the right calibration method.
+  (A real bug in the multi-class isotonic implementation was found and
+  fixed during a later review pass -- see §3's note on this repo's own
+  review process -- which changed this number slightly without changing
+  the qualitative conclusion.)
 - **Inference is fast**, as claimed. 1.51ms mean CPU latency for a single
   example across all three typed heads, in one forward pass, on a toy
   model with no GPU. See §4 for why this number needs a caveat despite
   being real.
 - **Graceful degradation on real domain shift, at least for the binary
-  head.** Evaluated on real, human-written text the spam model was never
-  trained on (BANKING77 customer-support questions, which are provably
-  never spam by how the dataset was built), accuracy dropped from 97.37%
-  to 95.24% AND mean confidence dropped from 0.983 to 0.909 — the model
-  got both less accurate and appropriately less confident under shift,
-  rather than staying falsely confident while wrong. That's the
-  calibration promise actually holding up somewhere it wasn't fit.
+  head's confidence.** Evaluated on real, human-written text the spam
+  model was never trained on (BANKING77 customer-support questions, which
+  are provably never spam by how the dataset was built), mean confidence
+  dropped from 0.983 (in-distribution) to 0.909 on this real OOD text —
+  a same-metric, appropriately-calibrated-looking degradation under
+  shift. (An earlier draft of this document also cited "accuracy dropped
+  from 97.37% to 95.24%" as a matching before/after pair; that 95.24%
+  figure is actually a pure true-negative rate on an all-ham OOD set,
+  not the same statistic as the 97.37% blended in-distribution accuracy,
+  so it has been removed as a direct comparison here — see README.md's
+  Phase 5 section for the corrected framing.) The confidence result is
+  the calibration promise actually holding up somewhere it wasn't fit.
 
 ## 2. What didn't work (and what was fixable vs. not)
 
@@ -82,8 +94,10 @@ English) — see README.md for full dataset provenance and licensing.
   correctness, under distribution shift.** This is the most important
   negative-but-informative result in this repo — see §5.
 - **The Choice head's uncertainty response to out-of-scope input is real
-  but incomplete.** Confidence dropped from 0.794 (in-distribution) to
-  0.403 (on real SMS text with no valid banking-intent answer) — a
+  but incomplete.** Confidence dropped from 0.795 (in-distribution,
+  measured on the held-out test split, not the split its own temperature
+  was fit on) to 0.403 (on real SMS text with no valid banking-intent
+  answer) — a
   meaningful, real signal. But 0.403 is still ~30x higher than the
   ~0.013 a maximally uncertain 77-way classifier would show. The model
   knows *something* is off, but doesn't know it's completely off-schema.
@@ -104,22 +118,28 @@ English) — see README.md for full dataset provenance and licensing.
 **Not trustworthy as exact figures, but now with a real measured range
 instead of a guess — this is explicitly documented in the code/README
 rather than hidden:**
-- **Run-to-run exact values are not bit-reproducible even with a fixed
-  seed**, and `seed_variation_sweep.py` now quantifies this properly for
-  the spam task instead of leaving it as an anecdote: 3 independent
-  seeds (42, 123, 2024), each with its own data split, tokenizer, and
-  training run, gave calibrated accuracy 0.9785-0.9833 (mean 0.9801, std
-  0.0023) and calibrated ECE 0.0039-0.0070 (mean 0.0054, std 0.0013).
-  That's a tight, reassuring range — accuracy varies by well under a
-  percentage point, and calibrated ECE stays under 0.007 in every run.
-  Earlier single-run numbers in this repo's own commit history (e.g. an
-  early run showing 97.13% acc / ECE 0.0131, another showing 97.85% /
-  0.0039) sit at the edges of or slightly outside this 3-seed range,
-  which is itself informative: a 3-seed sweep narrows the honest
-  uncertainty band a lot compared to one run, but three seeds is still
-  a small sample, and single historical numbers can land just outside
-  it. Treat any single decimal number in this repo (including this one)
-  as "within this measured range," not as an exact guarantee — and note
+- **Cross-seed variance is real and now measured; a claim that the SAME
+  seed and code were non-reproducible was checked and was wrong.** An
+  earlier draft of this document stated that re-running the identical
+  pipeline with the identical fixed seed produced different numbers
+  (citing an early 97.13% acc / ECE 0.0131 run vs. a later 97.85% / 0.0039
+  run as if both were seed=42 on the same code). A subsequent fresh-clone
+  sanity check disproved this: the early number was from an OLDER version
+  of the code (before the encoder/tokenizer upgrade in a later commit),
+  and the later number is what the CURRENT code reproduces bit-for-bit,
+  every time, seed=42, verified by two independent full re-runs. There is
+  no PyTorch/CPU nondeterminism here — the earlier claim conflated a code
+  change with run-to-run noise, and has been corrected in the README.
+  What IS real and worth reporting is genuine cross-SEED variance:
+  `seed_variation_sweep.py` runs 3 independent seeds (42, 123, 2024),
+  each with its own data split, tokenizer, and training run (not the same
+  seed re-run), giving calibrated accuracy 0.9785-0.9833 (mean 0.9801,
+  std 0.0028) and calibrated ECE 0.0039-0.0070 (mean 0.0054, std 0.0015).
+  (These std values use the unbiased sample-variance formula, dividing by
+  n-1=2; an earlier version of this script divided by n=3, understating
+  std by about 18% -- fixed, and the numbers above reflect the corrected,
+  slightly wider figures.) That is still a tight, reassuring range for
+  how much a genuinely different split/init changes the outcome. Note
   this sweep was run once, for one task (Noul); the Choice and Score
   heads have not had the same treatment and their numbers carry the
   same un-quantified uncertainty this section describes.

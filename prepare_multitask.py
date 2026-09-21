@@ -14,18 +14,35 @@ shared representation space.
                             (Casanueva et al. 2020, CC-BY 4.0).
   - Score (continuous):    STS Benchmark, English portion, via the
                             stsb-multi-mt mirror (Cer et al. 2017 /
-                            May 2021 repackaging, CC-BY-SA 4.0) -- genuine
-                            human similarity judgments in [0, 5], not
+                            May 2021 repackaging) -- genuine human
+                            similarity judgments in [0, 5], not
                             synthesized. Input is the two sentences joined
                             with a literal <sep> token so a single-text
                             encoder can consume a pair.
+                            LICENSE NOTE: this is NOT a single CC-BY-SA
+                            4.0 dataset -- the underlying sentence text
+                            mixes sub-sources with their own separate
+                            terms (Microsoft Research agreement required
+                            for MSRpar/MSR-Video; Stack Exchange CC-BY-SA
+                            3.0 with per-post/per-author attribution for
+                            answers-answers/answers-forums; others).
+                            This is a real, unresolved licensing
+                            compliance question for the redistributed
+                            CSVs here -- see README.md's "Dataset
+                            provenance & licensing" section, which flags
+                            it explicitly rather than assuming it away.
 
 IMPORTANT ON PROVENANCE: none of these labels were produced by an LLM.
 Spam/ham labels are the original SMS Spam Collection curator labels.
-Banking77 categories are the original crowd-sourced intent annotations.
-STS-B scores are the original human similarity ratings (averaged over
-multiple annotators in the source study). This script only reformats
-them; it does not relabel or filter based on any model's output.
+Banking77 categories are the original crowd-sourced intent annotations
+(BANKING77's CC-BY 4.0 license was confirmed by reading the LICENSE file
+in PolyAI-LDN/task-specific-datasets directly, not just citing the
+paper). STS-B scores are the original human similarity ratings (averaged
+over multiple annotators in the source study). This script only
+reformats them; it does not relabel or filter based on any model's
+output. The "not LLM-generated" claim for all three datasets rests on
+their publication history and age (all predate widespread LLM use), not
+on this repo independently re-verifying original annotation records.
 """
 import csv
 import json
