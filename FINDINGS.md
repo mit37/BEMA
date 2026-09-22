@@ -62,6 +62,23 @@ Reviews Score task, not STS-B.
   example across all three typed heads, in one forward pass, on a toy
   model with no GPU. See §4 for why this number needs a caveat despite
   being real.
+- **Conformal prediction's coverage guarantee genuinely holds, verified
+  empirically on held-out test data — but "valid" and "useful" turn out
+  to be different questions per head.** See `CONFORMAL.md` for the full
+  writeup. Noul hit 90.91% coverage (target 90%) with tight sets, but
+  8.37% of test examples got an EMPTY prediction set (neither class
+  confident enough) — a real, honest refusal rate a product would need
+  a policy for. Choice hit 98.83% coverage (conservative, as the
+  non-randomized APS method used here is known to be) with an average
+  set size of 7 of 77 classes — informative but not tight. Score hit
+  89.85% coverage with an interval width of 1.066 on a [0,1]-scale
+  target — **wider than the entire possible output range, i.e.
+  technically valid but practically useless** — traced to a heavily
+  right-skewed error distribution (driven by class imbalance: 61% of
+  Score test examples are 5-star reviews the model predicts well,
+  alongside a harder minority it predicts poorly) that a constant-width
+  interval method cannot adapt to. This is reported as a real negative
+  result for the Score interval specifically, not smoothed over.
 - **Graceful degradation on real domain shift, at least for the binary
   head's confidence.** Evaluated on real, human-written text the spam
   model was never trained on (BANKING77 customer-support questions, which
@@ -218,6 +235,7 @@ much this toy reproduction actually demonstrates:
 | Multiple typed decision shapes (Noul/Choice/Score) | **All three now show real, working signal.** Score (Amazon Fine Food Reviews, r=0.53) is weaker than Noul/Choice but genuinely learns and generalizes, unlike the STS-B attempt it replaced (r=0.29, flat training curve). None reach a "production-grade" bar, but none is a dead task either. | Low-Medium |
 | Speed/cost advantage over LLMs (40-200x claimed) | **Not independently verified.** This repo's own model is fast (1.51ms/example measured), but there is no LLM API in this sandbox to benchmark against directly — the comparison uses a documented industry reference figure for LLM latency, not a live measurement. The *shape* of the claim (a small non-autoregressive forward pass beats an LLM API round-trip) is directionally very plausible and structurally makes sense, but "40-200x" specifically is Jev's number, not something this repo measured against a real LLM. | Low (weakest-evidenced claim in this repo) |
 | Domain breadth / general-purpose typed questions over arbitrary schemas | **No.** Three narrow, single-domain tasks (spam/ham, 77 banking intents, food-review star ratings), each needing its own dataset and largely its own calibration. Jev's actual product claim is schema generality across arbitrary domains without per-domain retraining — nothing here demonstrates that. | Very Low |
+| A formal, verifiable confidence guarantee (not just observed calibration) | **Implemented and verified (`CONFORMAL.md`), with mixed practical results per head.** Split conformal prediction's coverage guarantee held on held-out test data for all three heads (Noul 90.91%, Choice 98.83%, Score 89.85%, target 90%) — the guarantee itself is real, not just observed-and-hoped-for. But "valid" isn't "useful": Noul refuses to answer (empty set) 8.4% of the time, Choice needs an average set of 7 of 77 classes to guarantee coverage, and Score's interval is wider than its entire possible output range. A team relying on "cannot hallucinate" as a complete safety story should be asked specifically whether their confidence numbers come with this kind of guarantee, and if so, whether the resulting sets/intervals are actually narrow enough to be useful — this repo shows both can be true or false independently. | Medium (guarantee verified real; usefulness varies sharply by head) |
 
 **Overall**: this reproduction validates the *architectural* core of Jev's
 claim (one shared encoder, typed fixed-schema heads, real calibration

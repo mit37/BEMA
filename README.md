@@ -299,6 +299,21 @@ of model for real deployment should demand a typo/noise robustness number
 specifically, not just clean-test-set calibration metrics — this repo's
 own numbers would have looked strong without this test, and were not.
 
+### Conformal prediction (`conformal.py`, `CONFORMAL.md`)
+
+Temperature/Platt/isotonic scaling calibrate confidence *on average*
+across a test set. Split conformal prediction is a different, stronger
+guarantee: prediction SETS (not point estimates) with a distribution-free
+coverage guarantee verified empirically here, not just asserted. Full
+writeup in `CONFORMAL.md`; summary: the guarantee held on held-out test
+data for all three heads (Noul 90.91%, Choice 98.83%, Score 89.85%,
+target 90%), but usefulness varies sharply — Noul refuses to answer
+(empty set) 8.4% of the time, Choice needs ~7 of 77 classes on average
+to guarantee coverage, and Score's interval is wider than its entire
+possible output range (a real, reported-as-such negative result, traced
+to a heavily right-skewed error distribution a constant-width interval
+can't adapt to).
+
 ## Files
 - `prepare_data.py` / `model.py` / `train.py` / `calibrate.py` / `serve.py`
   — single-task (Noul only) pipeline.
@@ -310,6 +325,8 @@ own numbers would have looked strong without this test, and were not.
 - `ood_stress_test.py` — Phase 5 real-data distribution-shift stress test.
 - `adversarial_stress_test.py` — Phase 5b real-data adversarial/typo
   robustness stress test (the repo's sharpest finding — see above).
+- `conformal.py` — split conformal prediction (Noul/Choice/Score), verified
+  coverage guarantees; full writeup in `CONFORMAL.md`.
 - `seed_variation_sweep.py` — measures real cross-seed variance on the
   Noul pipeline's accuracy/ECE (3 independent seeds), logs to
   `results_log.csv`.
@@ -337,6 +354,7 @@ python3 serve_multitask.py --demo
 python3 calibration_sweep.py   # Phase 4
 python3 ood_stress_test.py     # Phase 5
 python3 adversarial_stress_test.py  # Phase 5b
+python3 conformal.py                # Conformal prediction (see CONFORMAL.md)
 
 # Real cross-seed uncertainty measurement (Noul pipeline, ~10-15 min for 3 seeds)
 python3 seed_variation_sweep.py
