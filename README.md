@@ -327,6 +327,11 @@ can't adapt to).
   robustness stress test (the repo's sharpest finding — see above).
 - `conformal.py` — split conformal prediction (Noul/Choice/Score), verified
   coverage guarantees; full writeup in `CONFORMAL.md`.
+- `augment_and_retrain.py` — typo-noise data augmentation retrain, testing
+  whether it fixes the Phase 5b calibration gap; results in FINDINGS.md.
+- `LLM_BENCHMARK.md` — documents why a real LLM speed/cost benchmark
+  could not be run in this sandbox (network-reachable but no usable
+  credentials), rather than leaving it silently skipped.
 - `seed_variation_sweep.py` — measures real cross-seed variance on the
   Noul pipeline's accuracy/ECE (3 independent seeds), logs to
   `results_log.csv`.
