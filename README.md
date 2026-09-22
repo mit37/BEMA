@@ -299,6 +299,20 @@ of model for real deployment should demand a typo/noise robustness number
 specifically, not just clean-test-set calibration metrics — this repo's
 own numbers would have looked strong without this test, and were not.
 
+**Two follow-up results change how this finding should be read, without
+walking it back.** First, it generalizes: CLINC150 (`CLINC150.md`, a
+second, structurally different 151-class task with its own dedicated
+tokenizer) shows the same pattern at a similar relative magnitude
+(accuracy 71.80%→45.04%, confidence only 0.7514→0.5615) — this is not a
+BANKING77-specific artifact. Second, it's partially fixable: training on
+typo-augmented data (`augment_and_retrain.py`, FINDINGS.md §5) narrowed
+BANKING77's accuracy-collapse gap by roughly half (31.4pp→16.0pp) and the
+calibration mismatch similarly, at no cost to clean-test accuracy — but
+did not close either gap, and was only validated against the same
+perturbation type used in training. Read together: this is a real,
+generalizing failure mode, and a real, meaningful, but incomplete fix
+exists for it.
+
 ### Conformal prediction (`conformal.py`, `CONFORMAL.md`)
 
 Temperature/Platt/isotonic scaling calibrate confidence *on average*
@@ -352,6 +366,12 @@ in `CLINC150.md`.
   + out-of-scope) task on a second, independently licensed dataset,
   testing whether the typo-miscalibration finding generalizes; full
   writeup in `CLINC150.md`.
+- `attention_pooling_experiment.py` — Workstream E: one scoped architecture
+  experiment (learned attention pooling vs mean pooling), same recipe
+  and data as `train_multitask.py`; results in FINDINGS.md.
+- `DATA_LICENSES.md` — the canonical, per-dataset license verification
+  record for every dataset used in this repo (required before using any
+  new dataset, per this project's own rules).
 - `LLM_BENCHMARK.md` — documents why a real LLM speed/cost benchmark
   could not be run in this sandbox (network-reachable but no usable
   credentials), rather than leaving it silently skipped.

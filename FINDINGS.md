@@ -1,14 +1,19 @@
 # Findings: reconnaissance into System-One decision models (Jev-clone)
 
-Date: 2026-09-21, updated 2026-09-22 with Phase 5b (adversarial/typo
-robustness testing). This document summarizes what an independent, from-scratch
-reproduction of Jev's core interface shape (typed state in, typed
-calibrated decision out, one non-autoregressive forward pass) found when
-actually built and tested, rather than assumed. All numbers below are
-measured on held-out test splits the relevant fitting step never touched,
-on real human-labeled data (SMS Spam Collection, BANKING77, Amazon Fine
-Food Reviews) — see README.md's "Dataset provenance & licensing" section
-for what is and isn't independently verified for each dataset.
+Date: 2026-09-21, last updated 2026-09-22 after Workstreams A-E (split
+conformal prediction, adversarial typo-noise augmentation, the real-LLM
+benchmark disposition, a second independent domain-breadth dataset, and
+one architecture experiment — see CONFORMAL.md, CLINC150.md, and the
+sections below for each). This document summarizes what an independent,
+from-scratch reproduction of Jev's core interface shape (typed state in,
+typed calibrated decision out, one non-autoregressive forward pass)
+found when actually built and tested, rather than assumed. All numbers
+below are measured on held-out test splits the relevant fitting step
+never touched, on real human-labeled data (SMS Spam Collection,
+BANKING77, Amazon Fine Food Reviews, and CLINC150 for the standalone
+Workstream D task) — see README.md's "Dataset provenance & licensing"
+section and `DATA_LICENSES.md` for what is and isn't independently
+verified for each dataset.
 
 **Note on the Score dataset**: the Score task originally used the STS
 Benchmark (sentence-pair similarity). That dataset was replaced entirely
@@ -149,9 +154,9 @@ Reviews Score task, not STS-B.
   meaningful, real signal. But 0.403 is still ~30x higher than the
   ~0.013 a maximally uncertain 77-way classifier would show. The model
   knows *something* is off, but doesn't know it's completely off-schema.
-- **The most severe result in the whole repo: ordinary typos, not domain
-  shift, break the Choice head's calibration.** Phase 5b
-  (`adversarial_stress_test.py`) applied 2 adjacent-character swaps
+- **The most severe result in the whole repo, on discovery: ordinary
+  typos, not domain shift, break the Choice head's calibration.** Phase
+  5b (`adversarial_stress_test.py`) applied 2 adjacent-character swaps
   (verified by hand to read as an ordinary fast-typing typo, e.g. "How
   do I locate my card?" -> "Howd o I locate my crad?") to real,
   correctly-classified banking77 test queries -- still squarely inside
@@ -165,8 +170,17 @@ Reviews Score task, not STS-B.
   is treated as the tokenizer-independent finding; the exact MAGNITUDE
   of the 81.9%->51.2% collapse is not, since it runs partly through a
   small, from-scratch BPE vocabulary's specific fragmentation behavior
-  on this input. See §5 for the full discussion, including why this,
-  not the OOD result above, is this repo's sharpest finding.
+  on this input. **Status as of Workstream D: confirmed to generalize**
+  to a second, structurally different dataset (CLINC150) at a similar
+  relative magnitude -- not a one-dataset artifact. **Status as of
+  Workstream B: partially, not fully, mitigated** -- training on
+  typo-augmented data narrowed BANKING77's accuracy-collapse gap by
+  roughly half (31.4pp -> 16.0pp drop) and the calibration mismatch
+  similarly, with no clean-accuracy cost, but did not close either gap.
+  See §5 for the full discussion, including why this finding (its
+  existence, generalization, and partial-mitigation result together),
+  not the OOD result above, is this repo's sharpest finding as of the
+  most recent work.
 
 ## 3. Where the calibration numbers are trustworthy vs. not
 
@@ -542,7 +556,21 @@ question, which is whether PRETRAINED subword embeddings -- not merely
 subword tokenization, which this repo's BPE tokenizer already has --
 close the calibration gap.
 
-**This item is reported as genuinely unresolved.** It is not evidence
+**This item is reported as genuinely unresolved, and Workstream D's
+CLINC150 task (§5, `CLINC150.md`) does not resolve it either, despite
+using its own separate from-scratch tokenizer.** CLINC150 answers a
+different, narrower question than this one: whether the calibration gap
+survives across two different DATASETS/DOMAINS when both still use a
+from-scratch tokenizer (it does — see §5). It does not touch the
+pretrained-vs-from-scratch axis at all, since CLINC150's dedicated
+4,000-token BPE tokenizer is exactly the kind of "different from-scratch
+subword tokenizer" already named above as insufficient to answer this
+item's actual question. The two findings are complementary, not
+duplicates: one shows the gap generalizes across domains, the other
+(still open) is about whether it would shrink or vanish with real
+pretrained subword embeddings.
+
+It is not evidence
 either for or against the calibration gap being a general
 System-One-architecture property; it is an open question this
 environment cannot answer. Anyone with HuggingFace Hub access can run
