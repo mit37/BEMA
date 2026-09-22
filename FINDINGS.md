@@ -394,3 +394,48 @@ tokenizer even if the accuracy-collapse magnitude shrinks, which is the
 single result that would tell us whether this is a real property of
 System-One-style architectures or an artifact of this toy
 implementation's tokenizer.
+
+## 6. Item 3 disposition: pretrained subword-tokenized encoder swap (skipped, not approximated)
+
+Requested experiment: swap a pretrained, subword-tokenized encoder
+(distilbert-base-uncased, MiniLM, or similar) into the Choice head,
+retrain, and re-run `adversarial_stress_test.py`'s typo test against it,
+to determine whether the calibration gap found in §5 is a property of
+System-One-style architectures generally or an artifact of this repo's
+own from-scratch, narrow-vocabulary tokenizer.
+
+**Result: not run. Re-verified, freshly, immediately before writing this
+section (2026-09-22T02:12:10Z UTC), that no pretrained encoder is
+reachable from this sandbox:**
+
+```
+huggingface.co/distilbert-base-uncased/resolve/main/config.json -> connection tunnel rejected (HTTP 403, policy denial)
+download.pytorch.org/whl/torch/                                 -> connection tunnel rejected (HTTP 403, policy denial)
+```
+
+Both failures are hard connection rejections from the sandbox's egress
+proxy (explicit policy denial), not timeouts, DNS failures, or missing
+local packages -- the same result found earlier in this project (Phase
+2) when first checking pretrained-weights availability, now confirmed
+unchanged. No pretrained subword-tokenized encoder of any kind
+(HuggingFace Hub, PyTorch Hub, or otherwise) is reachable from this
+environment.
+
+Per this project's explicit instruction not to fake or approximate this
+experiment, no substitute was run. Specifically NOT done, and not
+presented as equivalent to the requested experiment: retraining the
+existing from-scratch encoder with a different from-scratch subword
+tokenizer (e.g. a WordPiece vocabulary instead of byte-level BPE) would
+still lack pretrained representations and would not answer the actual
+question, which is whether PRETRAINED subword embeddings -- not merely
+subword tokenization, which this repo's BPE tokenizer already has --
+close the calibration gap.
+
+**This item is reported as genuinely unresolved.** It is not evidence
+either for or against the calibration gap being a general
+System-One-architecture property; it is an open question this
+environment cannot answer. Anyone with HuggingFace Hub access can run
+this experiment directly against this repo's `adversarial_stress_test.py`
+and `train_multitask.py` by swapping in a pretrained encoder for the
+Choice head -- that is the specific, well-defined next step this
+reconnaissance effort could not complete.
