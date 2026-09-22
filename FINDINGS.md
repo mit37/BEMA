@@ -231,7 +231,7 @@ much this toy reproduction actually demonstrates:
 |---|---|---|
 | Non-autoregressive, single forward pass | **Yes, fully.** Architecturally real: one `encode()` call, typed heads read from it. | High |
 | Fixed-schema output ("cannot emit malformed output") | **Yes, fully.** Structural, not learned — heads are fixed-shape linear projections. | High |
-| Calibrated confidence that tracks real accuracy | **On clean test data, mostly yes for Noul specifically** (calibrated ECE 0.0039-0.0070 across 3 seeds, §3). **On realistic noisy input, no** — Phase 5b found ordinary typos collapse Choice accuracy 81.9%→51.2% while confidence drops only 0.791→0.612, a real miscalibration inside the model's own domain, not just at OOD edges (see §5). Clean-test-set ECE and noisy-input calibration are demonstrably different properties here. | Medium for clean input, Low once realistic noise is introduced |
+| Calibrated confidence that tracks real accuracy | **On clean test data, mostly yes for Noul specifically** (calibrated ECE 0.0039-0.0070 across 3 seeds, §3). **On realistic noisy input, no by default** — Phase 5b found ordinary typos collapse Choice accuracy 81.9%→51.2% while confidence drops only 0.791→0.612, a real miscalibration inside the model's own domain, not just at OOD edges (see §5). Clean-test-set ECE and noisy-input calibration are demonstrably different properties here. **Workstream B found this is substantially, not fully, fixable**: training on 50%-typo-augmented data narrowed the accuracy-collapse gap by roughly half (31.4pp→16.0pp drop) and the calibration mismatch similarly, with no clean-accuracy tradeoff — but the gap did not close, and the fix was only tested against the same perturbation type used in training (see §5). | Medium for clean input, Low-Medium once realistic noise is introduced (partially mitigable with targeted augmentation) |
 | Multiple typed decision shapes (Noul/Choice/Score) | **All three now show real, working signal.** Score (Amazon Fine Food Reviews, r=0.53) is weaker than Noul/Choice but genuinely learns and generalizes, unlike the STS-B attempt it replaced (r=0.29, flat training curve). None reach a "production-grade" bar, but none is a dead task either. | Low-Medium |
 | Speed/cost advantage over LLMs (40-200x claimed) | **Not independently verified — confirmed unreachable, not just untried** (see `LLM_BENCHMARK.md`). This repo's own model is fast (~1.4ms/example measured), but a real LLM benchmark requires an LLM API and no usable one exists in this sandbox: `api.anthropic.com` is network-reachable but no API credentials are present (`ANTHROPIC_API_KEY`/`CLAUDE_CODE_OAUTH_TOKEN`/`ANTHROPIC_AUTH_TOKEN` all unset), no local LLM server is running, and no LLM SDK is installed. The comparison still uses a documented industry reference figure for LLM latency, not a live measurement. The *shape* of the claim (a small non-autoregressive forward pass beats an LLM API round-trip) is directionally very plausible, but "40-200x" specifically remains Jev's number, not something this repo measured against a real LLM. | Low (weakest-evidenced claim in this repo) |
 | Domain breadth / general-purpose typed questions over arbitrary schemas | **No.** Three narrow, single-domain tasks (spam/ham, 77 banking intents, food-review star ratings), each needing its own dataset and largely its own calibration. Jev's actual product claim is schema generality across arbitrary domains without per-domain retraining — nothing here demonstrates that. | Very Low |
@@ -412,6 +412,67 @@ tokenizer even if the accuracy-collapse magnitude shrinks, which is the
 single result that would tell us whether this is a real property of
 System-One-style architectures or an artifact of this toy
 implementation's tokenizer.
+
+**Does adversarial data augmentation fix the typo-collapse finding?
+Mostly yes, on this toy task — a genuinely encouraging, fully-measured
+result.** `augment_and_retrain.py` duplicated 50% of each task's training
+rows with the exact same 2-adjacent-character-swap perturbation used by
+`adversarial_stress_test.py` (Choice: 8,503→12,754 train rows; Noul and
+Score augmented identically for consistency, though the typo-collapse
+finding itself was only ever measured on Choice), retrained a fresh
+encoder from scratch with the same architecture/hyperparameters as the
+baseline, and recalibrated. Val/test splits were left completely
+untouched — no perturbed example ever appears outside training. The
+comparison below re-evaluates the actual pre-fix baseline checkpoint live
+in the same run (not hardcoded historical numbers), applying the
+identical fixed-seed typo perturbations to both models:
+
+| Metric | Baseline | Augmented | Delta |
+|---|---|---|---|
+| Clean-test accuracy (Choice, n=3,080) | 0.8188 | 0.8347 | **+0.0159** |
+| Clean-test mean confidence | 0.7906 | 0.8133 | +0.0228 |
+| Typo-test accuracy | 0.5052 | 0.6744 | **+0.1692** |
+| Typo-test mean confidence | 0.6122 | 0.7046 | +0.0925 |
+| Accuracy drop under typos | 0.3136 (−31.4pp) | 0.1604 (−16.0pp) | **gap narrowed by ~half** |
+| Confidence drop under typos | 0.1784 | 0.1087 | gap narrowed by ~39% |
+
+Both halves of the original finding improve substantially:
+1. **The accuracy-collapse gap narrowed by roughly half** — typo-test
+   accuracy rose from 50.5% to 67.4%, cutting the accuracy drop under
+   typos from 31.4 points to 16.0 points. Augmentation clearly helps the
+   model generalize past small character-order perturbations it now
+   sees in training.
+2. **The calibration gap (confidence not tracking the real accuracy
+   drop) also narrowed**, from an 0.31-vs-0.18 mismatch (accuracy drop
+   nearly double the confidence drop) to a 0.16-vs-0.11 mismatch — still
+   present, but meaningfully closer to tracking.
+3. **No clean-accuracy tradeoff was observed — if anything, the
+   augmented model is slightly better on clean, unperturbed test data
+   too** (+1.6 points accuracy, +2.3 points confidence). This is not the
+   classic robustness/accuracy tradeoff pattern; augmentation with a
+   fixed typo mechanism at 50% duplication rate looks like a
+   close-to-free improvement on this toy task, possibly because the
+   duplicated rows also act as a mild data-volume increase (train set
+   grew ~50%) independent of the typo perturbation itself — this repo
+   does not separately test augmenting with non-typo duplicate data to
+   isolate that effect, so some of the clean-accuracy gain may be a
+   generic more-data effect rather than typo-specific.
+
+**What this does and doesn't establish.** The gap is narrowed, not
+closed — typo-test accuracy (67.4%) is still well below clean-test
+accuracy (83.5%), and confidence still doesn't fully track the remaining
+accuracy loss. This is a real, partial, measured improvement, not a
+solved problem: report it as "augmentation meaningfully helps and costs
+nothing on this toy task's clean accuracy," not as "typo miscalibration
+is fixed." It's also worth being explicit that this experiment trained
+against the *exact* perturbation mechanism (2 adjacent-character swaps)
+used to test it — a more realistic training signal would use a broader
+variety of noise (multiple typo types, varying counts, keyboard-adjacent
+substitutions, real user-generated typo corpora) to avoid narrowly
+overfitting to one specific corruption pattern; this repo's result should
+be read as "augmentation against a known noise distribution helps against
+that noise distribution," not yet "augmentation makes the model robust to
+noise in general."
 
 ## 6. Item 3 disposition: pretrained subword-tokenized encoder swap (skipped, not approximated)
 
