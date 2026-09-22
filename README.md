@@ -125,9 +125,11 @@ spot-checked against the well-known, widely-reproduced first rows of the
 original dataset ("Good Quality Dog Food" / "Not as Advertised") to
 confirm the mirror is genuine and not fabricated or reordered.
 
-There is also no repository-level LICENSE file for this project itself —
-an item that needs an explicit decision from whoever is publishing this
-repo, not an assumption made on their behalf.
+This repository's own code is MIT-licensed (see `LICENSE`). That covers
+the code in this repo (Python scripts, `model.py`, etc.) only — it does
+NOT change or override the separate licenses on the bundled third-party
+datasets described in the table above, each of which keeps its own
+terms regardless of this repo's code license.
 
 **Results** (clean run, 2026-09-21, held-out test splits the calibration
 step never touched, Score dataset = Amazon Fine Food Reviews as described
