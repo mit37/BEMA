@@ -1,0 +1,27 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+
+# Model checkpoints (large, reproducible from train.py/calibrate.py)
+*.pt
+*.pth
+
+# Prepared data cache (reproducible from prepare_data.py / prepare_multitask.py)
+data/prepared.pkl
+data/tokenizer.json
+data/prepared_multitask.pkl
+data/tokenizer_multitask.json
+eval_raw.pkl
+ood_results.pkl
+conformal_results.pkl
+augment_results.pkl
+data/prepared_clinc150.pkl
+data/tokenizer_clinc150.json
+clinc150_results.pkl
+attnpool_results.pkl
+
+# OS
+.DS_Store
