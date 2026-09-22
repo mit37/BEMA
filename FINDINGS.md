@@ -138,12 +138,18 @@ Reviews Score task, not STS-B.
   (verified by hand to read as an ordinary fast-typing typo, e.g. "How
   do I locate my card?" -> "Howd o I locate my crad?") to real,
   correctly-classified banking77 test queries -- still squarely inside
-  the model's intended domain, same schema, same task. Accuracy
-  collapsed from 81.9% to 51.2% while mean confidence dropped only from
-  0.791 to 0.612. Every other calibration number in this repo (Phase 3,
-  Phase 4) is measured on clean test text and would completely miss
-  this. See §5 for why this, not the OOD result above, is this repo's
-  sharpest finding.
+  the model's intended domain, same schema, same task. **n=3080** (the
+  full BANKING77 test split, not a small sample). Accuracy collapsed
+  from 81.9% to 51.2% while mean confidence dropped only from 0.791 to
+  0.612. Every other calibration number in this repo (Phase 3, Phase 4)
+  is measured on clean test text and would completely miss this. **Two
+  separate claims here, not one** -- see the tokenizer-audit caveat in
+  §5: the calibration GAP (confidence not tracking the accuracy drop)
+  is treated as the tokenizer-independent finding; the exact MAGNITUDE
+  of the 81.9%->51.2% collapse is not, since it runs partly through a
+  small, from-scratch BPE vocabulary's specific fragmentation behavior
+  on this input. See §5 for the full discussion, including why this,
+  not the OOD result above, is this repo's sharpest finding.
 
 ## 3. Where the calibration numbers are trustworthy vs. not
 
@@ -317,3 +323,74 @@ robustness number as a first-class metric alongside ECE, not an
 afterthought -- clean-test-set calibration and real-world-noise
 calibration are evidently not the same thing, and only one of them is
 usually reported.
+
+**Tokenizer audit on this finding, and what it does and doesn't tell
+us.** Before treating the 81.9%→51.2% collapse as a general property of
+"System-One-style architectures," it's worth being precise about what's
+actually happening mechanically, since that changes how far the finding
+generalizes.
+
+*What tokenizer does the Choice head use, exactly?* Confirmed directly
+from the code, not assumed: the shared byte-level BPE tokenizer
+(`data/tokenizer_multitask.json`, 8,000-token vocabulary, trained by
+`prepare_multitask.py`'s `ByteLevelBPETokenizer` on this repo's own
+training text only). This is NOT a fixed word-level vocabulary with
+`<unk>` OOV collapse -- that design existed only in an early version of
+`prepare_data.py` and was retired during the Phase 2 encoder upgrade,
+well before the Choice/Score work existed. Byte-level BPE has no true
+unknown-token collapse: any input string always decomposes to some
+sequence of byte-level tokens.
+
+*So what actually happens to the typo'd text?* `adversarial_stress_test.py`
+now prints this directly (added as a permanent diagnostic, not a one-off
+check): on a random sample, the 2-character swap produces zero `<unk>`
+tokens, but it frequently fragments a content word into several smaller,
+less-informative subword pieces -- e.g. "available" -> "vaailable"
+tokenizes as `['v', 'aa', 'ila', 'ble']` instead of the one clean
+`['available']` token the unperturbed text gets. 4 of 5 sampled examples
+showed measurable fragmentation (+2 to +5 extra tokens); one showed none,
+confirming this is a real but not universal mechanism, not an artifact
+of a single cherry-picked example.
+
+*Two claims, and only one of them is the tokenizer-independent finding:*
+1. **The calibration gap** -- confidence (0.791→0.612, a ~23% relative
+   drop) not tracking the accuracy collapse (81.9%→51.2%, a ~37% relative
+   drop) -- is treated as real and likely tokenizer-independent. Whatever
+   specific mechanism corrupts the model's internal representation under
+   this perturbation, a well-calibrated model's confidence should track
+   however much its accuracy actually degrades. It didn't. This is this
+   repo's headline finding and is not walked back by the tokenizer audit.
+2. **The exact magnitude of the accuracy collapse** is NOT claimed to
+   generalize to a production-grade subword-tokenized encoder. This
+   repo's tokenizer is small (8,000 tokens) and trained on a narrow,
+   single-domain corpus, which plausibly makes it more prone to
+   fragmenting near-miss spellings than a pretrained tokenizer (e.g. a
+   BERT/DistilBERT WordPiece vocabulary, ~30,000 tokens, trained on a
+   huge and diverse corpus) would be, since common near-miss spellings
+   are more likely to already exist as recognized subword pieces in a
+   much larger, more thoroughly-trained vocabulary. The 30.7-point
+   collapse specifically should be read as "this toy implementation's
+   number," not "System-One models in general will show a 30.7-point
+   collapse under typos."
+
+*The experiment that would actually resolve this* -- swap in a
+pretrained, subword-tokenized encoder for the Choice head, retrain, and
+re-run the same typo test -- was attempted and could not be run: this
+sandbox's network policy blocks both HuggingFace Hub (`huggingface.co`)
+and `download.pytorch.org`, confirmed again via direct connection tests
+immediately before writing this section (both return a hard connection
+rejection, not a timeout or a missing-package error). No pretrained
+subword-tokenized encoder of any kind is reachable from this environment.
+Per this project's own rule against faking or approximating an
+unreachable experiment, no from-scratch substitute was used as a stand-in
+for "pretrained encoder" -- the byte-level BPE tokenizer already in this
+repo IS a subword tokenizer, but it is not a pretrained one, and
+conflating the two would answer a different question than the one that
+matters here. **This experiment is reported as genuinely unresolved, not
+attempted-and-passing or attempted-and-failing.** Anyone able to run it
+in an environment with Hub access would learn something this repo
+cannot: whether the calibration gap survives with a production-grade
+tokenizer even if the accuracy-collapse magnitude shrinks, which is the
+single result that would tell us whether this is a real property of
+System-One-style architectures or an artifact of this toy
+implementation's tokenizer.

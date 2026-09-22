@@ -240,22 +240,49 @@ from a friendly test split. Three more tests, all built from real,
 correctly-labeled data (documented perturbations of real text, never
 synthetic labels):
 
-1. **Real hard negatives**: real ham SMS messages that happen to contain
-   classic spam-trigger words ("free", "win", "prize", "urgent", etc.) —
-   100% accuracy on this real 50-example subset vs 99.1% on other ham.
-   The model is not meaningfully fooled by superficial lexical cues on
-   real messages.
-2. **Mechanical filter-evasion perturbation** of real, correctly-
-   classified spam (character spacing, leetspeak substitution, case
-   noise — the kind of thing real spammers actually do to evade
-   filters): accuracy drops only slightly (89.7%→88.8%) with confidence
-   dropping proportionally (0.972→0.926) — reasonably graceful
-   degradation.
-3. **Typo robustness on real banking77 queries** (2 adjacent-character
-   swaps per query — an ordinary fast-typing typo, verified by hand:
-   "How do I locate my card?" → "Howd o I locate my crad?", fully
-   readable to a human): **accuracy collapses from 81.9% to 51.2% — a
-   30.7-point drop — while confidence only drops from 0.791 to 0.612.**
+1. **Real hard negatives** (n=50, a small sample — consistent-direction
+   signal, not a tight estimate): real ham SMS messages that happen to
+   contain classic spam-trigger words ("free", "win", "prize", "urgent",
+   etc.) — 100% accuracy on this real 50-example subset vs 99.1% on
+   other ham (n=670). The model is not meaningfully fooled by
+   superficial lexical cues on real messages, though n=50 means this
+   reads as "consistent with no effect," not a precise measurement.
+2. **Mechanical filter-evasion perturbation** (n=116) of real,
+   correctly-classified spam (character spacing, leetspeak
+   substitution, case noise — the kind of thing real spammers actually
+   do to evade filters): accuracy drops only slightly (89.7%→88.8%)
+   with confidence dropping proportionally (0.972→0.926) — reasonably
+   graceful degradation.
+3. **Typo robustness on real banking77 queries** (**n=3080** — the full
+   BANKING77 test split, not a small sample; 2 adjacent-character swaps
+   per query, an ordinary fast-typing typo, verified by hand: "How do I
+   locate my card?" → "Howd o I locate my crad?", fully readable to a
+   human): **accuracy collapses from 81.9% to 51.2% — a 30.7-point drop
+   — while confidence only drops from 0.791 to 0.612.**
+
+**A tokenizer caveat on #3, specifically** (see `adversarial_stress_test.py`'s
+own printed tokenizer audit for the full evidence): this model's Choice
+head uses a from-scratch byte-level BPE tokenizer trained on only this
+repo's own small training corpus (8,000-token vocabulary) — NOT a fixed
+word-level vocabulary with `<unk>` OOV collapse (that design was retired
+during the Phase 2 encoder upgrade and isn't used anywhere in the current
+pipeline). Checking the actual token sequences confirms the 2-character
+swap doesn't produce `<unk>` tokens; instead it fragments content words
+into multiple small, less-informative subword pieces (e.g. "available" →
+"vaailable" tokenizes as `['v','aa','ila','ble']` instead of one clean
+`['available']` token). That's a real, measured mechanism, but it is
+specific to this small-vocabulary, narrow-corpus tokenizer — a
+production-grade subword tokenizer (e.g. a pretrained BERT/DistilBERT
+WordPiece vocabulary, ~30k tokens trained on a huge diverse corpus) would
+very likely fragment this kind of typo less, since near-miss spellings
+are far more likely to already exist as recognized subword pieces.
+**Two separate claims, not one**: the CALIBRATION GAP (confidence not
+tracking the accuracy drop) is treated as the tokenizer-independent
+finding and is this repo's headline result; the exact MAGNITUDE of the
+81.9%→51.2% collapse is NOT claimed to reproduce on a production-grade
+subword-tokenized encoder — that specific comparison experiment could
+not be run in this sandbox (no pretrained-weights access; see
+FINDINGS.md for why it was skipped rather than approximated).
 
 **This, not the cross-domain OOD result above, is the sharpest finding in
 this repo.** A tiny amount of completely realistic noise — the kind every
