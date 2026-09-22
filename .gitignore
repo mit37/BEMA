@@ -21,6 +21,7 @@ augment_results.pkl
 data/prepared_clinc150.pkl
 data/tokenizer_clinc150.json
 clinc150_results.pkl
+attnpool_results.pkl
 
 # OS
 .DS_Store
