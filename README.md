@@ -224,15 +224,53 @@ Real data only — no synthetic or LLM-generated labels. Two tests:
    on the Choice head's held-out test split, not the split its own
    temperature was fit on) to 0.4097 on out-of-scope input. That's a real,
    meaningful drop — but still far
-   above the 1/77≈0.013 a maximally-uncertain model would show. **This is
-   the sharpest finding in this repo about the "cannot hallucinate" claim**:
-   the fixed-schema output guarantee is real (the model structurally cannot
-   emit anything but one of 77 valid categories), but that guarantee says
-   nothing about whether the *chosen* category is meaningful for
-   out-of-scope input. "Cannot hallucinate" in Jev's sense means "cannot
-   produce a malformed answer," not "cannot be confidently wrong" — those
-   are different claims, and this toy model demonstrates the gap between
-   them directly.
+   above the 1/77≈0.013 a maximally-uncertain model would show. This is a
+   real limit on the "cannot hallucinate" claim: the fixed-schema output
+   guarantee is real (the model structurally cannot emit anything but one
+   of 77 valid categories), but that guarantee says nothing about whether
+   the *chosen* category is meaningful for out-of-scope input. "Cannot
+   hallucinate" in Jev's sense means "cannot produce a malformed answer,"
+   not "cannot be confidently wrong" — those are different claims, and
+   this toy model demonstrates the gap between them directly.
+
+### Phase 5b: adversarial / ambiguous-input stress test (`adversarial_stress_test.py`)
+
+Cross-domain shift (Phase 5 above) isn't the only way real input differs
+from a friendly test split. Three more tests, all built from real,
+correctly-labeled data (documented perturbations of real text, never
+synthetic labels):
+
+1. **Real hard negatives**: real ham SMS messages that happen to contain
+   classic spam-trigger words ("free", "win", "prize", "urgent", etc.) —
+   100% accuracy on this real 50-example subset vs 99.1% on other ham.
+   The model is not meaningfully fooled by superficial lexical cues on
+   real messages.
+2. **Mechanical filter-evasion perturbation** of real, correctly-
+   classified spam (character spacing, leetspeak substitution, case
+   noise — the kind of thing real spammers actually do to evade
+   filters): accuracy drops only slightly (89.7%→88.8%) with confidence
+   dropping proportionally (0.972→0.926) — reasonably graceful
+   degradation.
+3. **Typo robustness on real banking77 queries** (2 adjacent-character
+   swaps per query — an ordinary fast-typing typo, verified by hand:
+   "How do I locate my card?" → "Howd o I locate my crad?", fully
+   readable to a human): **accuracy collapses from 81.9% to 51.2% — a
+   30.7-point drop — while confidence only drops from 0.791 to 0.612.**
+
+**This, not the cross-domain OOD result above, is the sharpest finding in
+this repo.** A tiny amount of completely realistic noise — the kind every
+real customer-service deployment sees constantly, not an adversarial
+attack — nearly halves accuracy while confidence drops by less than a
+third. The model isn't just "confidently wrong on inputs outside its
+schema" (Phase 5's finding); it's **badly miscalibrated on inputs squarely
+inside its intended domain**, the moment those inputs contain the kind of
+noise real text always has. Good in-distribution ECE numbers (Phase
+3/4 above) say nothing about this failure mode — it would not show up in
+any of this repo's other calibration measurements, because those all
+evaluate on clean, unperturbed test text. Anyone evaluating this category
+of model for real deployment should demand a typo/noise robustness number
+specifically, not just clean-test-set calibration metrics — this repo's
+own numbers would have looked strong without this test, and were not.
 
 ## Files
 - `prepare_data.py` / `model.py` / `train.py` / `calibrate.py` / `serve.py`
@@ -243,11 +281,13 @@ Real data only — no synthetic or LLM-generated labels. Two tests:
 - `calibration_sweep.py` — Phase 4 calibration method comparison, logs to
   `results_log.csv`.
 - `ood_stress_test.py` — Phase 5 real-data distribution-shift stress test.
+- `adversarial_stress_test.py` — Phase 5b real-data adversarial/typo
+  robustness stress test (the repo's sharpest finding — see above).
 - `seed_variation_sweep.py` — measures real cross-seed variance on the
   Noul pipeline's accuracy/ECE (3 independent seeds), logs to
   `results_log.csv`.
 - `benchmark_speed.py` — measures single-example CPU inference latency
-  for the multi-task model (the "1.51ms" figure cited in FINDINGS.md).
+  for the multi-task model (the "~1.4ms" figure cited in FINDINGS.md).
 
 `results_log.csv` is intentionally tracked in git (unlike model
 checkpoints or pickled data caches, which are gitignored as reproducible
@@ -269,6 +309,7 @@ python3 prepare_multitask.py && python3 train_multitask.py && python3 calibrate_
 python3 serve_multitask.py --demo
 python3 calibration_sweep.py   # Phase 4
 python3 ood_stress_test.py     # Phase 5
+python3 adversarial_stress_test.py  # Phase 5b
 
 # Real cross-seed uncertainty measurement (Noul pipeline, ~10-15 min for 3 seeds)
 python3 seed_variation_sweep.py

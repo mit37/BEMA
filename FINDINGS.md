@@ -1,6 +1,7 @@
 # Findings: reconnaissance into System-One decision models (Jev-clone)
 
-Date: 2026-09-21. This document summarizes what an independent, from-scratch
+Date: 2026-09-21, updated 2026-09-22 with Phase 5b (adversarial/typo
+robustness testing). This document summarizes what an independent, from-scratch
 reproduction of Jev's core interface shape (typed state in, typed
 calibrated decision out, one non-autoregressive forward pass) found when
 actually built and tested, rather than assumed. All numbers below are
@@ -121,7 +122,7 @@ Reviews Score task, not STS-B.
   learning rate and adding gradient clipping — but it's a real reminder
   that "just make it bigger" doesn't compose for free even at toy scale.
 - **"Cannot hallucinate" holds for output shape, not output
-  correctness, under distribution shift.** This is the most important
+  correctness, under distribution shift.** This is an important
   negative-but-informative result in this repo — see §5.
 - **The Choice head's uncertainty response to out-of-scope input is real
   but incomplete.** Confidence dropped from 0.795 (in-distribution,
@@ -131,6 +132,18 @@ Reviews Score task, not STS-B.
   meaningful, real signal. But 0.403 is still ~30x higher than the
   ~0.013 a maximally uncertain 77-way classifier would show. The model
   knows *something* is off, but doesn't know it's completely off-schema.
+- **The most severe result in the whole repo: ordinary typos, not domain
+  shift, break the Choice head's calibration.** Phase 5b
+  (`adversarial_stress_test.py`) applied 2 adjacent-character swaps
+  (verified by hand to read as an ordinary fast-typing typo, e.g. "How
+  do I locate my card?" -> "Howd o I locate my crad?") to real,
+  correctly-classified banking77 test queries -- still squarely inside
+  the model's intended domain, same schema, same task. Accuracy
+  collapsed from 81.9% to 51.2% while mean confidence dropped only from
+  0.791 to 0.612. Every other calibration number in this repo (Phase 3,
+  Phase 4) is measured on clean test text and would completely miss
+  this. See §5 for why this, not the OOD result above, is this repo's
+  sharpest finding.
 
 ## 3. Where the calibration numbers are trustworthy vs. not
 
@@ -195,7 +208,7 @@ much this toy reproduction actually demonstrates:
 |---|---|---|
 | Non-autoregressive, single forward pass | **Yes, fully.** Architecturally real: one `encode()` call, typed heads read from it. | High |
 | Fixed-schema output ("cannot emit malformed output") | **Yes, fully.** Structural, not learned — heads are fixed-shape linear projections. | High |
-| Calibrated confidence that tracks real accuracy | **Mostly, for the Noul task specifically.** True for Noul/Choice on in-distribution data across multiple calibration methods; for Noul, now backed by a real 3-seed uncertainty range (calibrated ECE 0.0039-0.0070, §3) rather than one number. Choice and Score have not had the same multi-seed treatment. Explicitly does NOT hold for "confident but wrong on out-of-scope input" (see §5). | Medium-High for Noul, Medium for Choice/Score |
+| Calibrated confidence that tracks real accuracy | **On clean test data, mostly yes for Noul specifically** (calibrated ECE 0.0039-0.0070 across 3 seeds, §3). **On realistic noisy input, no** — Phase 5b found ordinary typos collapse Choice accuracy 81.9%→51.2% while confidence drops only 0.791→0.612, a real miscalibration inside the model's own domain, not just at OOD edges (see §5). Clean-test-set ECE and noisy-input calibration are demonstrably different properties here. | Medium for clean input, Low once realistic noise is introduced |
 | Multiple typed decision shapes (Noul/Choice/Score) | **All three now show real, working signal.** Score (Amazon Fine Food Reviews, r=0.53) is weaker than Noul/Choice but genuinely learns and generalizes, unlike the STS-B attempt it replaced (r=0.29, flat training curve). None reach a "production-grade" bar, but none is a dead task either. | Low-Medium |
 | Speed/cost advantage over LLMs (40-200x claimed) | **Not independently verified.** This repo's own model is fast (1.51ms/example measured), but there is no LLM API in this sandbox to benchmark against directly — the comparison uses a documented industry reference figure for LLM latency, not a live measurement. The *shape* of the claim (a small non-autoregressive forward pass beats an LLM API round-trip) is directionally very plausible and structurally makes sense, but "40-200x" specifically is Jev's number, not something this repo measured against a real LLM. | Low (weakest-evidenced claim in this repo) |
 | Domain breadth / general-purpose typed questions over arbitrary schemas | **No.** Three narrow, single-domain tasks (spam/ham, 77 banking intents, food-review star ratings), each needing its own dataset and largely its own calibration. Jev's actual product claim is schema generality across arbitrary domains without per-domain retraining — nothing here demonstrates that. | Very Low |
@@ -279,3 +292,28 @@ before committing to a typed head) as a first-class feature, not an
 afterthought — and that's exactly the kind of thing worth verifying is
 present (or absent) in any real competitor's actual product before taking
 "cannot hallucinate" at face value.
+
+**A second, sharper wedge: the failure mode above needs a domain shift to
+show up. This one doesn't.** `adversarial_stress_test.py` (Phase 5b) ran
+the Choice head on real, correctly-labeled banking77 queries with 2
+adjacent-character swaps -- an ordinary fast-typing typo, not an
+adversarial attack, verified by hand to be fully readable ("How do I
+locate my card?" -> "Howd o I locate my crad?"). Accuracy collapsed from
+81.9% to 51.2% -- nearly halved -- while mean confidence dropped only
+from 0.791 to 0.612. That gap (confidence down ~23%, accuracy down ~37
+relative percentage points) is a real, quantified miscalibration, and it
+happens on input that is squarely INSIDE the model's intended domain,
+using the exact same schema, on the exact kind of noise every real text
+interface encounters constantly. Every calibration number elsewhere in
+this repo (Phase 3's temperature/Platt/isotonic scaling, Phase 4's
+sweep) is measured on clean, unperturbed test text and would not have
+caught this. If a team ships "cannot hallucinate, and here's our ECE on
+held-out test data" as the whole trustworthiness story, this result says
+that story is incomplete in a way that matters immediately, not just at
+the edges of the domain: ordinary text noise, not adversarial intent or
+distribution shift, is enough to break the confidence-accuracy
+relationship. A serious evaluation of this category needs a typo/noise
+robustness number as a first-class metric alongside ECE, not an
+afterthought -- clean-test-set calibration and real-world-noise
+calibration are evidently not the same thing, and only one of them is
+usually reported.
