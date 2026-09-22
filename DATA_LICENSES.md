@@ -35,3 +35,19 @@ This repository's own code is MIT-licensed (see `LICENSE`). That license
 covers the code in this repo only — it does not change or override the
 separate license terms on any dataset listed above, each of which keeps
 its own terms regardless of this repo's code license.
+
+## Datasets considered for Workstream D and rejected (not used)
+
+| Dataset | Considered for | Why rejected |
+|---|---|---|
+| Hate Speech and Offensive Language (Davidson et al. 2017, `t-davidson/hate-speech-and-offensive-language`) | A toxicity/moderation Noul-type task, to broaden domain coverage beyond CLINC150 and BANKING77 | **Ambiguous licensing — flagged, not used, per project rule.** The GitHub repo carries a top-level `LICENSE` file that reads as plain MIT (confirmed by fetching it directly, 2026-09-22). However, the repo's own README explicitly requests citation of the associated paper for any published work using the data ("Please cite our paper..."), directs users to a tracking form for research use, and repeats a content warning about the data's nature — signals of an academic-use norm layered on top of the repository's code license, not clearly covered or overridden by the MIT LICENSE file's terms (which govern reproduction/redistribution of the *file*, not necessarily research-use expectations the authors are signaling separately). This is the same category of mismatch (a permissive top-level repo license vs. non-uniform or unstated expectations on the actual data) that caused this project's earlier STS-B licensing mistake (see FINDINGS.md §2). Per this project's explicit rule ("if licensing is ambiguous... STOP and flag" rather than proceed on convenience), this dataset was not used, and no from-scratch relabeling or substitute was attempted as a workaround. |
+
+This entry exists so the decision is on record rather than silently
+absent — Workstream D's dataset-breadth goal (2-4 additional tasks) was
+only partially completed (one dataset, CLINC150, added — see
+`CLINC150.md`) specifically because a second reasonable candidate was
+found and rejected for licensing reasons rather than replaced with a
+less scrutinized one. Workstream D is explicitly a background/
+lower-priority item in this project's task ordering, so this partial
+result is treated as an acceptable stopping point rather than a gap
+requiring a rushed substitute dataset.
