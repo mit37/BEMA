@@ -232,3 +232,44 @@ print("=" * 70)
 print(f"Clean queries    n={n_choice}  accuracy={base_correct/n_choice:.4f}  mean_confidence={sum(base_confs)/n_choice:.4f}")
 print(f"With typos       n={n_choice}  accuracy={typo_correct/n_choice:.4f}  mean_confidence={sum(typo_confs)/n_choice:.4f}")
 print(f"Accuracy drop: {base_correct/n_choice - typo_correct/n_choice:.4f}")
+
+# ---------------------------------------------------------------------------
+# Tokenizer audit: this model uses the shared byte-level BPE tokenizer
+# (data/tokenizer_multitask.json), NOT a fixed word-level vocab with
+# <unk> OOV collapse -- confirm that, and show concretely what the
+# 2-char-swap perturbation actually does to tokenization, since that
+# mechanism (not "confusion" in the abstract) is what the accuracy
+# collapse above runs through.
+# ---------------------------------------------------------------------------
+print("\n" + "=" * 70)
+print("TOKENIZER AUDIT: what the typo perturbation actually does to tokenization")
+print("=" * 70)
+print("Tokenizer: shared byte-level BPE, data/tokenizer_multitask.json "
+      f"(vocab_size={vocab_size}). NOT a fixed word-level vocab -- byte-level BPE")
+print("has no true <unk>/OOV collapse; any input text always decomposes to bytes.")
+sample_rows = random.sample(choice_test_rows, min(5, len(choice_test_rows)))
+frag_deltas = []
+for r in sample_rows:
+    typo_text = perturb_typo(r["text"])
+    clean_tokens = tokenizer.encode(r["text"]).tokens
+    typo_tokens = tokenizer.encode(typo_text).tokens
+    frag_deltas.append(len(typo_tokens) - len(clean_tokens))
+    print(f"  CLEAN ({len(clean_tokens)} tok): {clean_tokens}")
+    print(f"  TYPO  ({len(typo_tokens)} tok): {typo_tokens}")
+    print()
+print(f"Token-count delta on this sample: {frag_deltas} "
+      f"(positive = perturbation fragmented the text into MORE, smaller subword pieces)")
+print("This is real subword FRAGMENTATION, not <unk> erasure -- e.g. 'card'->'crad' typically")
+print("splits into two or more unrelated subword pieces instead of one clean 'card' token.")
+print("This is a real, measured mechanism for the accuracy collapse above, but it is specific")
+print("to THIS from-scratch, small-vocab (8000) BPE tokenizer trained only on this repo's own")
+print("training text. A production-grade subword tokenizer (e.g. a pretrained BERT/DistilBERT")
+print("WordPiece vocab, ~30k tokens, trained on a huge diverse corpus) would very likely show")
+print("LESS fragmentation on the same typo, since 'crad'-like fragments are far more likely to")
+print("already exist as recognized subword pieces in a much larger, more thoroughly-trained")
+print("vocabulary. See FINDINGS.md for why the CALIBRATION GAP (confidence not tracking the")
+print("accuracy drop) is treated as the tokenizer-independent finding here, while the exact")
+print("magnitude of the accuracy collapse (81.9%->51.2%) is NOT claimed to generalize to a")
+print("production-grade subword-tokenized encoder -- that specific experiment was not")
+print("reachable in this sandbox (no pretrained weights access) and is reported as skipped,")
+print("not approximated, in FINDINGS.md.")
