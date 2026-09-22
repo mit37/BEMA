@@ -234,7 +234,7 @@ much this toy reproduction actually demonstrates:
 | Calibrated confidence that tracks real accuracy | **On clean test data, mostly yes for Noul specifically** (calibrated ECE 0.0039-0.0070 across 3 seeds, §3). **On realistic noisy input, no by default** — Phase 5b found ordinary typos collapse Choice accuracy 81.9%→51.2% while confidence drops only 0.791→0.612, a real miscalibration inside the model's own domain, not just at OOD edges (see §5). Clean-test-set ECE and noisy-input calibration are demonstrably different properties here. **Workstream B found this is substantially, not fully, fixable**: training on 50%-typo-augmented data narrowed the accuracy-collapse gap by roughly half (31.4pp→16.0pp drop) and the calibration mismatch similarly, with no clean-accuracy tradeoff — but the gap did not close, and the fix was only tested against the same perturbation type used in training (see §5). | Medium for clean input, Low-Medium once realistic noise is introduced (partially mitigable with targeted augmentation) |
 | Multiple typed decision shapes (Noul/Choice/Score) | **All three now show real, working signal.** Score (Amazon Fine Food Reviews, r=0.53) is weaker than Noul/Choice but genuinely learns and generalizes, unlike the STS-B attempt it replaced (r=0.29, flat training curve). None reach a "production-grade" bar, but none is a dead task either. | Low-Medium |
 | Speed/cost advantage over LLMs (40-200x claimed) | **Not independently verified — confirmed unreachable, not just untried** (see `LLM_BENCHMARK.md`). This repo's own model is fast (~1.4ms/example measured), but a real LLM benchmark requires an LLM API and no usable one exists in this sandbox: `api.anthropic.com` is network-reachable but no API credentials are present (`ANTHROPIC_API_KEY`/`CLAUDE_CODE_OAUTH_TOKEN`/`ANTHROPIC_AUTH_TOKEN` all unset), no local LLM server is running, and no LLM SDK is installed. The comparison still uses a documented industry reference figure for LLM latency, not a live measurement. The *shape* of the claim (a small non-autoregressive forward pass beats an LLM API round-trip) is directionally very plausible, but "40-200x" specifically remains Jev's number, not something this repo measured against a real LLM. | Low (weakest-evidenced claim in this repo) |
-| Domain breadth / general-purpose typed questions over arbitrary schemas | **No.** Three narrow, single-domain tasks (spam/ham, 77 banking intents, food-review star ratings), each needing its own dataset and largely its own calibration. Jev's actual product claim is schema generality across arbitrary domains without per-domain retraining — nothing here demonstrates that. | Very Low |
+| Domain breadth / general-purpose typed questions over arbitrary schemas | **No, still the weakest part of this reproduction, though now tested on one more task.** Four narrow, single-purpose tasks total (spam/ham, 77 banking intents, food-review star ratings, and now CLINC150's 151-way intent+oos, `CLINC150.md`), each needing its own dataset, its own tokenizer/encoder in CLINC150's case, and largely its own calibration. Jev's actual product claim is schema generality across arbitrary domains WITHOUT per-domain retraining — nothing here demonstrates that; each new task in this repo required a full retrain, not zero-shot or few-shot adaptation of an existing model. | Very Low |
 | A formal, verifiable confidence guarantee (not just observed calibration) | **Implemented and verified (`CONFORMAL.md`), with mixed practical results per head.** Split conformal prediction's coverage guarantee held on held-out test data for all three heads (Noul 90.91%, Choice 98.83%, Score 89.85%, target 90%) — the guarantee itself is real, not just observed-and-hoped-for. But "valid" isn't "useful": Noul refuses to answer (empty set) 8.4% of the time, Choice needs an average set of 7 of 77 classes to guarantee coverage, and Score's interval is wider than its entire possible output range. A team relying on "cannot hallucinate" as a complete safety story should be asked specifically whether their confidence numbers come with this kind of guarantee, and if so, whether the resulting sets/intervals are actually narrow enough to be useful — this repo shows both can be true or false independently. | Medium (guarantee verified real; usefulness varies sharply by head) |
 
 **Overall**: this reproduction validates the *architectural* core of Jev's
@@ -473,6 +473,38 @@ overfitting to one specific corruption pattern; this repo's result should
 be read as "augmentation against a known noise distribution helps against
 that noise distribution," not yet "augmentation makes the model robust to
 noise in general."
+
+**Does the typo-miscalibration finding generalize past BANKING77? Yes —
+confirmed on a second, structurally different dataset (Workstream D, full
+writeup in `CLINC150.md`).** CLINC150 (150 real crowdsourced intents
+across many domains, plus a genuine out-of-scope class; CC-BY 3.0,
+verified in `DATA_LICENSES.md`) was run through the identical typo
+perturbation with its own dedicated encoder, its own dedicated
+4,000-token tokenizer trained from scratch on this corpus alone (not the
+shared multitask vocabulary), and 151 classes instead of 77. Result:
+accuracy 71.80%→45.04% (a ~37% relative collapse) while confidence only
+dropped 0.7514→0.5615 (a ~25% relative drop) — the same qualitative
+pattern, at a similar relative magnitude, as BANKING77's 81.9%→51.2%
+accuracy collapse against a 0.791→0.612 confidence drop. Two different
+datasets, different vocabularies, different domains, different class
+counts, same result: this meaningfully strengthens the claim that the
+typo-miscalibration gap is a real property worth checking for in any
+System-One-style architecture, not a quirk of one dataset's tokenizer or
+domain.
+
+CLINC150 also surfaced a genuinely new, related finding that BANKING77's
+schema couldn't test at all: even with an explicit, human-labeled
+out-of-scope class present in the schema — the exact "learned 'none of
+the above' option" this section already recommended as a fix for the OOD
+wedge above — the model still only recognized true out-of-scope queries
+16.1% of the time (vs 84.2% accuracy on in-scope queries), because that
+class made up just 0.67% of training data (100 of 15,000 examples), a
+real property of CLINC150's own split design. Having the right answer
+available in the schema is not sufficient if the training signal for it
+is this imbalanced — see `CLINC150.md` for the full breakdown and what
+would be needed to fix it (class-weighted loss, oversampling, or a
+dedicated OOD-detection mechanism, none of which this workstream
+attempted).
 
 ## 6. Item 3 disposition: pretrained subword-tokenized encoder swap (skipped, not approximated)
 

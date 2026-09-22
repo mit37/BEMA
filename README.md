@@ -314,6 +314,25 @@ possible output range (a real, reported-as-such negative result, traced
 to a heavily right-skewed error distribution a constant-width interval
 can't adapt to).
 
+### CLINC150: a second, independent domain-breadth task (`clinc150_pipeline.py`, `CLINC150.md`)
+
+A standalone (not shared-trunk) Choice model on CLINC150 — 150 real
+crowdsourced intents across many domains, plus a genuine out-of-scope
+class (CC-BY 3.0, verified in `DATA_LICENSES.md`) — run specifically to
+test whether the typo-miscalibration finding above generalizes past
+BANKING77. It does: accuracy collapsed 71.80%→45.04% under the same
+ordinary-typo perturbation while confidence dropped only 0.7514→0.5615,
+the same pattern at a similar relative magnitude on a structurally
+different dataset (different tokenizer, different domain mix, 151 vs 77
+classes). It also surfaced a new finding: even with an explicit
+out-of-scope class in the schema, the model only recognized true
+out-of-scope queries 16.1% of the time (vs 84.2% in-scope accuracy),
+because that class was severely underrepresented in training data
+(0.67%) — a concrete instance of "having the right answer in the schema
+isn't enough if the training signal for it is this imbalanced." Full
+writeup, including the conformal and calibration numbers for this task,
+in `CLINC150.md`.
+
 ## Files
 - `prepare_data.py` / `model.py` / `train.py` / `calibrate.py` / `serve.py`
   — single-task (Noul only) pipeline.
@@ -329,6 +348,10 @@ can't adapt to).
   coverage guarantees; full writeup in `CONFORMAL.md`.
 - `augment_and_retrain.py` — typo-noise data augmentation retrain, testing
   whether it fixes the Phase 5b calibration gap; results in FINDINGS.md.
+- `clinc150_pipeline.py` — Workstream D: standalone 151-class (150 intents
+  + out-of-scope) task on a second, independently licensed dataset,
+  testing whether the typo-miscalibration finding generalizes; full
+  writeup in `CLINC150.md`.
 - `LLM_BENCHMARK.md` — documents why a real LLM speed/cost benchmark
   could not be run in this sandbox (network-reachable but no usable
   credentials), rather than leaving it silently skipped.
@@ -360,6 +383,9 @@ python3 calibration_sweep.py   # Phase 4
 python3 ood_stress_test.py     # Phase 5
 python3 adversarial_stress_test.py  # Phase 5b
 python3 conformal.py                # Conformal prediction (see CONFORMAL.md)
+
+# Workstream D: second independent domain-breadth task (see CLINC150.md)
+python3 clinc150_pipeline.py
 
 # Real cross-seed uncertainty measurement (Noul pipeline, ~10-15 min for 3 seeds)
 python3 seed_variation_sweep.py
