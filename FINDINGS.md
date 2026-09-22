@@ -578,3 +578,48 @@ this experiment directly against this repo's `adversarial_stress_test.py`
 and `train_multitask.py` by swapping in a pretrained encoder for the
 Choice head -- that is the specific, well-defined next step this
 reconnaissance effort could not complete.
+
+## 7. Workstream E: attention pooling vs. mean pooling (one scoped experiment)
+
+Lowest-priority workstream, run only given idle capacity after
+Workstreams A-D. `attention_pooling_experiment.py` swapped this repo's
+existing mean-pooling step (averaging the encoder's per-token hidden
+states over non-padded positions) for a learned attention pool (a single
+trainable query vector scores each token position, softmax-weighted sum
+of hidden states) — everything else (layer count, dimensions, training
+recipe, data) held identical to `train_multitask.py`, so any delta is
+attributable to the pooling change alone. Comparison is against the
+existing baseline checkpoint, freshly re-evaluated live in the same run
+(not hardcoded), on the same held-out test data used everywhere else in
+this repo.
+
+| Metric | Mean-pool (baseline) | Attention-pool | Delta |
+|---|---|---|---|
+| Noul test accuracy | 0.9785 | 0.9785 | **+0.0000 (no change)** |
+| Choice test accuracy | 0.8188 | 0.8247 | +0.0058 |
+| Score test MAE (lower is better) | 0.1872 | 0.1787 | −0.0085 |
+
+**Result: a small, mostly negligible effect, exactly the kind of result
+this project's own instructions for this workstream anticipated ("expect
+small effects") — not oversold here as a meaningful architectural win.**
+Noul shows literally zero change. Choice improves by 0.58 percentage
+points (81.88%→82.47%) — a real but small delta, well within the kind of
+run-to-run variation `seed_variation_sweep.py` already measured for this
+architecture (Noul's calibrated accuracy alone varies by std≈0.0028
+across 3 seeds; this experiment used only a single seed for each of the
+two pooling methods, so part of this 0.58-point gap could plausibly be
+seed noise rather than a real effect of the pooling change — this was
+not disentangled by re-running either variant with multiple seeds, which
+would be the correct follow-up before treating either number as
+precise). Score's MAE improves modestly (a 4.5% relative reduction).
+**Conclusion: no strong evidence that attention pooling meaningfully
+outperforms mean pooling on this toy scale, data size, and encoder
+capacity** — the honest read is "roughly comparable, with a slight edge
+to attention pooling that a single run per method cannot confidently
+attribute to the architecture change rather than to seed variance." This
+is consistent with the broader literature's finding that pooling-strategy
+choice tends to matter more at larger scale/longer sequences than it
+does here (max sequence length 48-64 tokens, ~8,500-15,000 training
+examples per task) — nothing about this result should be read as
+evidence against attention pooling in general, only as a null-to-small
+result on this repo's specific toy setup.
