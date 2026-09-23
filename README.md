@@ -323,10 +323,11 @@ writeup in `CONFORMAL.md`; summary: the guarantee held on held-out test
 data for all three heads (Noul 90.91%, Choice 98.83%, Score 89.85%,
 target 90%), but usefulness varies sharply — Noul refuses to answer
 (empty set) 8.4% of the time, Choice needs ~7 of 77 classes on average
-to guarantee coverage, and Score's interval is wider than its entire
-possible output range (a real, reported-as-such negative result, traced
-to a heavily right-skewed error distribution a constant-width interval
-can't adapt to).
+to guarantee coverage, and Score's constant-width interval averages
+about 2.6 stars once clipped to the valid range. Conformalized quantile
+regression (`score_cqr.py`) keeps 90% coverage with narrower, adaptive
+intervals, but covers 1-star reviews only 52% of the time (5-star: 97%):
+the guarantee is an average over a test set that is 61% 5-star.
 
 ### CLINC150: a second, independent domain-breadth task (`clinc150_pipeline.py`, `CLINC150.md`)
 

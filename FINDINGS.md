@@ -76,14 +76,16 @@ Reviews Score task, not STS-B.
   a policy for. Choice hit 98.83% coverage (conservative, as the
   non-randomized APS method used here is known to be) with an average
   set size of 7 of 77 classes — informative but not tight. Score hit
-  89.85% coverage with an interval width of 1.066 on a [0,1]-scale
-  target — **wider than the entire possible output range, i.e.
-  technically valid but practically useless** — traced to a heavily
-  right-skewed error distribution (driven by class imbalance: 61% of
-  Score test examples are 5-star reviews the model predicts well,
-  alongside a harder minority it predicts poorly) that a constant-width
-  interval method cannot adapt to. This is reported as a real negative
-  result for the Score interval specifically, not smoothed over.
+  89.85% coverage, but its constant-width interval spans on average
+  0.656 of the [0,1] rating scale (about 2.6 stars) once clipped to the
+  valid range. (An earlier version of this document called the interval
+  "wider than the entire output range"; that described the raw,
+  unclipped width of 1.066 and overstated the problem.) Conformalized
+  quantile regression (`score_cqr.py`) keeps coverage at 90.11% with a
+  narrower, input-adaptive interval (mean 0.608; 41% of intervals under
+  2 stars), but coverage is uneven: 97% for 5-star reviews and only 52%
+  for 1-star reviews. The 90% guarantee is an average, and it holds here
+  because 61% of reviews are 5-star.
 - **Graceful degradation on real domain shift, at least for the binary
   head's confidence.** Evaluated on real, human-written text the spam
   model was never trained on (BANKING77 customer-support questions, which
@@ -249,7 +251,7 @@ much this toy reproduction actually demonstrates:
 | Multiple typed decision shapes (Noul/Choice/Score) | **All three now show real, working signal.** Score (Amazon Fine Food Reviews, r=0.53) is weaker than Noul/Choice but genuinely learns and generalizes, unlike the STS-B attempt it replaced (r=0.29, flat training curve). None reach a "production-grade" bar, but none is a dead task either. | Low-Medium |
 | Speed/cost advantage over LLMs (40-200x claimed) | **Not independently verified — confirmed unreachable, not just untried** (see `LLM_BENCHMARK.md`). This repo's own model is fast (~1.4ms/example measured), but a real LLM benchmark requires an LLM API and no usable one exists in this sandbox: `api.anthropic.com` is network-reachable but no API credentials are present (`ANTHROPIC_API_KEY`/`CLAUDE_CODE_OAUTH_TOKEN`/`ANTHROPIC_AUTH_TOKEN` all unset), no local LLM server is running, and no LLM SDK is installed. The comparison still uses a documented industry reference figure for LLM latency, not a live measurement. The *shape* of the claim (a small non-autoregressive forward pass beats an LLM API round-trip) is directionally very plausible, but "40-200x" specifically remains Jev's number, not something this repo measured against a real LLM. | Low (weakest-evidenced claim in this repo) |
 | Domain breadth / general-purpose typed questions over arbitrary schemas | **No, still the weakest part of this reproduction, though now tested on one more task.** Four narrow, single-purpose tasks total (spam/ham, 77 banking intents, food-review star ratings, and now CLINC150's 151-way intent+oos, `CLINC150.md`), each needing its own dataset, its own tokenizer/encoder in CLINC150's case, and largely its own calibration. Jev's actual product claim is schema generality across arbitrary domains WITHOUT per-domain retraining — nothing here demonstrates that; each new task in this repo required a full retrain, not zero-shot or few-shot adaptation of an existing model. | Very Low |
-| A formal, verifiable confidence guarantee (not just observed calibration) | **Implemented and verified (`CONFORMAL.md`), with mixed practical results per head.** Split conformal prediction's coverage guarantee held on held-out test data for all three heads (Noul 90.91%, Choice 98.83%, Score 89.85%, target 90%) — the guarantee itself is real, not just observed-and-hoped-for. But "valid" isn't "useful": Noul refuses to answer (empty set) 8.4% of the time, Choice needs an average set of 7 of 77 classes to guarantee coverage, and Score's interval is wider than its entire possible output range. A team relying on "cannot hallucinate" as a complete safety story should be asked specifically whether their confidence numbers come with this kind of guarantee, and if so, whether the resulting sets/intervals are actually narrow enough to be useful — this repo shows both can be true or false independently. | Medium (guarantee verified real; usefulness varies sharply by head) |
+| A formal, verifiable confidence guarantee (not just observed calibration) | **Implemented and verified (`CONFORMAL.md`), with mixed practical results per head.** Split conformal prediction's coverage guarantee held on held-out test data for all three heads (Noul 90.91%, Choice 98.83%, Score 89.85%, target 90%) — the guarantee itself is real, not just observed-and-hoped-for. But "valid" isn't "useful": Noul refuses to answer (empty set) 8.4% of the time, Choice needs an average set of 7 of 77 classes to guarantee coverage, and Score's intervals average about 2.4-2.6 stars wide (CQR narrows them somewhat but covers 1-star reviews only 52% of the time while 5-star reviews get 97%, so the 90% average hides the group that matters most). A team relying on "cannot hallucinate" as a complete safety story should be asked specifically whether their confidence numbers come with this kind of guarantee, and if so, whether the resulting sets/intervals are actually narrow enough to be useful — this repo shows both can be true or false independently. | Medium (guarantee verified real; usefulness varies sharply by head) |
 
 **Overall**: this reproduction validates the *architectural* core of Jev's
 claim (one shared encoder, typed fixed-schema heads, real calibration
