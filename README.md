@@ -338,14 +338,15 @@ BANKING77. It does: accuracy collapsed 71.80%→45.04% under the same
 ordinary-typo perturbation while confidence dropped only 0.7514→0.5615,
 the same pattern at a similar relative magnitude on a structurally
 different dataset (different tokenizer, different domain mix, 151 vs 77
-classes). It also surfaced a new finding: even with an explicit
-out-of-scope class in the schema, the model only recognized true
-out-of-scope queries 16.1% of the time (vs 84.2% in-scope accuracy),
-because that class was severely underrepresented in training data
-(0.67%) — a concrete instance of "having the right answer in the schema
-isn't enough if the training signal for it is this imbalanced." Full
-writeup, including the conformal and calibration numbers for this task,
-in `CLINC150.md`.
+classes). It also tested out-of-scope detection: used as one more
+softmax class, the explicit out-of-scope label caught only 16.1% of true
+out-of-scope queries (vs 84.2% in-scope accuracy), even though training
+data is balanced (100 examples per class, oos included). The confidence
+score does most of the work instead: rejecting answers whose top
+probability is below a validation-tuned threshold
+(`clinc150_oos_threshold.py`) raises oos recall to 85.7%, at a cost of
+about 10 points of in-scope accuracy. Full writeup, including the
+conformal and calibration numbers for this task, in `CLINC150.md`.
 
 ## Files
 - `prepare_data.py` / `model.py` / `train.py` / `calibrate.py` / `serve.py`

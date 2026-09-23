@@ -506,19 +506,22 @@ typo-miscalibration gap is a real property worth checking for in any
 System-One-style architecture, not a quirk of one dataset's tokenizer or
 domain.
 
-CLINC150 also surfaced a genuinely new, related finding that BANKING77's
-schema couldn't test at all: even with an explicit, human-labeled
-out-of-scope class present in the schema — the exact "learned 'none of
-the above' option" this section already recommended as a fix for the OOD
-wedge above — the model still only recognized true out-of-scope queries
-16.1% of the time (vs 84.2% accuracy on in-scope queries), because that
-class made up just 0.67% of training data (100 of 15,000 examples), a
-real property of CLINC150's own split design. Having the right answer
-available in the schema is not sufficient if the training signal for it
-is this imbalanced — see `CLINC150.md` for the full breakdown and what
-would be needed to fix it (class-weighted loss, oversampling, or a
-dedicated OOD-detection mechanism, none of which this workstream
-attempted).
+CLINC150 also tested something BANKING77's schema couldn't: an explicit,
+human-labeled out-of-scope class, the "learned 'none of the above'
+option" this section recommends above. Used as just one more softmax
+class, it recognized true out-of-scope queries only 16.1% of the time
+(vs 84.2% accuracy on in-scope queries). An earlier version of this
+paragraph blamed class imbalance; that was wrong, because CLINC150's
+training set has exactly 100 examples for every class, oos included. The
+oos class simply has to cover "everything else" with the same budget as
+one narrow intent. The more useful result is that the confidence score
+carries the missing signal (`clinc150_oos_threshold.py`): top-class
+probability averages 0.82 on in-scope vs 0.44 on out-of-scope test
+queries (AUROC 0.88), and rejecting answers below a validation-tuned
+threshold raises oos recall to 85.7%, at a cost of in-scope accuracy
+84.2%→74.5% (oos precision 46%). So "knows when it doesn't know" is
+partly true here, but only as a tunable tradeoff, not for free. See
+`CLINC150.md` for the full table and tradeoff curve.
 
 ## 6. Item 3 disposition: pretrained subword-tokenized encoder swap (skipped, not approximated)
 
