@@ -24,6 +24,7 @@ clinc150_results.pkl
 attnpool_results.pkl
 multiseed_results.pkl
 heldout_noise_results.pkl
+clinc150_oos_results.pkl
 
 # OS
 .DS_Store
