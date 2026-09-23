@@ -25,3 +25,4 @@ attnpool_results.pkl
 
 # OS
 .DS_Store
+multiseed_results.pkl

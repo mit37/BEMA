@@ -57,7 +57,7 @@ def eval_noul(model, loader):
     with torch.no_grad():
         for ids, mask, label in loader:
             ids, mask, label = ids.to(device), mask.to(device), label.to(device)
-            logit = model.forward(ids, mask)
+            logit = model.noul_head(model.encode(ids, mask)).squeeze(-1)
             pred = (torch.sigmoid(logit) > 0.5).float()
             correct += (pred == label).sum().item()
             n += label.size(0)
@@ -91,7 +91,9 @@ def eval_score_mae(model, loader):
     return total_abs_err / n
 
 
-def train_model():
+def train_model(seed=None, model_factory=None, save_path="jev_clone_multitask.pt"):
+    if seed is not None:
+        torch.manual_seed(seed)
     noul_train = TaskDataset(data["noul"]["train"], torch.float)
     choice_train = TaskDataset(data["choice"]["train"], torch.long)
     score_train = TaskDataset(data["score"]["train"], torch.float)
@@ -110,10 +112,13 @@ def train_model():
     steps_per_epoch = math.ceil(len(choice_train) / BATCH)
     EPOCHS = 12
 
-    model = JevCloneEncoder(
-        vocab_size=vocab_size, max_len=max_len,
-        num_choice_classes=num_choice_classes, enable_score=True,
-    ).to(device)
+    if model_factory is None:
+        model = JevCloneEncoder(
+            vocab_size=vocab_size, max_len=max_len,
+            num_choice_classes=num_choice_classes, enable_score=True,
+        ).to(device)
+    else:
+        model = model_factory().to(device)
 
     n_pos = sum(r["label"] for r in data["noul"]["train"])
     n_neg = len(data["noul"]["train"]) - n_pos
@@ -170,8 +175,8 @@ def train_model():
             best_state = {k: v.clone() for k, v in model.state_dict().items()}
 
     model.load_state_dict(best_state)
-    torch.save(model.state_dict(), "jev_clone_multitask.pt")
-    print(f"\nSaved jev_clone_multitask.pt (best combined val score={best_score_sum:.4f})")
+    torch.save(model.state_dict(), save_path)
+    print(f"\nSaved {save_path} (best combined val score={best_score_sum:.4f})")
     return model
 
 
