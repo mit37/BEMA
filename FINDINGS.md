@@ -179,6 +179,9 @@ Reviews Score task, not STS-B.
   typo-augmented data narrowed BANKING77's accuracy-collapse gap by
   roughly half (31.4pp -> 16.0pp drop) and the calibration mismatch
   similarly, with no clean-accuracy cost, but did not close either gap.
+  The improvement also carries over to typo types the model never
+  trained on (keyboard-neighbor substitutions, deletions, insertions;
+  +11 to +15 points accuracy, n=3080; see §5).
   See §5 for the full discussion, including why this finding (its
   existence, generalization, and partial-mitigation result together),
   not the OOD result above, is this repo's sharpest finding as of the
@@ -247,7 +250,7 @@ much this toy reproduction actually demonstrates:
 |---|---|---|
 | Non-autoregressive, single forward pass | **Yes, fully.** Architecturally real: one `encode()` call, typed heads read from it. | High |
 | Fixed-schema output ("cannot emit malformed output") | **Yes, fully.** Structural, not learned — heads are fixed-shape linear projections. | High |
-| Calibrated confidence that tracks real accuracy | **On clean test data, mostly yes for Noul specifically** (calibrated ECE 0.0039-0.0070 across 3 seeds, §3). **On realistic noisy input, no by default** — Phase 5b found ordinary typos collapse Choice accuracy 81.9%→51.2% while confidence drops only 0.791→0.612, a real miscalibration inside the model's own domain, not just at OOD edges (see §5). Clean-test-set ECE and noisy-input calibration are demonstrably different properties here. **Workstream B found this is substantially, not fully, fixable**: training on 50%-typo-augmented data narrowed the accuracy-collapse gap by roughly half (31.4pp→16.0pp drop) and the calibration mismatch similarly, with no clean-accuracy tradeoff — but the gap did not close, and the fix was only tested against the same perturbation type used in training (see §5). | Medium for clean input, Low-Medium once realistic noise is introduced (partially mitigable with targeted augmentation) |
+| Calibrated confidence that tracks real accuracy | **On clean test data, mostly yes for Noul specifically** (calibrated ECE 0.0039-0.0070 across 3 seeds, §3). **On realistic noisy input, no by default** — Phase 5b found ordinary typos collapse Choice accuracy 81.9%→51.2% while confidence drops only 0.791→0.612, a real miscalibration inside the model's own domain, not just at OOD edges (see §5). Clean-test-set ECE and noisy-input calibration are demonstrably different properties here. **Workstream B found this is substantially, not fully, fixable**: training on 50%-typo-augmented data narrowed the accuracy-collapse gap by roughly half (31.4pp→16.0pp drop) and the calibration mismatch similarly, with no clean-accuracy tradeoff, and the gain carries over to typo types never seen in training (+11-15 points accuracy, ECE roughly halved). But the gap did not close: accuracy under noise stays 13-24 points below clean (see §5). | Medium for clean input, Low-Medium once realistic noise is introduced (partially mitigable with targeted augmentation) |
 | Multiple typed decision shapes (Noul/Choice/Score) | **All three now show real, working signal.** Score (Amazon Fine Food Reviews, r=0.53) is weaker than Noul/Choice but genuinely learns and generalizes, unlike the STS-B attempt it replaced (r=0.29, flat training curve). None reach a "production-grade" bar, but none is a dead task either. | Low-Medium |
 | Speed/cost advantage over LLMs (40-200x claimed) | **Not independently verified — confirmed unreachable, not just untried** (see `LLM_BENCHMARK.md`). This repo's own model is fast (~1.4ms/example measured), but a real LLM benchmark requires an LLM API and no usable one exists in this sandbox: `api.anthropic.com` is network-reachable but no API credentials are present (`ANTHROPIC_API_KEY`/`CLAUDE_CODE_OAUTH_TOKEN`/`ANTHROPIC_AUTH_TOKEN` all unset), no local LLM server is running, and no LLM SDK is installed. The comparison still uses a documented industry reference figure for LLM latency, not a live measurement. The *shape* of the claim (a small non-autoregressive forward pass beats an LLM API round-trip) is directionally very plausible, but "40-200x" specifically remains Jev's number, not something this repo measured against a real LLM. | Low (weakest-evidenced claim in this repo) |
 | Domain breadth / general-purpose typed questions over arbitrary schemas | **No, still the weakest part of this reproduction, though now tested on one more task.** Four narrow, single-purpose tasks total (spam/ham, 77 banking intents, food-review star ratings, and now CLINC150's 151-way intent+oos, `CLINC150.md`), each needing its own dataset, its own tokenizer/encoder in CLINC150's case, and largely its own calibration. Jev's actual product claim is schema generality across arbitrary domains WITHOUT per-domain retraining — nothing here demonstrates that; each new task in this repo required a full retrain, not zero-shot or few-shot adaptation of an existing model. | Very Low |
@@ -480,15 +483,36 @@ accuracy (83.5%), and confidence still doesn't fully track the remaining
 accuracy loss. This is a real, partial, measured improvement, not a
 solved problem: report it as "augmentation meaningfully helps and costs
 nothing on this toy task's clean accuracy," not as "typo miscalibration
-is fixed." It's also worth being explicit that this experiment trained
-against the *exact* perturbation mechanism (2 adjacent-character swaps)
-used to test it — a more realistic training signal would use a broader
-variety of noise (multiple typo types, varying counts, keyboard-adjacent
-substitutions, real user-generated typo corpora) to avoid narrowly
-overfitting to one specific corruption pattern; this repo's result should
-be read as "augmentation against a known noise distribution helps against
-that noise distribution," not yet "augmentation makes the model robust to
-noise in general."
+is fixed."
+
+**Does the improvement carry over to typo types it never trained on?
+Yes.** The augmented model only ever saw 2 adjacent-character swaps, so
+its gain could have been narrow memorization of that one corruption.
+`heldout_noise_test.py` scores both calibrated models on the same
+BANKING77 test queries (n=3080) under four corruptions absent from
+training (QWERTY-neighbor substitution, deletion, insertion, and a mix
+of all three), generated once with a fixed seed so both models see
+identical text:
+
+| Noise (2 edits unless noted) | In training? | Baseline acc / ECE | Augmented acc / ECE | Acc gain |
+|---|---|---|---|---|
+| none (clean) | - | 0.8188 / 0.037 | 0.8347 / 0.034 | +0.016 |
+| adjacent swap | yes | 0.5000 / 0.112 | 0.6718 / 0.032 | +0.172 |
+| adjacent swap ×4 | same kind, heavier | 0.3276 / 0.202 | 0.5295 / 0.095 | +0.202 |
+| keyboard-neighbor substitution | no | 0.5276 / 0.094 | 0.6558 / 0.035 | +0.128 |
+| deletion | no | 0.5503 / 0.092 | 0.6870 / 0.026 | +0.137 |
+| insertion | no | 0.5899 / 0.062 | 0.7026 / 0.024 | +0.113 |
+| substitution + deletion + insertion | no | 0.4461 / 0.139 | 0.5958 / 0.066 | +0.150 |
+
+(The baseline's swap accuracy here, 0.5000, differs slightly from the
+0.5052 above because the swaps are a different random draw.) On every
+held-out corruption the augmented model is 11-15 points more accurate
+and its ECE falls by roughly half or more, so the fix is not limited to
+the exact noise it was trained on. It is still not a cure: accuracy
+under held-out noise stays 13-24 points below clean accuracy, the model
+remains overconfident under every corruption (mean confidence exceeds
+accuracy by 0.9-9.5 points), and none of these synthetic corruptions is
+a substitute for testing on real user-typed text.
 
 **Does the typo-miscalibration finding generalize past BANKING77? Yes —
 confirmed on a second, structurally different dataset (Workstream D, full

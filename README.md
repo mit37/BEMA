@@ -307,9 +307,11 @@ tokenizer) shows the same pattern at a similar relative magnitude
 BANKING77-specific artifact. Second, it's partially fixable: training on
 typo-augmented data (`augment_and_retrain.py`, FINDINGS.md §5) narrowed
 BANKING77's accuracy-collapse gap by roughly half (31.4pp→16.0pp) and the
-calibration mismatch similarly, at no cost to clean-test accuracy — but
-did not close either gap, and was only validated against the same
-perturbation type used in training. Read together: this is a real,
+calibration mismatch similarly, at no cost to clean-test accuracy, and
+`heldout_noise_test.py` shows the gain carries over to typo types it
+never trained on (keyboard-neighbor substitutions, deletions,
+insertions: +11 to +15 points accuracy, ECE roughly halved). It still
+did not close either gap. Read together: this is a real,
 generalizing failure mode, and a real, meaningful, but incomplete fix
 exists for it.
 
