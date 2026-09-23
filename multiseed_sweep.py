@@ -1,14 +1,15 @@
 """
-Multi-seed comparison of the multitask model with mean pooling (baseline)
-vs learned attention pooling (Workstream E). Closes two gaps FINDINGS.md
+Workstream E: mean pooling (baseline) vs learned attention pooling on the
+multitask model, across several training seeds. Closes two gaps FINDINGS.md
 names: seed variance had only been measured for Noul (single-task), and
 the pooling comparison was a single seed per variant.
 
 The data split is held FIXED (data/prepared_multitask.pkl); only the
 training seed (weight init + batch order) varies. That isolates the
 effect of the architecture from the effect of which examples landed in
-test. Seed 42 reuses the existing checkpoints (jev_clone_multitask.pt,
-jev_clone_attnpool.pt); seeds 123 and 2024 are trained here.
+test. Seed 42 reuses jev_clone_multitask.pt / jev_clone_attnpool.pt when
+present; any missing checkpoint is trained here with train_multitask's
+recipe (seed 42 mean pooling reproduces train_multitask.py exactly).
 
 Usage: python3 multiseed_sweep.py
 """
@@ -20,9 +21,8 @@ import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader
 
-from attention_pooling_experiment import AttnPoolEncoder
+from calib_utils import ece as ece_score
 from model import JevCloneEncoder
-from seed_variation_sweep import ece_score
 from train_multitask import (TaskDataset, data, device, eval_choice, eval_noul,
                              max_len, num_choice_classes, train_model, vocab_size)
 
@@ -30,17 +30,13 @@ SEEDS = [42, 123, 2024]
 EXISTING = {("mean", 42): "jev_clone_multitask.pt", ("attn", 42): "jev_clone_attnpool.pt"}
 
 
-def make_mean():
-    return JevCloneEncoder(vocab_size=vocab_size, max_len=max_len,
-                           num_choice_classes=num_choice_classes, enable_score=True)
+def factory(pooling):
+    return lambda: JevCloneEncoder(vocab_size=vocab_size, max_len=max_len,
+                                   num_choice_classes=num_choice_classes, enable_score=True,
+                                   pooling=pooling)
 
 
-def make_attn():
-    return AttnPoolEncoder(vocab_size=vocab_size, max_len=max_len,
-                           num_choice_classes=num_choice_classes)
-
-
-FACTORIES = {"mean": make_mean, "attn": make_attn}
+FACTORIES = {"mean": factory("mean"), "attn": factory("attn")}
 
 
 def loader(task, split, dtype):
