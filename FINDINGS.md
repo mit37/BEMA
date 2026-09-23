@@ -1,10 +1,15 @@
 # Findings: reconnaissance into System-One decision models (Jev-clone)
 
-Date: 2026-09-21, last updated 2026-09-22 after Workstreams A-E (split
+Date: 2026-09-21, updated 2026-09-22 after Workstreams A-E (split
 conformal prediction, adversarial typo-noise augmentation, the real-LLM
 benchmark disposition, a second independent domain-breadth dataset, and
 one architecture experiment — see CONFORMAL.md, CLINC150.md, and the
-sections below for each). This document summarizes what an independent,
+sections below for each), and 2026-09-23 with follow-ups that closed the
+gaps those left open: augmentation tested on unseen noise types,
+out-of-scope rejection on CLINC150, adaptive (CQR) intervals for Score,
+and a multi-seed pooling comparison. That round also corrected two
+earlier claims (CLINC150 "class imbalance"; the Score interval being
+"wider than the output range"), marked where they appear. This document summarizes what an independent,
 from-scratch reproduction of Jev's core interface shape (typed state in,
 typed calibrated decision out, one non-autoregressive forward pass)
 found when actually built and tested, rather than assumed. All numbers
@@ -224,22 +229,28 @@ rather than hidden:**
   n-1=2; an earlier version of this script divided by n=3, understating
   std by about 18% -- fixed, and the numbers above reflect the corrected,
   slightly wider figures.) That is still a tight, reassuring range for
-  how much a genuinely different split/init changes the outcome. Note
-  this sweep was run once, for one task (Noul); the Choice and Score
-  heads have not had the same treatment and their numbers carry the
-  same un-quantified uncertainty this section describes.
+  how much a genuinely different split/init changes the outcome.
+- **Choice and Score now have seed variance too, but only over training
+  seeds.** `multiseed_sweep.py` retrains the multitask model with seeds
+  42, 123 and 2024 on the SAME data split (so it measures init and
+  batch-order noise, not split noise, and is a narrower measure than the
+  Noul sweep above). With mean pooling: Choice test accuracy 0.8195 ±
+  0.0011 (n=3080), calibrated Choice ECE 0.0341 ± 0.0042, Score MAE
+  0.1858 ± 0.0055 and Score Pearson r 0.5605 ± 0.0234 (n=1517). Choice
+  accuracy is very stable across seeds. Score r is not: it ranges
+  0.534-0.579, and the single-run r=0.53 quoted elsewhere in this repo
+  is the lowest of the three, so it slightly understates the typical
+  result.
 - **Calibration numbers otherwise still come from ONE held-out split per
   dataset**, not cross-validation or bootstrapping within a single split.
-  The seed sweep above measures cross-run variance (different splits
-  entirely), which is a stronger and more honest signal than a
-  within-split bootstrap would have been, but it was only done for one
-  of the three tasks due to the ~3-5 minutes of compute per seed adding
-  up across tasks. Extending it to Choice and Score is straightforward
-  future work using the same script as a template.
+  The Noul seed sweep measures cross-run variance with different splits
+  entirely; the Choice/Score sweep varies only the training seed. Neither
+  resamples the multitask test split, so split-to-split variance for
+  Choice and Score is still unmeasured.
 - **The Score task's numbers below reflect a single run on the new
-  (Amazon Fine Food Reviews) dataset**, with no seed sweep done for it
-  yet (see the point above) -- read them the same way as any single-run
-  number in this repo: directionally informative, not exact.
+  (Amazon Fine Food Reviews) dataset** unless stated otherwise. The
+  training-seed sweep above puts that single run's r=0.53 at the low end
+  of a 0.53-0.58 range.
 
 ## 4. An honest estimate of what % of Jev's value proposition this reproduces
 
@@ -608,47 +619,37 @@ and `train_multitask.py` by swapping in a pretrained encoder for the
 Choice head -- that is the specific, well-defined next step this
 reconnaissance effort could not complete.
 
-## 7. Workstream E: attention pooling vs. mean pooling (one scoped experiment)
+## 7. Workstream E: attention pooling vs. mean pooling
 
-Lowest-priority workstream, run only given idle capacity after
-Workstreams A-D. `attention_pooling_experiment.py` swapped this repo's
-existing mean-pooling step (averaging the encoder's per-token hidden
-states over non-padded positions) for a learned attention pool (a single
-trainable query vector scores each token position, softmax-weighted sum
-of hidden states) — everything else (layer count, dimensions, training
-recipe, data) held identical to `train_multitask.py`, so any delta is
-attributable to the pooling change alone. Comparison is against the
-existing baseline checkpoint, freshly re-evaluated live in the same run
-(not hardcoded), on the same held-out test data used everywhere else in
-this repo.
+Lowest-priority workstream. The encoder's mean pooling (averaging
+per-token hidden states over non-padded positions) was compared with a
+learned attention pool (one trainable query vector scores each token;
+the pooled vector is the softmax-weighted sum), available as
+`JevCloneEncoder(pooling="attn")`. Everything else (layers, dimensions,
+training recipe, data split) is identical to `train_multitask.py`.
 
-| Metric | Mean-pool (baseline) | Attention-pool | Delta |
+A first single-seed run showed attention pooling slightly ahead (Choice
+0.8247 vs 0.8188, Score MAE 0.1787 vs 0.1872) and was flagged at the time
+as possibly seed noise. `multiseed_sweep.py` settles that by training
+both variants with three seeds (42, 123, 2024) on the same data split:
+
+| Test metric | Mean pooling (3 seeds) | Attention pooling (3 seeds) | Paired difference (attn − mean) |
 |---|---|---|---|
-| Noul test accuracy | 0.9785 | 0.9785 | **+0.0000 (no change)** |
-| Choice test accuracy | 0.8188 | 0.8247 | +0.0058 |
-| Score test MAE (lower is better) | 0.1872 | 0.1787 | −0.0085 |
+| Noul accuracy (n=836) | 0.9801 ± 0.0050 | 0.9809 ± 0.0041 | +0.0008 ± 0.0014 |
+| Choice accuracy (n=3080) | 0.8195 ± 0.0011 | 0.8202 ± 0.0143 | +0.0008 ± 0.0136 |
+| Choice ECE, calibrated | 0.0341 ± 0.0042 | 0.0314 ± 0.0046 | −0.0027 ± 0.0050 |
+| Score MAE (lower is better, n=1517) | 0.1858 ± 0.0055 | 0.1809 ± 0.0041 | −0.0049 ± 0.0095 |
+| Score Pearson r | 0.5605 ± 0.0234 | 0.5666 ± 0.0199 | +0.0061 ± 0.0190 |
 
-**Result: a small, mostly negligible effect, exactly the kind of result
-this project's own instructions for this workstream anticipated ("expect
-small effects") — not oversold here as a meaningful architectural win.**
-Noul shows literally zero change. Choice improves by 0.58 percentage
-points (81.88%→82.47%) — a real but small delta, well within the kind of
-run-to-run variation `seed_variation_sweep.py` already measured for this
-architecture (Noul's calibrated accuracy alone varies by std≈0.0028
-across 3 seeds; this experiment used only a single seed for each of the
-two pooling methods, so part of this 0.58-point gap could plausibly be
-seed noise rather than a real effect of the pooling change — this was
-not disentangled by re-running either variant with multiple seeds, which
-would be the correct follow-up before treating either number as
-precise). Score's MAE improves modestly (a 4.5% relative reduction).
-**Conclusion: no strong evidence that attention pooling meaningfully
-outperforms mean pooling on this toy scale, data size, and encoder
-capacity** — the honest read is "roughly comparable, with a slight edge
-to attention pooling that a single run per method cannot confidently
-attribute to the architecture change rather than to seed variance." This
-is consistent with the broader literature's finding that pooling-strategy
-choice tends to matter more at larger scale/longer sequences than it
-does here (max sequence length 48-64 tokens, ~8,500-15,000 training
-examples per task) — nothing about this result should be read as
-evidence against attention pooling in general, only as a null-to-small
-result on this repo's specific toy setup.
+(mean ± sample standard deviation over seeds.)
+
+**Result: no measurable difference.** Every paired difference is smaller
+than its own seed-to-seed spread. The single-seed Choice edge did not
+hold up: attention pooling won by 0.0058 at seed 42 and 0.0110 at seed
+123, but lost by 0.0146 at seed 2024. If anything, attention pooling made
+Choice accuracy less stable across seeds (std 0.0143 vs 0.0011). With
+only three seeds this cannot rule out a small real effect, but nothing
+here supports switching pooling methods. That fits the usual expectation
+that pooling choice matters little for short inputs (48-64 tokens) and a
+small encoder, and it says nothing about attention pooling at larger
+scale.
