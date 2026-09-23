@@ -34,6 +34,7 @@ from torch.utils.data import DataLoader, Dataset
 from tokenizers import ByteLevelBPETokenizer
 
 from model import JevCloneEncoder
+from calib_utils import aps_prediction_set_sizes_and_coverage, aps_score, conformal_quantile, ece, split_val
 
 SEED = 42
 random.seed(SEED)
@@ -197,19 +198,6 @@ print(f"Saved jev_clone_clinc150.pt (best val_acc={best_acc:.4f})")
 # ---------------------------------------------------------------------------
 # 3. Calibrate (temperature scaling on val, ECE on raw held-out test)
 # ---------------------------------------------------------------------------
-def ece(confidences, correct, n_bins=10):
-    bins = torch.linspace(0, 1, n_bins + 1)
-    total = 0.0
-    for i in range(n_bins):
-        lo, hi = bins[i].item(), bins[i + 1].item()
-        idxs = [j for j, c in enumerate(confidences) if lo < c <= hi or (i == 0 and c == lo)]
-        if not idxs:
-            continue
-        bin_conf = sum(confidences[j] for j in idxs) / len(idxs)
-        bin_acc = sum(correct[j] for j in idxs) / len(idxs)
-        total += (len(idxs) / len(confidences)) * abs(bin_acc - bin_conf)
-    return total
-
 
 def collect_logits(loader):
     logits_all, labels_all = [], []
@@ -270,13 +258,6 @@ print("SPLIT CONFORMAL PREDICTION (APS), target coverage 90%")
 print("=" * 70)
 
 
-def split_val(rows, frac_a=0.5, seed=123):
-    rows = list(rows)
-    rnd = random.Random(seed)
-    rnd.shuffle(rows)
-    n_a = int(len(rows) * frac_a)
-    return rows[:n_a], rows[n_a:]
-
 
 val_a_rows, val_b_rows = split_val(data["val"])
 val_a_loader = DataLoader(ChoiceDataset(val_a_rows), batch_size=64)
@@ -303,24 +284,6 @@ probs_b = torch.softmax(val_b_logits / T_conformal, dim=-1).numpy()
 y_b = val_b_labels.numpy()
 
 
-def aps_score(probs, true_labels):
-    order = np.argsort(-probs, axis=1)
-    sorted_probs = np.take_along_axis(probs, order, axis=1)
-    cumsum = np.cumsum(sorted_probs, axis=1)
-    scores = np.zeros(len(true_labels))
-    for i in range(len(true_labels)):
-        rank = np.where(order[i] == true_labels[i])[0][0]
-        scores[i] = cumsum[i, rank]
-    return scores
-
-
-def conformal_quantile(scores, alpha):
-    n = len(scores)
-    q_level = np.ceil((n + 1) * (1 - alpha)) / n
-    if q_level >= 1.0:
-        return float(np.max(scores))
-    return float(np.quantile(scores, q_level, method="higher"))
-
 
 scores_b = aps_score(probs_b, y_b)
 qhat = conformal_quantile(scores_b, ALPHA)
@@ -329,20 +292,6 @@ print(f"Calibration set n={len(val_b_rows)}   qhat={qhat:.4f}")
 probs_test = torch.softmax(test_logits / T_conformal, dim=-1).numpy()
 y_test = test_labels.numpy()
 
-
-def aps_prediction_set_sizes_and_coverage(probs, true_labels, qhat):
-    order = np.argsort(-probs, axis=1)
-    sorted_probs = np.take_along_axis(probs, order, axis=1)
-    cumsum = np.cumsum(sorted_probs, axis=1)
-    set_sizes = np.zeros(len(true_labels), dtype=int)
-    covered = np.zeros(len(true_labels), dtype=bool)
-    for i in range(len(true_labels)):
-        k = np.searchsorted(cumsum[i], qhat, side="left")
-        k = min(k, len(cumsum[i]) - 1)
-        set_sizes[i] = k + 1
-        true_rank = np.where(order[i] == true_labels[i])[0][0]
-        covered[i] = true_rank <= k
-    return set_sizes, covered
 
 
 set_sizes, covered = aps_prediction_set_sizes_and_coverage(probs_test, y_test, qhat)

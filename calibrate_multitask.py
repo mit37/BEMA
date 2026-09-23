@@ -17,6 +17,7 @@ import torch.nn as nn
 from torch.utils.data import DataLoader
 
 from model import JevCloneEncoder
+from calib_utils import ece
 from train_multitask import TaskDataset, data, vocab_size, max_len, num_choice_classes, device
 
 model = JevCloneEncoder(
@@ -26,19 +27,6 @@ model = JevCloneEncoder(
 model.load_state_dict(torch.load("jev_clone_multitask.pt", map_location=device))
 model.eval()
 
-
-def ece(confidences, correct, n_bins=10):
-    bins = torch.linspace(0, 1, n_bins + 1)
-    total = 0.0
-    for i in range(n_bins):
-        lo, hi = bins[i].item(), bins[i + 1].item()
-        idxs = [j for j, c in enumerate(confidences) if lo < c <= hi or (i == 0 and c == lo)]
-        if not idxs:
-            continue
-        bin_conf = sum(confidences[j] for j in idxs) / len(idxs)
-        bin_acc = sum(correct[j] for j in idxs) / len(idxs)
-        total += (len(idxs) / len(confidences)) * abs(bin_acc - bin_conf)
-    return total
 
 
 # ---------------------------------------------------------------------------
