@@ -353,7 +353,8 @@ conformal and calibration numbers for this task, in `CLINC150.md`.
 
 ## Files
 - `prepare_data.py` / `model.py` / `train.py` / `calibrate.py` / `serve.py`
-  — single-task (Noul only) pipeline.
+  — single-task (Noul only) pipeline. `model.py` holds the shared
+  encoder for every pipeline (mean or attention pooling).
 - `prepare_multitask.py` / `train_multitask.py` / `calibrate_multitask.py`
   / `serve_multitask.py` — multi-task (Noul + Choice + Score) pipeline,
   shared encoder.
@@ -364,15 +365,26 @@ conformal and calibration numbers for this task, in `CLINC150.md`.
   robustness stress test (the repo's sharpest finding — see above).
 - `conformal.py` — split conformal prediction (Noul/Choice/Score), verified
   coverage guarantees; full writeup in `CONFORMAL.md`.
+- `score_cqr.py` — conformalized quantile regression for the Score head
+  (adaptive intervals), compared with the constant-width method; see
+  `CONFORMAL.md`.
 - `augment_and_retrain.py` — typo-noise data augmentation retrain, testing
   whether it fixes the Phase 5b calibration gap; results in FINDINGS.md.
+- `heldout_noise_test.py` — scores the baseline and augmented models on
+  typo types the augmentation never trained on (perturbations in
+  `noise.py`).
 - `clinc150_pipeline.py` — Workstream D: standalone 151-class (150 intents
   + out-of-scope) task on a second, independently licensed dataset,
   testing whether the typo-miscalibration finding generalizes; full
   writeup in `CLINC150.md`.
-- `attention_pooling_experiment.py` — Workstream E: one scoped architecture
-  experiment (learned attention pooling vs mean pooling), same recipe
-  and data as `train_multitask.py`; results in FINDINGS.md.
+- `clinc150_oos_threshold.py` — out-of-scope detection on CLINC150 by
+  thresholding the model's confidence (threshold picked on validation).
+- `multiseed_sweep.py` — Workstream E: mean vs attention pooling across
+  three training seeds, also giving seed variance for Choice and Score;
+  results in FINDINGS.md.
+- `calib_utils.py` — shared ECE and split-conformal helpers.
+- `tests/` — fast unit tests (no data or checkpoints needed), run in CI by
+  `.github/workflows/tests.yml`.
 - `DATA_LICENSES.md` — the canonical, per-dataset license verification
   record for every dataset used in this repo (required before using any
   new dataset, per this project's own rules).
@@ -407,9 +419,17 @@ python3 calibration_sweep.py   # Phase 4
 python3 ood_stress_test.py     # Phase 5
 python3 adversarial_stress_test.py  # Phase 5b
 python3 conformal.py                # Conformal prediction (see CONFORMAL.md)
+python3 score_cqr.py                # Adaptive (CQR) intervals for Score
+python3 augment_and_retrain.py      # Typo-augmentation retrain (Workstream B)
+python3 heldout_noise_test.py       # ...and its test on unseen typo types
+python3 multiseed_sweep.py          # Mean vs attention pooling, 3 seeds (Workstream E, slow)
 
 # Workstream D: second independent domain-breadth task (see CLINC150.md)
 python3 clinc150_pipeline.py
+python3 clinc150_oos_threshold.py
+
+# Unit tests
+pip install pytest && python3 -m pytest -q tests
 
 # Real cross-seed uncertainty measurement (Noul pipeline, ~10-15 min for 3 seeds)
 python3 seed_variation_sweep.py
