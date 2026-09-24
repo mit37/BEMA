@@ -16,6 +16,8 @@ jobs:
       - name: Install CPU-only dependencies
         run: |
           pip install torch --index-url https://download.pytorch.org/whl/cpu
-          pip install "numpy>=1.24" pytest
+          pip install "numpy>=1.24" pytest pyflakes
+      - name: Lint (pyflakes)
+        run: python -m pyflakes *.py tests/*.py
       - name: Run unit tests
         run: python -m pytest -q tests

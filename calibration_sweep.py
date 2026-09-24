@@ -16,7 +16,6 @@ Usage: python3 train_multitask.py && python3 calibration_sweep.py
 """
 import csv
 import os
-import pickle
 from datetime import datetime, timezone
 
 import numpy as np

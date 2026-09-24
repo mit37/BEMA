@@ -263,7 +263,7 @@ score_avg_width = 2 * score_qhat  # constant width by construction
 print(f"\nTEST SET RESULTS (n={len(score_test)}):")
 print(f"  Target coverage: {1-ALPHA:.0%}   Measured coverage: {score_coverage:.4f}")
 print(f"  Interval width: {score_avg_width:.4f} (constant, out of a [0,1]-scale target range)")
-print(f"  For context, this repo's Score head has a point-prediction MAE of ~0.19 on this")
+print("  For context, this repo's Score head has a point-prediction MAE of ~0.19 on this")
 print(f"  test set (see FINDINGS.md) -- a conformal half-width of {score_qhat:.4f} is "
       f"{'wider' if score_qhat > 0.19 else 'narrower'} than the typical point-prediction error.")
 

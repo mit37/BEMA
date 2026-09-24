@@ -36,7 +36,6 @@ or LLM-generated labels, per this project's ground-truth rule):
 Uses the same calibrated multi-task model as ood_stress_test.py.
 """
 import random
-import re
 
 import torch
 from torch.utils.data import DataLoader

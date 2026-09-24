@@ -11,7 +11,7 @@ import torch.nn as nn
 from torch.utils.data import DataLoader
 
 from model import JevCloneEncoder
-from train import SpamDataset, data, vocab_size, max_len, device, evaluate_calibration
+from train import SpamDataset, data, vocab_size, max_len, device
 
 model = JevCloneEncoder(vocab_size=vocab_size, max_len=max_len).to(device)
 model.load_state_dict(torch.load("jev_clone.pt", map_location=device))

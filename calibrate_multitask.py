@@ -11,7 +11,6 @@ attempt to measure. We report MAE and Pearson correlation for Score
 instead of ECE, and say so plainly rather than implying a calibration
 number that isn't actually a calibration number.
 """
-import pickle
 import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader
