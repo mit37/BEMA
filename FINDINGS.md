@@ -9,7 +9,9 @@ gaps those left open: augmentation tested on unseen noise types,
 out-of-scope rejection on CLINC150, adaptive (CQR) intervals for Score,
 and a multi-seed pooling comparison. That round also corrected two
 earlier claims (CLINC150 "class imbalance"; the Score interval being
-"wider than the output range"), marked where they appear. This document summarizes what an independent,
+"wider than the output range"), marked where they appear. A third pass
+(2026-09-24) added bootstrap confidence intervals (§3), conformal
+coverage under typo noise, and group-conditional CQR. This document summarizes what an independent,
 from-scratch reproduction of Jev's core interface shape (typed state in,
 typed calibrated decision out, one non-autoregressive forward pass)
 found when actually built and tested, rather than assumed. All numbers
@@ -90,7 +92,15 @@ Reviews Score task, not STS-B.
   narrower, input-adaptive interval (mean 0.608; 41% of intervals under
   2 stars), but coverage is uneven: 97% for 5-star reviews and only 52%
   for 1-star reviews. The 90% guarantee is an average, and it holds here
-  because 61% of reviews are 5-star.
+  because 61% of reviews are 5-star. Calibrating separately within
+  predicted-rating groups evens coverage across those groups but only
+  lifts 1-star coverage to 61%: the model rarely predicts a low rating at
+  all, so the gap is in the point predictor, not the calibration.
+  Under typo noise (`conformal_typo.py`), Choice's sets react where its
+  point confidence did not: calibrated on clean text, coverage stays at
+  89-92% while sets nearly double (7 to 13-15 classes); calibrating on
+  typo'd text restores the 90% guarantee, and the typo-augmented model
+  keeps 96-98% coverage with smaller sets.
 - **Graceful degradation on real domain shift, at least for the binary
   head's confidence.** Evaluated on real, human-written text the spam
   model was never trained on (BANKING77 customer-support questions, which
@@ -244,9 +254,24 @@ rather than hidden:**
 - **Calibration numbers otherwise still come from ONE held-out split per
   dataset**, not cross-validation or bootstrapping within a single split.
   The Noul seed sweep measures cross-run variance with different splits
-  entirely; the Choice/Score sweep varies only the training seed. Neither
-  resamples the multitask test split, so split-to-split variance for
-  Choice and Score is still unmeasured.
+  entirely; the Choice/Score sweep varies only the training seed.
+- **Test-set sampling uncertainty is now measured** (`bootstrap_ci.py`:
+  2000 bootstrap resamples of each fixed test split, existing
+  checkpoints, paired for differences). 95% intervals: Noul accuracy
+  0.9785 [0.968, 0.988] and calibrated ECE 0.0046 [0.0038, 0.0153]
+  (n=836); Choice accuracy 0.8188 [0.806, 0.832] and calibrated ECE
+  0.0371 [0.033, 0.051] (n=3080); Score MAE 0.187 [0.176, 0.199] and
+  Pearson r 0.534 [0.491, 0.576] (n=1517). Two things follow. The
+  differences this repo leans on are well outside the noise (e.g. typo
+  augmentation's gain on unseen keyboard typos, +12.8 points [11.2,
+  14.5]; its small clean-text gain, +1.6 [0.5, 2.8]; CLINC150's threshold
+  cost to in-scope accuracy, −9.7 [−10.5, −8.9]). But single ECE values
+  are soft: binned ECE is noisy and biased upward at these sample sizes,
+  so the headline "calibrated Noul ECE ≈ 0.005" is better read as "at
+  most about 0.015". BANKING77's test split is the dataset's official
+  one, so resampling that fixed set is the relevant uncertainty; for the
+  randomly split Noul and Score data, a different split would add further
+  variation (measured for Noul by the seed sweep above).
 - **The Score task's numbers below reflect a single run on the new
   (Amazon Fine Food Reviews) dataset** unless stated otherwise. The
   training-seed sweep above puts that single run's r=0.53 at the low end
@@ -265,7 +290,7 @@ much this toy reproduction actually demonstrates:
 | Multiple typed decision shapes (Noul/Choice/Score) | **All three now show real, working signal.** Score (Amazon Fine Food Reviews, r=0.53) is weaker than Noul/Choice but genuinely learns and generalizes, unlike the STS-B attempt it replaced (r=0.29, flat training curve). None reach a "production-grade" bar, but none is a dead task either. | Low-Medium |
 | Speed/cost advantage over LLMs (40-200x claimed) | **Not independently verified — confirmed unreachable, not just untried** (see `LLM_BENCHMARK.md`). This repo's own model is fast (~1.4ms/example measured), but a real LLM benchmark requires an LLM API and no usable one exists in this sandbox: `api.anthropic.com` is network-reachable but no API credentials are present (`ANTHROPIC_API_KEY`/`CLAUDE_CODE_OAUTH_TOKEN`/`ANTHROPIC_AUTH_TOKEN` all unset), no local LLM server is running, and no LLM SDK is installed. The comparison still uses a documented industry reference figure for LLM latency, not a live measurement. The *shape* of the claim (a small non-autoregressive forward pass beats an LLM API round-trip) is directionally very plausible, but "40-200x" specifically remains Jev's number, not something this repo measured against a real LLM. | Low (weakest-evidenced claim in this repo) |
 | Domain breadth / general-purpose typed questions over arbitrary schemas | **No, still the weakest part of this reproduction, though now tested on one more task.** Four narrow, single-purpose tasks total (spam/ham, 77 banking intents, food-review star ratings, and now CLINC150's 151-way intent+oos, `CLINC150.md`), each needing its own dataset, its own tokenizer/encoder in CLINC150's case, and largely its own calibration. Jev's actual product claim is schema generality across arbitrary domains WITHOUT per-domain retraining — nothing here demonstrates that; each new task in this repo required a full retrain, not zero-shot or few-shot adaptation of an existing model. | Very Low |
-| A formal, verifiable confidence guarantee (not just observed calibration) | **Implemented and verified (`CONFORMAL.md`), with mixed practical results per head.** Split conformal prediction's coverage guarantee held on held-out test data for all three heads (Noul 90.91%, Choice 98.83%, Score 89.85%, target 90%) — the guarantee itself is real, not just observed-and-hoped-for. But "valid" isn't "useful": Noul refuses to answer (empty set) 8.4% of the time, Choice needs an average set of 7 of 77 classes to guarantee coverage, and Score's intervals average about 2.4-2.6 stars wide (CQR narrows them somewhat but covers 1-star reviews only 52% of the time while 5-star reviews get 97%, so the 90% average hides the group that matters most). A team relying on "cannot hallucinate" as a complete safety story should be asked specifically whether their confidence numbers come with this kind of guarantee, and if so, whether the resulting sets/intervals are actually narrow enough to be useful — this repo shows both can be true or false independently. | Medium (guarantee verified real; usefulness varies sharply by head) |
+| A formal, verifiable confidence guarantee (not just observed calibration) | **Implemented and verified (`CONFORMAL.md`), with mixed practical results per head.** Split conformal prediction's coverage guarantee held on held-out test data for all three heads (Noul 90.91%, Choice 98.83%, Score 89.85%, target 90%) — the guarantee itself is real, not just observed-and-hoped-for. But "valid" isn't "useful": Noul refuses to answer (empty set) 8.4% of the time, Choice needs an average set of 7 of 77 classes to guarantee coverage, and Score's intervals average about 2.4-2.6 stars wide (CQR narrows them somewhat but covers 1-star reviews only 52% of the time while 5-star reviews get 97%, so the 90% average hides the group that matters most; per-group calibration only lifts that to 61%). Under typo noise the Choice sets widen instead of silently failing (coverage 89-92% with clean calibration, back above 90% when calibrated on typo'd text). A team relying on "cannot hallucinate" as a complete safety story should be asked specifically whether their confidence numbers come with this kind of guarantee, and if so, whether the resulting sets/intervals are actually narrow enough to be useful — this repo shows both can be true or false independently. | Medium (guarantee verified real; usefulness varies sharply by head) |
 
 **Overall**: this reproduction validates the *architectural* core of Jev's
 claim (one shared encoder, typed fixed-schema heads, real calibration
@@ -296,9 +321,9 @@ more time"):**
   r=0.53 and a "strong" sentiment-regression result is most plausibly
   the same encoder-capacity/no-pretrained-weights bottleneck named
   above, not a new architecture problem specific to this dataset.
-- **Small held-out test sets (800-3,080 examples per task).** Enough for
-  point estimates, not enough (without bootstrapping, which wasn't done)
-  for tight confidence intervals on ECE or accuracy.
+- **Small held-out test sets (836-3,080 examples per task).** Bootstrap
+  intervals (§3) show accuracies are pinned to about ±1-2 points, but
+  ECE values are only good to within roughly a factor of 2-3.
 
 ## 5. The real technical wedge (or weakness) this exercise surfaced
 
@@ -570,8 +595,9 @@ System-One-style architectures generally or an artifact of this repo's
 own from-scratch, narrow-vocabulary tokenizer.
 
 **Result: not run. Re-verified, freshly, immediately before writing this
-section (2026-09-22T02:12:10Z UTC), that no pretrained encoder is
-reachable from this sandbox:**
+section (2026-09-22T02:12:10Z UTC; re-checked again 2026-09-24T06:40Z
+with the same result), that no pretrained encoder is reachable from this
+sandbox:**
 
 ```
 huggingface.co/distilbert-base-uncased/resolve/main/config.json -> connection tunnel rejected (HTTP 403, policy denial)
