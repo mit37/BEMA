@@ -156,9 +156,20 @@ average reaches 90% even though a 1-star review's true rating falls
 inside its interval only about half the time. Split conformal methods
 cannot guarantee coverage conditional on the true label (it is unknown
 at prediction time). A deployment that cares most about negative
-reviews would need to measure coverage on that group directly, and to
-collect more low-rating data or conformalize within predicted-rating
-groups. An average coverage number alone would hide the problem.
+reviews would need to measure coverage on that group directly. An
+average coverage number alone would hide the problem.
+
+**Group-conditional CQR** (also in `score_cqr.py`) conformalizes
+separately within three predicted-rating groups (equal-count cut points
+from val_a). It evens coverage across those groups (lowest-predicted
+group 85.4% → 89.6%; all three ≈ 90%), keeps 90.2% overall, and narrows
+intervals slightly (mean width 0.590). By true rating it barely helps:
+1-star coverage 52.5% → 60.5%, 2-star unchanged at 78.0%. The lowest
+predicted third already starts at 0.87 on the [0,1] scale (about 4.5
+stars): the model almost never predicts a low rating, so no grouping by
+prediction can single out the reviews it gets wrong. That gap has to be
+fixed in the point predictor (more low-rating data, a stronger
+encoder), not in the calibration layer.
 
 ## What this adds over temperature/Platt/isotonic scaling, honestly
 
@@ -186,14 +197,40 @@ groups. An average coverage number alone would hide the problem.
   tension; this section's job was to make the tension visible and
   measured, which it does.
 
-## Relation to Workstream B
+## Conformal sets under typo noise (and Workstream B)
 
-This repo's earlier, sharpest finding (FINDINGS.md §5: ordinary typo
-noise collapses Choice accuracy 81.9%→51.2% while confidence drops only
-0.791→0.612) predates this conformal analysis and used point-estimate
-confidence, not conformal sets. Workstream B (retraining with typo
-augmentation) is evaluated separately and does not currently re-run the
-conformal pipeline above — that combination (does typo-augmented
-training also tighten/loosen conformal set sizes under typo noise) is a
-natural follow-up not attempted in this pass, noted here rather than
-silently left out.
+This repo's sharpest finding (FINDINGS.md §5) is that ordinary typos
+collapse Choice accuracy while the point confidence barely drops.
+`conformal_typo.py` asks the same question of the conformal sets. Split
+conformal's guarantee assumes calibration and test data are exchangeable,
+which calibrating on clean text and serving typo'd text breaks. Same
+protocol as above (temperature on val_a, APS on val_b, test n=3080);
+the baseline row on clean text reproduces the 98.83% / 7.07 result.
+
+| Model | Calibrated on | Test text | Coverage | Avg set size |
+|---|---|---|---|---|
+| baseline | clean | clean | 0.9883 | 7.07 |
+| baseline | clean | 2 swaps | 0.9172 | 13.34 |
+| baseline | clean | 2 keyboard typos | 0.9247 | 12.95 |
+| baseline | clean | mixed (sub+del+ins) | **0.8903** | 14.51 |
+| baseline | matching typos | mixed | 0.9094 | 16.55 |
+| augmented | clean | clean | 0.9906 | 7.30 |
+| augmented | clean | mixed | 0.9682 | 12.90 |
+| augmented | matching typos | mixed | 0.9614 | 11.24 |
+
+(Full grid, including the swap and keyboard rows for every setting, is
+printed by the script.)
+
+- **The sets respond to typo uncertainty; the point confidence mostly
+  did not.** Sets nearly double under typos, so a caller looking at the
+  set sees that the model is less sure.
+- **The guarantee is not formally kept, but nearly.** Non-randomized
+  APS over-covers clean text, and that slack absorbs most of the shift:
+  coverage stays at 91.7-92.5% on swap and keyboard typos and dips to
+  89.0% only on the mixed corruption (about 1.8 standard errors below
+  90% at n=3080). Calibrating on typo'd validation text, i.e. on data
+  that looks like deployment, restores coverage above 90% (90.9% on
+  mixed), as exchangeability predicts.
+- **Typo augmentation helps here too.** The augmented model keeps 96-98%
+  coverage under every corruption, with smaller sets than the baseline
+  (9.5-11 classes when calibrated on matching noise, vs 12-17).

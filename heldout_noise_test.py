@@ -50,6 +50,12 @@ def encode_batch(texts):
     return torch.tensor(ids), torch.tensor(masks)
 
 
+def perturbed(texts, name):
+    """Apply noise type `name` with a fixed per-type seed, so every caller sees identical text."""
+    rnd = random.Random(f"{SEED}-{name}")
+    return [perturb(t, NOISE[name], rnd) for t in texts]
+
+
 def load(path):
     m = JevCloneEncoder(vocab_size=vocab_size, max_len=max_len,
                         num_choice_classes=num_choice_classes, enable_score=True).to(device)
@@ -79,9 +85,8 @@ if __name__ == "__main__":
     labels = torch.tensor([r["label"] for r in rows])
 
     conditions = {"clean": texts}
-    for name, ops in NOISE.items():
-        rnd = random.Random(f"{SEED}-{name}")
-        conditions[name] = [perturb(t, ops, rnd) for t in texts]
+    for name in NOISE:
+        conditions[name] = perturbed(texts, name)
 
     models = {"baseline": load("jev_clone_multitask_calibrated.pt"),
               "augmented": load("jev_clone_multitask_augmented_calibrated.pt")}

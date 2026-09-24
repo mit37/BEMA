@@ -21,12 +21,10 @@ Produces: jev_clone_multitask_augmented.pt,
           jev_clone_multitask_augmented_calibrated.pt,
           augment_results.pkl
 """
-import copy
 import math
 import pickle
 import random
 
-import numpy as np
 import torch
 import torch.nn as nn
 from torch.utils.data import Dataset, DataLoader

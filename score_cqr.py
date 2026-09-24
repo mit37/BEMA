@@ -52,8 +52,8 @@ def features(rows):
 
 val_a, val_b = split_val(data["score"]["val"])
 X_tr, _, y_tr = features(data["score"]["train"])
-X_a, _, y_a = features(val_a)
-X_b, _, y_b = features(val_b)
+X_a, point_a, y_a = features(val_a)
+X_b, point_b, y_b = features(val_b)
 X_te, point_te, y_te = features(data["score"]["test"])
 
 
@@ -100,9 +100,7 @@ cov = float(((y >= lo) & (y <= hi)).mean())
 
 # The existing absolute-residual interval from conformal.py, recomputed on the
 # same val_b/test so both methods are compared on identical data.
-with torch.no_grad():
-    point_b = torch.sigmoid(encoder.score_head(X_b.to(device)).squeeze(-1)).cpu().numpy()
-q_abs = conformal_quantile(np.abs(point_b - y_b.numpy()), ALPHA)
+q_abs = conformal_quantile(np.abs(point_b.numpy() - y_b.numpy()), ALPHA)
 p = point_te.numpy()
 lo_abs, hi_abs = np.clip(p - q_abs, 0, 1), np.clip(p + q_abs, 0, 1)
 cov_abs = float(((y >= lo_abs) & (y <= hi_abs)).mean())
@@ -117,13 +115,40 @@ print(f"{'absolute residual':<24}{cov_abs:>10.4f}{width_abs.mean():>12.4f}"
 print(f"{'CQR':<24}{cov:>10.4f}{width.mean():>12.4f}{np.median(width):>9.4f}{(width < 0.5).mean():>11.4f}")
 print(f"CQR conformal correction qhat = {qhat:+.4f}")
 
-print("\nCQR by true star rating (does the interval adapt?):")
+# Group-conditional ("Mondrian") CQR: conformalize separately within three
+# groups of the model's PREDICTED rating (equal-count cut points set on
+# val_a). This guarantees coverage within each predicted-rating group; it
+# cannot guarantee coverage by TRUE rating, which is unknown at test time.
+cuts = np.quantile(point_a.numpy(), [1 / 3, 2 / 3])
+g_b, g_te = np.digitize(point_b.numpy(), cuts), np.digitize(p, cuts)
+scores_b = np.maximum(lo_b - y_b.numpy(), y_b.numpy() - hi_b)
+qhat_g = np.array([conformal_quantile(scores_b[g_b == g], ALPHA) for g in range(3)])
+lo_m, hi_m = np.clip(lo_te - qhat_g[g_te], 0, 1), np.clip(hi_te + qhat_g[g_te], 0, 1)
+width_m = hi_m - lo_m
+cov_m = float(((y >= lo_m) & (y <= hi_m)).mean())
+print(f"{'CQR, per predicted group':<24}{cov_m:>10.4f}{width_m.mean():>12.4f}"
+      f"{np.median(width_m):>9.4f}{(width_m < 0.5).mean():>11.4f}")
+print(f"Predicted-rating cut points (val_a tertiles, [0,1] scale): {cuts.round(3).tolist()}; "
+      f"per-group qhat {qhat_g.round(4).tolist()} (val_b n per group {np.bincount(g_b).tolist()})")
+
+
+def covered(lo_, hi_, m):
+    return ((y[m] >= lo_[m]) & (y[m] <= hi_[m])).mean()
+
+
+print("\nBy true star rating (does the interval adapt, and who is under-covered?):")
+print(f"  {'':<8}{'n':>6}{'CQR cov':>10}{'width':>8}{'per-group cov':>15}{'width':>8}")
 for s in range(1, 6):
     m = stars == s
-    print(f"  {s} stars  n={m.sum():>5}  coverage {((y[m] >= lo[m]) & (y[m] <= hi[m])).mean():.4f}  "
-          f"mean width {width[m].mean():.4f}")
+    print(f"  {s} stars {m.sum():>6}{covered(lo, hi, m):>10.4f}{width[m].mean():>8.3f}"
+          f"{covered(lo_m, hi_m, m):>15.4f}{width_m[m].mean():>8.3f}")
+print("By predicted-rating group (what per-group calibration does guarantee):")
+for g in range(3):
+    m = g_te == g
+    print(f"  group {g} n={m.sum():>5}  CQR {covered(lo, hi, m):.4f}  per-group {covered(lo_m, hi_m, m):.4f}")
 
 with open("score_cqr_results.pkl", "wb") as f:
     pickle.dump({"alpha": ALPHA, "n_test": len(y), "cqr": {"coverage": cov, "mean_width": float(width.mean())},
-                 "abs_residual": {"coverage": cov_abs, "mean_width": float(width_abs.mean())}}, f)
+                 "abs_residual": {"coverage": cov_abs, "mean_width": float(width_abs.mean())},
+                 "cqr_per_group": {"coverage": cov_m, "mean_width": float(width_m.mean())}}, f)
 print("\nSaved score_cqr_results.pkl")

@@ -58,3 +58,19 @@ def aps_prediction_set_sizes_and_coverage(probs, true_labels, qhat):
     k = np.minimum((cumsum < qhat).sum(axis=1), probs.shape[1] - 1)
     true_rank = np.argmax(order == np.asarray(true_labels)[:, None], axis=1)
     return k + 1, true_rank <= k
+
+
+def fit_temperature(logits, labels):
+    """Temperature T minimizing cross-entropy of logits / T (Guo et al. 2017)."""
+    T = torch.nn.Parameter(torch.ones(1) * 1.5)
+    opt = torch.optim.LBFGS([T], lr=0.01, max_iter=200)
+    ce = torch.nn.CrossEntropyLoss()
+
+    def closure():
+        opt.zero_grad()
+        loss = ce(logits / T, labels)
+        loss.backward()
+        return loss
+
+    opt.step(closure)
+    return T.item()

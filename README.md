@@ -329,7 +329,10 @@ to guarantee coverage, and Score's constant-width interval averages
 about 2.6 stars once clipped to the valid range. Conformalized quantile
 regression (`score_cqr.py`) keeps 90% coverage with narrower, adaptive
 intervals, but covers 1-star reviews only 52% of the time (5-star: 97%):
-the guarantee is an average over a test set that is 61% 5-star.
+the guarantee is an average over a test set that is 61% 5-star, and
+calibrating within predicted-rating groups only lifts 1-star coverage
+to 61%. Under typo noise, Choice's conformal sets widen (7 to 13-15
+classes) and keep coverage near 90% (89-92%); `conformal_typo.py`.
 
 ### CLINC150: a second, independent domain-breadth task (`clinc150_pipeline.py`, `CLINC150.md`)
 
@@ -382,7 +385,12 @@ conformal and calibration numbers for this task, in `CLINC150.md`.
 - `multiseed_sweep.py` — Workstream E: mean vs attention pooling across
   three training seeds, also giving seed variance for Choice and Score;
   results in FINDINGS.md.
-- `calib_utils.py` — shared ECE and split-conformal helpers.
+- `conformal_typo.py` — does Choice's conformal coverage survive typo
+  noise, for the baseline and augmented models (see `CONFORMAL.md`).
+- `bootstrap_ci.py` — 95% bootstrap confidence intervals for the headline
+  test metrics and the key differences (see FINDINGS.md §3).
+- `calib_utils.py` — shared ECE, temperature-fitting and split-conformal
+  helpers.
 - `tests/` — fast unit tests (no data or checkpoints needed), run in CI by
   `.github/workflows/tests.yml`.
 - `DATA_LICENSES.md` — the canonical, per-dataset license verification
@@ -420,6 +428,7 @@ python3 ood_stress_test.py     # Phase 5
 python3 adversarial_stress_test.py  # Phase 5b
 python3 conformal.py                # Conformal prediction (see CONFORMAL.md)
 python3 score_cqr.py                # Adaptive (CQR) intervals for Score
+python3 conformal_typo.py           # Conformal coverage under typo noise
 python3 augment_and_retrain.py      # Typo-augmentation retrain (Workstream B)
 python3 heldout_noise_test.py       # ...and its test on unseen typo types
 python3 multiseed_sweep.py          # Mean vs attention pooling, 3 seeds (Workstream E, slow)
@@ -428,8 +437,11 @@ python3 multiseed_sweep.py          # Mean vs attention pooling, 3 seeds (Workst
 python3 clinc150_pipeline.py
 python3 clinc150_oos_threshold.py
 
-# Unit tests
-pip install pytest && python3 -m pytest -q tests
+# Bootstrap confidence intervals (needs the checkpoints above)
+python3 bootstrap_ci.py
+
+# Lint and unit tests (what CI runs)
+pip install pytest pyflakes && python3 -m pyflakes *.py tests/*.py && python3 -m pytest -q tests
 
 # Real cross-seed uncertainty measurement (Noul pipeline, ~10-15 min for 3 seeds)
 python3 seed_variation_sweep.py

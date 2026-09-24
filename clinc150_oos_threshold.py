@@ -58,33 +58,39 @@ def rates(pred, y):
             "overall_acc": float((pred == y).mean())}
 
 
-val_p, val_y = probs_and_labels(data["val"])
-test_p, test_y = probs_and_labels(data["test"])
-
-is_oos = test_y == OOS
-auroc = roc_auc_score(is_oos, 1 - test_p.max(1))
-print(f"Test n={len(test_y)} ({is_oos.sum()} oos, {(~is_oos).sum()} in-scope); "
-      f"val n={len(val_y)} ({(val_y == OOS).sum()} oos)")
-print(f"AUROC of (1 - max prob) for detecting oos on test: {auroc:.4f}  (0.5 = chance, 1.0 = perfect)")
-print(f"Mean max prob on test: in-scope {test_p[~is_oos].max(1).mean():.4f}, "
-      f"oos {test_p[is_oos].max(1).mean():.4f}")
-
-taus = np.round(np.arange(0.0, 1.0, 0.01), 2)
-val_scores = [np.mean([rates(predict(val_p, t), val_y)[k] for k in ("inscope_acc", "oos_recall")])
+def choose_tau(val_p, val_y):
+    """Threshold maximizing mean(in-scope accuracy, oos recall) on validation."""
+    taus = np.round(np.arange(0.0, 1.0, 0.01), 2)
+    scores = [np.mean([rates(predict(val_p, t), val_y)[k] for k in ("inscope_acc", "oos_recall")])
               for t in taus]
-tau = float(taus[int(np.argmax(val_scores))])
+    return float(taus[int(np.argmax(scores))])
 
-base, thr = rates(predict(test_p, 0.0), test_y), rates(predict(test_p, tau), test_y)
-print(f"\nThreshold chosen on validation: tau = {tau:.2f}")
-print(f"{'Test metric':<16}{'argmax only':>14}{'tau rejection':>16}")
-for k in ("inscope_acc", "oos_recall", "oos_precision", "overall_acc"):
-    print(f"{k:<16}{base[k]:>14.4f}{thr[k]:>16.4f}")
 
-print("\nTradeoff curve on test (for reference only; tau above was picked on val):")
-for t in (0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8):
-    r = rates(predict(test_p, t), test_y)
-    print(f"  tau={t:.1f}  in-scope acc {r['inscope_acc']:.4f}  oos recall {r['oos_recall']:.4f}")
+if __name__ == "__main__":
+    val_p, val_y = probs_and_labels(data["val"])
+    test_p, test_y = probs_and_labels(data["test"])
 
-with open("clinc150_oos_results.pkl", "wb") as f:
-    pickle.dump({"auroc": auroc, "tau": tau, "argmax": base, "threshold": thr}, f)
-print("\nSaved clinc150_oos_results.pkl")
+    is_oos = test_y == OOS
+    auroc = roc_auc_score(is_oos, 1 - test_p.max(1))
+    print(f"Test n={len(test_y)} ({is_oos.sum()} oos, {(~is_oos).sum()} in-scope); "
+          f"val n={len(val_y)} ({(val_y == OOS).sum()} oos)")
+    print(f"AUROC of (1 - max prob) for detecting oos on test: {auroc:.4f}  (0.5 = chance, 1.0 = perfect)")
+    print(f"Mean max prob on test: in-scope {test_p[~is_oos].max(1).mean():.4f}, "
+          f"oos {test_p[is_oos].max(1).mean():.4f}")
+
+    tau = choose_tau(val_p, val_y)
+
+    base, thr = rates(predict(test_p, 0.0), test_y), rates(predict(test_p, tau), test_y)
+    print(f"\nThreshold chosen on validation: tau = {tau:.2f}")
+    print(f"{'Test metric':<16}{'argmax only':>14}{'tau rejection':>16}")
+    for k in ("inscope_acc", "oos_recall", "oos_precision", "overall_acc"):
+        print(f"{k:<16}{base[k]:>14.4f}{thr[k]:>16.4f}")
+
+    print("\nTradeoff curve on test (for reference only; tau above was picked on val):")
+    for t in (0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8):
+        r = rates(predict(test_p, t), test_y)
+        print(f"  tau={t:.1f}  in-scope acc {r['inscope_acc']:.4f}  oos recall {r['oos_recall']:.4f}")
+
+    with open("clinc150_oos_results.pkl", "wb") as f:
+        pickle.dump({"auroc": auroc, "tau": tau, "argmax": base, "threshold": thr}, f)
+    print("\nSaved clinc150_oos_results.pkl")
