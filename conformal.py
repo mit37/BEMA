@@ -36,6 +36,7 @@ import torch.nn as nn
 from torch.utils.data import DataLoader
 
 from model import JevCloneEncoder
+from calib_utils import aps_prediction_set_sizes_and_coverage, aps_score, conformal_quantile, split_val
 from train_multitask import TaskDataset, data, vocab_size, max_len, num_choice_classes, device
 
 ALPHA = 0.10  # target: 90% coverage
@@ -51,26 +52,6 @@ model = JevCloneEncoder(
 model.load_state_dict(torch.load("jev_clone_multitask_calibrated.pt", map_location=device))
 model.eval()
 
-
-def split_val(rows, frac_a=0.5, seed=SEED):
-    rows = list(rows)
-    rnd = random.Random(seed)
-    rnd.shuffle(rows)
-    n_a = int(len(rows) * frac_a)
-    return rows[:n_a], rows[n_a:]
-
-
-def conformal_quantile(scores, alpha):
-    """Standard finite-sample-corrected split conformal quantile
-    (Angelopoulos & Bates 2021, eq. for split conformal): the
-    ceil((n+1)(1-alpha))/n empirical quantile of the calibration
-    nonconformity scores, clipped to the max score if the level exceeds 1
-    (which happens when n is small relative to 1/alpha)."""
-    n = len(scores)
-    q_level = np.ceil((n + 1) * (1 - alpha)) / n
-    if q_level >= 1.0:
-        return float(np.max(scores))
-    return float(np.quantile(scores, q_level, method="higher"))
 
 
 # =============================================================================
@@ -216,20 +197,6 @@ def choice_probs(rows, T):
     return torch.cat(probs).numpy(), torch.cat(labels).numpy()
 
 
-def aps_score(probs, true_labels):
-    """Non-randomized APS nonconformity score: sort classes by decreasing
-    probability, cumulative-sum until (and including) the true class's
-    rank. This is the standard (slightly conservative) APS score from
-    Romano, Sesia & Candes 2020."""
-    order = np.argsort(-probs, axis=1)
-    sorted_probs = np.take_along_axis(probs, order, axis=1)
-    cumsum = np.cumsum(sorted_probs, axis=1)
-    scores = np.zeros(len(true_labels))
-    for i in range(len(true_labels)):
-        rank = np.where(order[i] == true_labels[i])[0][0]
-        scores[i] = cumsum[i, rank]
-    return scores
-
 
 probs_b, y_b_choice = choice_probs(choice_val_b, T_choice_val)
 choice_scores_b = aps_score(probs_b, y_b_choice)
@@ -238,21 +205,6 @@ print(f"Conformal quantile (qhat) at alpha={ALPHA}: {choice_qhat:.4f}")
 
 probs_test, y_test_choice = choice_probs(choice_test, T_choice_val)
 
-
-def aps_prediction_set_sizes_and_coverage(probs, true_labels, qhat):
-    order = np.argsort(-probs, axis=1)
-    sorted_probs = np.take_along_axis(probs, order, axis=1)
-    cumsum = np.cumsum(sorted_probs, axis=1)
-    # Include classes up to and including the first one where cumsum >= qhat
-    set_sizes = np.zeros(len(true_labels), dtype=int)
-    covered = np.zeros(len(true_labels), dtype=bool)
-    for i in range(len(true_labels)):
-        k = np.searchsorted(cumsum[i], qhat, side="left")
-        k = min(k, len(cumsum[i]) - 1)
-        set_sizes[i] = k + 1  # number of classes included (rank 0-indexed -> +1)
-        true_rank = np.where(order[i] == true_labels[i])[0][0]
-        covered[i] = true_rank <= k
-    return set_sizes, covered
 
 
 choice_set_sizes, choice_covered = aps_prediction_set_sizes_and_coverage(probs_test, y_test_choice, choice_qhat)

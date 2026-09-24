@@ -22,6 +22,10 @@ data/prepared_clinc150.pkl
 data/tokenizer_clinc150.json
 clinc150_results.pkl
 attnpool_results.pkl
+multiseed_results.pkl
+heldout_noise_results.pkl
+clinc150_oos_results.pkl
+score_cqr_results.pkl
 
 # OS
 .DS_Store

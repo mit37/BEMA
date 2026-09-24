@@ -55,8 +55,11 @@ class JevCloneEncoder(nn.Module):
     """
 
     def __init__(self, vocab_size, d_model=96, nhead=6, num_layers=3, max_len=48,
-                 dropout=0.15, num_choice_classes=None, enable_score=False):
+                 dropout=0.15, num_choice_classes=None, enable_score=False, pooling="mean"):
         super().__init__()
+        if pooling not in ("mean", "attn"):
+            raise ValueError(f"pooling must be 'mean' or 'attn', got {pooling!r}")
+        self.pooling = pooling
         self.embed = nn.Embedding(vocab_size, d_model, padding_idx=0)
         self.pos = PositionalEncoding(d_model, max_len)
         layer = nn.TransformerEncoderLayer(
@@ -65,6 +68,9 @@ class JevCloneEncoder(nn.Module):
         )
         self.encoder = nn.TransformerEncoder(layer, num_layers=num_layers)
         self.pool_norm = nn.LayerNorm(d_model)
+        # Learned attention pooling: one query vector scores each token;
+        # softmax over non-padded positions weights the hidden states.
+        self.attn_query = nn.Linear(d_model, 1) if pooling == "attn" else None
 
         self.noul_head = nn.Sequential(
             nn.Linear(d_model, d_model), nn.ReLU(), nn.Linear(d_model, 1)
@@ -93,9 +99,12 @@ class JevCloneEncoder(nn.Module):
         key_padding_mask = mask == 0  # True where padded
         h = self.encoder(x, src_key_padding_mask=key_padding_mask)
 
-        # Mean-pool over real (non-pad) tokens -> one state vector per example
-        mask_f = mask.unsqueeze(-1).float()
-        pooled = (h * mask_f).sum(1) / mask_f.sum(1).clamp(min=1e-6)
+        if self.pooling == "attn":
+            scores = self.attn_query(h).squeeze(-1).masked_fill(mask == 0, float("-inf"))
+            pooled = (h * torch.softmax(scores, dim=-1).unsqueeze(-1)).sum(1)
+        else:
+            mask_f = mask.unsqueeze(-1).float()
+            pooled = (h * mask_f).sum(1) / mask_f.sum(1).clamp(min=1e-6)
         return self.pool_norm(pooled)
 
     def forward(self, ids, mask):

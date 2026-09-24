@@ -1,10 +1,15 @@
 # Findings: reconnaissance into System-One decision models (Jev-clone)
 
-Date: 2026-09-21, last updated 2026-09-22 after Workstreams A-E (split
+Date: 2026-09-21, updated 2026-09-22 after Workstreams A-E (split
 conformal prediction, adversarial typo-noise augmentation, the real-LLM
 benchmark disposition, a second independent domain-breadth dataset, and
 one architecture experiment — see CONFORMAL.md, CLINC150.md, and the
-sections below for each). This document summarizes what an independent,
+sections below for each), and 2026-09-23 with follow-ups that closed the
+gaps those left open: augmentation tested on unseen noise types,
+out-of-scope rejection on CLINC150, adaptive (CQR) intervals for Score,
+and a multi-seed pooling comparison. That round also corrected two
+earlier claims (CLINC150 "class imbalance"; the Score interval being
+"wider than the output range"), marked where they appear. This document summarizes what an independent,
 from-scratch reproduction of Jev's core interface shape (typed state in,
 typed calibrated decision out, one non-autoregressive forward pass)
 found when actually built and tested, rather than assumed. All numbers
@@ -76,14 +81,16 @@ Reviews Score task, not STS-B.
   a policy for. Choice hit 98.83% coverage (conservative, as the
   non-randomized APS method used here is known to be) with an average
   set size of 7 of 77 classes — informative but not tight. Score hit
-  89.85% coverage with an interval width of 1.066 on a [0,1]-scale
-  target — **wider than the entire possible output range, i.e.
-  technically valid but practically useless** — traced to a heavily
-  right-skewed error distribution (driven by class imbalance: 61% of
-  Score test examples are 5-star reviews the model predicts well,
-  alongside a harder minority it predicts poorly) that a constant-width
-  interval method cannot adapt to. This is reported as a real negative
-  result for the Score interval specifically, not smoothed over.
+  89.85% coverage, but its constant-width interval spans on average
+  0.656 of the [0,1] rating scale (about 2.6 stars) once clipped to the
+  valid range. (An earlier version of this document called the interval
+  "wider than the entire output range"; that described the raw,
+  unclipped width of 1.066 and overstated the problem.) Conformalized
+  quantile regression (`score_cqr.py`) keeps coverage at 90.11% with a
+  narrower, input-adaptive interval (mean 0.608; 41% of intervals under
+  2 stars), but coverage is uneven: 97% for 5-star reviews and only 52%
+  for 1-star reviews. The 90% guarantee is an average, and it holds here
+  because 61% of reviews are 5-star.
 - **Graceful degradation on real domain shift, at least for the binary
   head's confidence.** Evaluated on real, human-written text the spam
   model was never trained on (BANKING77 customer-support questions, which
@@ -177,6 +184,9 @@ Reviews Score task, not STS-B.
   typo-augmented data narrowed BANKING77's accuracy-collapse gap by
   roughly half (31.4pp -> 16.0pp drop) and the calibration mismatch
   similarly, with no clean-accuracy cost, but did not close either gap.
+  The improvement also carries over to typo types the model never
+  trained on (keyboard-neighbor substitutions, deletions, insertions;
+  +11 to +15 points accuracy, n=3080; see §5).
   See §5 for the full discussion, including why this finding (its
   existence, generalization, and partial-mitigation result together),
   not the OOD result above, is this repo's sharpest finding as of the
@@ -219,22 +229,28 @@ rather than hidden:**
   n-1=2; an earlier version of this script divided by n=3, understating
   std by about 18% -- fixed, and the numbers above reflect the corrected,
   slightly wider figures.) That is still a tight, reassuring range for
-  how much a genuinely different split/init changes the outcome. Note
-  this sweep was run once, for one task (Noul); the Choice and Score
-  heads have not had the same treatment and their numbers carry the
-  same un-quantified uncertainty this section describes.
+  how much a genuinely different split/init changes the outcome.
+- **Choice and Score now have seed variance too, but only over training
+  seeds.** `multiseed_sweep.py` retrains the multitask model with seeds
+  42, 123 and 2024 on the SAME data split (so it measures init and
+  batch-order noise, not split noise, and is a narrower measure than the
+  Noul sweep above). With mean pooling: Choice test accuracy 0.8195 ±
+  0.0011 (n=3080), calibrated Choice ECE 0.0341 ± 0.0042, Score MAE
+  0.1858 ± 0.0055 and Score Pearson r 0.5605 ± 0.0234 (n=1517). Choice
+  accuracy is very stable across seeds. Score r is not: it ranges
+  0.534-0.579, and the single-run r=0.53 quoted elsewhere in this repo
+  is the lowest of the three, so it slightly understates the typical
+  result.
 - **Calibration numbers otherwise still come from ONE held-out split per
   dataset**, not cross-validation or bootstrapping within a single split.
-  The seed sweep above measures cross-run variance (different splits
-  entirely), which is a stronger and more honest signal than a
-  within-split bootstrap would have been, but it was only done for one
-  of the three tasks due to the ~3-5 minutes of compute per seed adding
-  up across tasks. Extending it to Choice and Score is straightforward
-  future work using the same script as a template.
+  The Noul seed sweep measures cross-run variance with different splits
+  entirely; the Choice/Score sweep varies only the training seed. Neither
+  resamples the multitask test split, so split-to-split variance for
+  Choice and Score is still unmeasured.
 - **The Score task's numbers below reflect a single run on the new
-  (Amazon Fine Food Reviews) dataset**, with no seed sweep done for it
-  yet (see the point above) -- read them the same way as any single-run
-  number in this repo: directionally informative, not exact.
+  (Amazon Fine Food Reviews) dataset** unless stated otherwise. The
+  training-seed sweep above puts that single run's r=0.53 at the low end
+  of a 0.53-0.58 range.
 
 ## 4. An honest estimate of what % of Jev's value proposition this reproduces
 
@@ -245,11 +261,11 @@ much this toy reproduction actually demonstrates:
 |---|---|---|
 | Non-autoregressive, single forward pass | **Yes, fully.** Architecturally real: one `encode()` call, typed heads read from it. | High |
 | Fixed-schema output ("cannot emit malformed output") | **Yes, fully.** Structural, not learned — heads are fixed-shape linear projections. | High |
-| Calibrated confidence that tracks real accuracy | **On clean test data, mostly yes for Noul specifically** (calibrated ECE 0.0039-0.0070 across 3 seeds, §3). **On realistic noisy input, no by default** — Phase 5b found ordinary typos collapse Choice accuracy 81.9%→51.2% while confidence drops only 0.791→0.612, a real miscalibration inside the model's own domain, not just at OOD edges (see §5). Clean-test-set ECE and noisy-input calibration are demonstrably different properties here. **Workstream B found this is substantially, not fully, fixable**: training on 50%-typo-augmented data narrowed the accuracy-collapse gap by roughly half (31.4pp→16.0pp drop) and the calibration mismatch similarly, with no clean-accuracy tradeoff — but the gap did not close, and the fix was only tested against the same perturbation type used in training (see §5). | Medium for clean input, Low-Medium once realistic noise is introduced (partially mitigable with targeted augmentation) |
+| Calibrated confidence that tracks real accuracy | **On clean test data, mostly yes for Noul specifically** (calibrated ECE 0.0039-0.0070 across 3 seeds, §3). **On realistic noisy input, no by default** — Phase 5b found ordinary typos collapse Choice accuracy 81.9%→51.2% while confidence drops only 0.791→0.612, a real miscalibration inside the model's own domain, not just at OOD edges (see §5). Clean-test-set ECE and noisy-input calibration are demonstrably different properties here. **Workstream B found this is substantially, not fully, fixable**: training on 50%-typo-augmented data narrowed the accuracy-collapse gap by roughly half (31.4pp→16.0pp drop) and the calibration mismatch similarly, with no clean-accuracy tradeoff, and the gain carries over to typo types never seen in training (+11-15 points accuracy, ECE roughly halved). But the gap did not close: accuracy under noise stays 13-24 points below clean (see §5). | Medium for clean input, Low-Medium once realistic noise is introduced (partially mitigable with targeted augmentation) |
 | Multiple typed decision shapes (Noul/Choice/Score) | **All three now show real, working signal.** Score (Amazon Fine Food Reviews, r=0.53) is weaker than Noul/Choice but genuinely learns and generalizes, unlike the STS-B attempt it replaced (r=0.29, flat training curve). None reach a "production-grade" bar, but none is a dead task either. | Low-Medium |
 | Speed/cost advantage over LLMs (40-200x claimed) | **Not independently verified — confirmed unreachable, not just untried** (see `LLM_BENCHMARK.md`). This repo's own model is fast (~1.4ms/example measured), but a real LLM benchmark requires an LLM API and no usable one exists in this sandbox: `api.anthropic.com` is network-reachable but no API credentials are present (`ANTHROPIC_API_KEY`/`CLAUDE_CODE_OAUTH_TOKEN`/`ANTHROPIC_AUTH_TOKEN` all unset), no local LLM server is running, and no LLM SDK is installed. The comparison still uses a documented industry reference figure for LLM latency, not a live measurement. The *shape* of the claim (a small non-autoregressive forward pass beats an LLM API round-trip) is directionally very plausible, but "40-200x" specifically remains Jev's number, not something this repo measured against a real LLM. | Low (weakest-evidenced claim in this repo) |
 | Domain breadth / general-purpose typed questions over arbitrary schemas | **No, still the weakest part of this reproduction, though now tested on one more task.** Four narrow, single-purpose tasks total (spam/ham, 77 banking intents, food-review star ratings, and now CLINC150's 151-way intent+oos, `CLINC150.md`), each needing its own dataset, its own tokenizer/encoder in CLINC150's case, and largely its own calibration. Jev's actual product claim is schema generality across arbitrary domains WITHOUT per-domain retraining — nothing here demonstrates that; each new task in this repo required a full retrain, not zero-shot or few-shot adaptation of an existing model. | Very Low |
-| A formal, verifiable confidence guarantee (not just observed calibration) | **Implemented and verified (`CONFORMAL.md`), with mixed practical results per head.** Split conformal prediction's coverage guarantee held on held-out test data for all three heads (Noul 90.91%, Choice 98.83%, Score 89.85%, target 90%) — the guarantee itself is real, not just observed-and-hoped-for. But "valid" isn't "useful": Noul refuses to answer (empty set) 8.4% of the time, Choice needs an average set of 7 of 77 classes to guarantee coverage, and Score's interval is wider than its entire possible output range. A team relying on "cannot hallucinate" as a complete safety story should be asked specifically whether their confidence numbers come with this kind of guarantee, and if so, whether the resulting sets/intervals are actually narrow enough to be useful — this repo shows both can be true or false independently. | Medium (guarantee verified real; usefulness varies sharply by head) |
+| A formal, verifiable confidence guarantee (not just observed calibration) | **Implemented and verified (`CONFORMAL.md`), with mixed practical results per head.** Split conformal prediction's coverage guarantee held on held-out test data for all three heads (Noul 90.91%, Choice 98.83%, Score 89.85%, target 90%) — the guarantee itself is real, not just observed-and-hoped-for. But "valid" isn't "useful": Noul refuses to answer (empty set) 8.4% of the time, Choice needs an average set of 7 of 77 classes to guarantee coverage, and Score's intervals average about 2.4-2.6 stars wide (CQR narrows them somewhat but covers 1-star reviews only 52% of the time while 5-star reviews get 97%, so the 90% average hides the group that matters most). A team relying on "cannot hallucinate" as a complete safety story should be asked specifically whether their confidence numbers come with this kind of guarantee, and if so, whether the resulting sets/intervals are actually narrow enough to be useful — this repo shows both can be true or false independently. | Medium (guarantee verified real; usefulness varies sharply by head) |
 
 **Overall**: this reproduction validates the *architectural* core of Jev's
 claim (one shared encoder, typed fixed-schema heads, real calibration
@@ -478,15 +494,36 @@ accuracy (83.5%), and confidence still doesn't fully track the remaining
 accuracy loss. This is a real, partial, measured improvement, not a
 solved problem: report it as "augmentation meaningfully helps and costs
 nothing on this toy task's clean accuracy," not as "typo miscalibration
-is fixed." It's also worth being explicit that this experiment trained
-against the *exact* perturbation mechanism (2 adjacent-character swaps)
-used to test it — a more realistic training signal would use a broader
-variety of noise (multiple typo types, varying counts, keyboard-adjacent
-substitutions, real user-generated typo corpora) to avoid narrowly
-overfitting to one specific corruption pattern; this repo's result should
-be read as "augmentation against a known noise distribution helps against
-that noise distribution," not yet "augmentation makes the model robust to
-noise in general."
+is fixed."
+
+**Does the improvement carry over to typo types it never trained on?
+Yes.** The augmented model only ever saw 2 adjacent-character swaps, so
+its gain could have been narrow memorization of that one corruption.
+`heldout_noise_test.py` scores both calibrated models on the same
+BANKING77 test queries (n=3080) under four corruptions absent from
+training (QWERTY-neighbor substitution, deletion, insertion, and a mix
+of all three), generated once with a fixed seed so both models see
+identical text:
+
+| Noise (2 edits unless noted) | In training? | Baseline acc / ECE | Augmented acc / ECE | Acc gain |
+|---|---|---|---|---|
+| none (clean) | - | 0.8188 / 0.037 | 0.8347 / 0.034 | +0.016 |
+| adjacent swap | yes | 0.5000 / 0.112 | 0.6718 / 0.032 | +0.172 |
+| adjacent swap ×4 | same kind, heavier | 0.3276 / 0.202 | 0.5295 / 0.095 | +0.202 |
+| keyboard-neighbor substitution | no | 0.5276 / 0.094 | 0.6558 / 0.035 | +0.128 |
+| deletion | no | 0.5503 / 0.092 | 0.6870 / 0.026 | +0.137 |
+| insertion | no | 0.5899 / 0.062 | 0.7026 / 0.024 | +0.113 |
+| substitution + deletion + insertion | no | 0.4461 / 0.139 | 0.5958 / 0.066 | +0.150 |
+
+(The baseline's swap accuracy here, 0.5000, differs slightly from the
+0.5052 above because the swaps are a different random draw.) On every
+held-out corruption the augmented model is 11-15 points more accurate
+and its ECE falls by roughly half or more, so the fix is not limited to
+the exact noise it was trained on. It is still not a cure: accuracy
+under held-out noise stays 13-24 points below clean accuracy, the model
+remains overconfident under every corruption (mean confidence exceeds
+accuracy by 0.9-9.5 points), and none of these synthetic corruptions is
+a substitute for testing on real user-typed text.
 
 **Does the typo-miscalibration finding generalize past BANKING77? Yes —
 confirmed on a second, structurally different dataset (Workstream D, full
@@ -506,19 +543,22 @@ typo-miscalibration gap is a real property worth checking for in any
 System-One-style architecture, not a quirk of one dataset's tokenizer or
 domain.
 
-CLINC150 also surfaced a genuinely new, related finding that BANKING77's
-schema couldn't test at all: even with an explicit, human-labeled
-out-of-scope class present in the schema — the exact "learned 'none of
-the above' option" this section already recommended as a fix for the OOD
-wedge above — the model still only recognized true out-of-scope queries
-16.1% of the time (vs 84.2% accuracy on in-scope queries), because that
-class made up just 0.67% of training data (100 of 15,000 examples), a
-real property of CLINC150's own split design. Having the right answer
-available in the schema is not sufficient if the training signal for it
-is this imbalanced — see `CLINC150.md` for the full breakdown and what
-would be needed to fix it (class-weighted loss, oversampling, or a
-dedicated OOD-detection mechanism, none of which this workstream
-attempted).
+CLINC150 also tested something BANKING77's schema couldn't: an explicit,
+human-labeled out-of-scope class, the "learned 'none of the above'
+option" this section recommends above. Used as just one more softmax
+class, it recognized true out-of-scope queries only 16.1% of the time
+(vs 84.2% accuracy on in-scope queries). An earlier version of this
+paragraph blamed class imbalance; that was wrong, because CLINC150's
+training set has exactly 100 examples for every class, oos included. The
+oos class simply has to cover "everything else" with the same budget as
+one narrow intent. The more useful result is that the confidence score
+carries the missing signal (`clinc150_oos_threshold.py`): top-class
+probability averages 0.82 on in-scope vs 0.44 on out-of-scope test
+queries (AUROC 0.88), and rejecting answers below a validation-tuned
+threshold raises oos recall to 85.7%, at a cost of in-scope accuracy
+84.2%→74.5% (oos precision 46%). So "knows when it doesn't know" is
+partly true here, but only as a tunable tradeoff, not for free. See
+`CLINC150.md` for the full table and tradeoff curve.
 
 ## 6. Item 3 disposition: pretrained subword-tokenized encoder swap (skipped, not approximated)
 
@@ -579,47 +619,37 @@ and `train_multitask.py` by swapping in a pretrained encoder for the
 Choice head -- that is the specific, well-defined next step this
 reconnaissance effort could not complete.
 
-## 7. Workstream E: attention pooling vs. mean pooling (one scoped experiment)
+## 7. Workstream E: attention pooling vs. mean pooling
 
-Lowest-priority workstream, run only given idle capacity after
-Workstreams A-D. `attention_pooling_experiment.py` swapped this repo's
-existing mean-pooling step (averaging the encoder's per-token hidden
-states over non-padded positions) for a learned attention pool (a single
-trainable query vector scores each token position, softmax-weighted sum
-of hidden states) — everything else (layer count, dimensions, training
-recipe, data) held identical to `train_multitask.py`, so any delta is
-attributable to the pooling change alone. Comparison is against the
-existing baseline checkpoint, freshly re-evaluated live in the same run
-(not hardcoded), on the same held-out test data used everywhere else in
-this repo.
+Lowest-priority workstream. The encoder's mean pooling (averaging
+per-token hidden states over non-padded positions) was compared with a
+learned attention pool (one trainable query vector scores each token;
+the pooled vector is the softmax-weighted sum), available as
+`JevCloneEncoder(pooling="attn")`. Everything else (layers, dimensions,
+training recipe, data split) is identical to `train_multitask.py`.
 
-| Metric | Mean-pool (baseline) | Attention-pool | Delta |
+A first single-seed run showed attention pooling slightly ahead (Choice
+0.8247 vs 0.8188, Score MAE 0.1787 vs 0.1872) and was flagged at the time
+as possibly seed noise. `multiseed_sweep.py` settles that by training
+both variants with three seeds (42, 123, 2024) on the same data split:
+
+| Test metric | Mean pooling (3 seeds) | Attention pooling (3 seeds) | Paired difference (attn − mean) |
 |---|---|---|---|
-| Noul test accuracy | 0.9785 | 0.9785 | **+0.0000 (no change)** |
-| Choice test accuracy | 0.8188 | 0.8247 | +0.0058 |
-| Score test MAE (lower is better) | 0.1872 | 0.1787 | −0.0085 |
+| Noul accuracy (n=836) | 0.9801 ± 0.0050 | 0.9809 ± 0.0041 | +0.0008 ± 0.0014 |
+| Choice accuracy (n=3080) | 0.8195 ± 0.0011 | 0.8202 ± 0.0143 | +0.0008 ± 0.0136 |
+| Choice ECE, calibrated | 0.0341 ± 0.0042 | 0.0314 ± 0.0046 | −0.0027 ± 0.0050 |
+| Score MAE (lower is better, n=1517) | 0.1858 ± 0.0055 | 0.1809 ± 0.0041 | −0.0049 ± 0.0095 |
+| Score Pearson r | 0.5605 ± 0.0234 | 0.5666 ± 0.0199 | +0.0061 ± 0.0190 |
 
-**Result: a small, mostly negligible effect, exactly the kind of result
-this project's own instructions for this workstream anticipated ("expect
-small effects") — not oversold here as a meaningful architectural win.**
-Noul shows literally zero change. Choice improves by 0.58 percentage
-points (81.88%→82.47%) — a real but small delta, well within the kind of
-run-to-run variation `seed_variation_sweep.py` already measured for this
-architecture (Noul's calibrated accuracy alone varies by std≈0.0028
-across 3 seeds; this experiment used only a single seed for each of the
-two pooling methods, so part of this 0.58-point gap could plausibly be
-seed noise rather than a real effect of the pooling change — this was
-not disentangled by re-running either variant with multiple seeds, which
-would be the correct follow-up before treating either number as
-precise). Score's MAE improves modestly (a 4.5% relative reduction).
-**Conclusion: no strong evidence that attention pooling meaningfully
-outperforms mean pooling on this toy scale, data size, and encoder
-capacity** — the honest read is "roughly comparable, with a slight edge
-to attention pooling that a single run per method cannot confidently
-attribute to the architecture change rather than to seed variance." This
-is consistent with the broader literature's finding that pooling-strategy
-choice tends to matter more at larger scale/longer sequences than it
-does here (max sequence length 48-64 tokens, ~8,500-15,000 training
-examples per task) — nothing about this result should be read as
-evidence against attention pooling in general, only as a null-to-small
-result on this repo's specific toy setup.
+(mean ± sample standard deviation over seeds.)
+
+**Result: no measurable difference.** Every paired difference is smaller
+than its own seed-to-seed spread. The single-seed Choice edge did not
+hold up: attention pooling won by 0.0058 at seed 42 and 0.0110 at seed
+123, but lost by 0.0146 at seed 2024. If anything, attention pooling made
+Choice accuracy less stable across seeds (std 0.0143 vs 0.0011). With
+only three seeds this cannot rule out a small real effect, but nothing
+here supports switching pooling methods. That fits the usual expectation
+that pooling choice matters little for short inputs (48-64 tokens) and a
+small encoder, and it says nothing about attention pooling at larger
+scale.

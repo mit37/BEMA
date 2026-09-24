@@ -74,44 +74,55 @@ same ordinary-typo perturbation, by a similar relative margin. This
 strengthens, rather than merely repeats, the wedge described in
 FINDINGS.md §5.
 
-## Finding 2 (new, not previously observed in this repo): an explicit
-"I don't know" class doesn't help much if it's severely underrepresented
-in training
+## Finding 2: the "oos" class alone catches few out-of-scope queries, but the confidence score can catch most of them, at a price
 
 CLINC150's design gives this model something BANKING77 never had: a
 genuine, human-labeled "none of the above" class to learn, directly
-addressing the exact gap FINDINGS.md §5 identifies as missing from this
-project's other tasks ("a learned 'none of the above' option... as a
-first-class feature"). The result is a genuinely useful, honest negative
-finding: **having the class in the schema is not sufficient if the
-training data is severely imbalanced.**
+addressing the gap FINDINGS.md §5 identifies ("a learned 'none of the
+above' option... as a first-class feature").
 
-The out-of-scope class makes up only 100 of 15,000 training examples
-(0.67%) — a real property of CLINC150's own split design, not something
-this repo chose. The consequence: **the model recognizes an actual
-out-of-scope query only 16.1% of the time** (recall on the 1,000-example
-oos test set), while achieving 84.2% accuracy on the 4,500 in-scope test
-examples. The overall 71.8% test accuracy is a weighted blend of these
-two very different numbers — it is NOT a single meaningful accuracy
-figure on its own, and reporting it without the in-scope/out-of-scope
-split (as `clinc150_pipeline.py`'s summary line alone would) would
-understate how well the model handles in-domain queries while also
-overstating how well it handles unfamiliar ones. Both halves are reported
-here explicitly rather than collapsed into one number.
+**Used as just one more softmax class, it mostly fails: the model
+recognizes an actual out-of-scope query only 16.1% of the time** (recall
+on the 1,000-example oos test set), while reaching 84.2% accuracy on the
+4,500 in-scope test examples. The overall 71.8% test accuracy is a
+weighted blend of these two very different numbers and is not meaningful
+on its own; both halves are reported explicitly.
 
-This is a direct, concrete confirmation of FINDINGS.md §5's wedge finding
-("the model cannot produce a malformed answer, but it absolutely can,
-and does, produce a confidently wrong one") — except this time the model
-*had* the correct typed answer available in its schema and mostly failed
-to use it, because of a training-data imbalance problem rather than an
-architectural one. A team building a real out-of-scope detector on this
-architecture would need either substantially more OOS training examples,
-class-weighted loss (as this repo already does for Noul's spam/ham
-imbalance — see `train_multitask.py`'s `pos_weight` — but did not apply
-here, since CLINC150's imbalance (150:1) is far more extreme and a
-150-way softmax cross-entropy doesn't have as direct an equivalent), or a
-dedicated OOD-detection mechanism on the pooled state (as FINDINGS.md §5
-already recommends) rather than relying on the softmax class alone.
+**Correction to an earlier version of this document.** It blamed the low
+recall on "severe class imbalance" (oos being 0.67% of training data,
+"150:1"). That was wrong: CLINC150's training set is balanced, with
+exactly 100 examples for every class, oos included (verified by counting
+`data_full.json`), so every class is about 0.66% of training data and
+frequency-based class weighting would change nothing. The real
+difference is what the 100 examples must cover: an in-scope intent is
+one narrow request type, while oos is everything else. The test split
+also contains 1,000 oos queries versus 30 per intent.
+
+**The confidence score carries most of the missing signal**
+(`clinc150_oos_threshold.py`). On the test split, the model's top-class
+probability averages 0.82 on in-scope queries but 0.44 on out-of-scope
+ones, and (1 - top probability) separates the two with AUROC 0.88. Using
+the CLINC150 paper's standard remedy, answering "oos" whenever the top
+probability is below a threshold tau chosen on the validation split only
+(tau = 0.67):
+
+| Test metric (n=5,500) | Argmax only | Threshold rejection (tau = 0.67) |
+|---|---|---|
+| In-scope accuracy (n=4,500) | 0.8418 | 0.7449 |
+| Out-of-scope recall (n=1,000) | 0.1610 | **0.8570** |
+| Out-of-scope precision | 0.8895 | 0.4612 |
+| Overall accuracy | 0.7180 | 0.7653 |
+
+So the model does, in a usable sense, "know when it doesn't know" more
+often than its argmax answer suggests. But the separation is far from
+clean. Catching 86% of out-of-scope queries also rejects enough real
+in-scope queries to cost almost 10 points of in-scope accuracy, and more
+than half of all "oos" answers are then wrong. Moving tau trades one
+against the other (on test: tau 0.4 gives 82.4% in-scope accuracy and
+60.3% oos recall; tau 0.8 gives 68.4% and 92.7%). The fixed schema
+guarantees a well-formed answer; how often the answer means "I don't
+know" when it should is a tunable tradeoff, not a property you get for
+free.
 
 ## Why val accuracy (0.8177) and test accuracy (0.7180) differ so much
 
@@ -145,14 +156,14 @@ contradicted.
 - **Confirms** (does not merely repeat) the typo-miscalibration wedge on
   a second, structurally different dataset — meaningfully strengthens
   that finding's claim to generalize beyond one dataset's quirks.
-- **Adds a new, previously-untested finding**: an explicit out-of-scope
-  class in the schema is not sufficient for reliable out-of-scope
-  detection if training data for that class is severely imbalanced — a
-  concrete, measured instance of the "cannot hallucinate ≠ knows what it
-  doesn't know" gap FINDINGS.md §5 already argued for on more general
-  grounds.
-- **Does not** attempt a from-scratch fix for the OOS-imbalance problem
-  (e.g. class-weighted loss, oversampling the oos class, a dedicated
-  binary OOD head) — that's a natural next experiment but out of scope
-  for this workstream, which was about domain breadth and generalization
-  of the typo finding, not about building a better OOD detector.
+- **Adds a new finding on out-of-scope detection**: an explicit oos class
+  used as one more softmax output catches only 16.1% of out-of-scope
+  queries, even though training is balanced. The confidence score
+  separates oos from in-scope reasonably well (AUROC 0.88), and a
+  validation-tuned threshold raises oos recall to 85.7%, at a cost of
+  about 10 points of in-scope accuracy. This is a measured version of the
+  "cannot hallucinate ≠ knows what it doesn't know" gap in FINDINGS.md §5:
+  the signal exists, but using it is a tradeoff.
+- **Does not** try a dedicated OOD head, extra oos training data, or
+  outlier exposure, which would be the next experiments for a better
+  detector.

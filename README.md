@@ -307,9 +307,11 @@ tokenizer) shows the same pattern at a similar relative magnitude
 BANKING77-specific artifact. Second, it's partially fixable: training on
 typo-augmented data (`augment_and_retrain.py`, FINDINGS.md §5) narrowed
 BANKING77's accuracy-collapse gap by roughly half (31.4pp→16.0pp) and the
-calibration mismatch similarly, at no cost to clean-test accuracy — but
-did not close either gap, and was only validated against the same
-perturbation type used in training. Read together: this is a real,
+calibration mismatch similarly, at no cost to clean-test accuracy, and
+`heldout_noise_test.py` shows the gain carries over to typo types it
+never trained on (keyboard-neighbor substitutions, deletions,
+insertions: +11 to +15 points accuracy, ECE roughly halved). It still
+did not close either gap. Read together: this is a real,
 generalizing failure mode, and a real, meaningful, but incomplete fix
 exists for it.
 
@@ -323,10 +325,11 @@ writeup in `CONFORMAL.md`; summary: the guarantee held on held-out test
 data for all three heads (Noul 90.91%, Choice 98.83%, Score 89.85%,
 target 90%), but usefulness varies sharply — Noul refuses to answer
 (empty set) 8.4% of the time, Choice needs ~7 of 77 classes on average
-to guarantee coverage, and Score's interval is wider than its entire
-possible output range (a real, reported-as-such negative result, traced
-to a heavily right-skewed error distribution a constant-width interval
-can't adapt to).
+to guarantee coverage, and Score's constant-width interval averages
+about 2.6 stars once clipped to the valid range. Conformalized quantile
+regression (`score_cqr.py`) keeps 90% coverage with narrower, adaptive
+intervals, but covers 1-star reviews only 52% of the time (5-star: 97%):
+the guarantee is an average over a test set that is 61% 5-star.
 
 ### CLINC150: a second, independent domain-breadth task (`clinc150_pipeline.py`, `CLINC150.md`)
 
@@ -338,18 +341,20 @@ BANKING77. It does: accuracy collapsed 71.80%→45.04% under the same
 ordinary-typo perturbation while confidence dropped only 0.7514→0.5615,
 the same pattern at a similar relative magnitude on a structurally
 different dataset (different tokenizer, different domain mix, 151 vs 77
-classes). It also surfaced a new finding: even with an explicit
-out-of-scope class in the schema, the model only recognized true
-out-of-scope queries 16.1% of the time (vs 84.2% in-scope accuracy),
-because that class was severely underrepresented in training data
-(0.67%) — a concrete instance of "having the right answer in the schema
-isn't enough if the training signal for it is this imbalanced." Full
-writeup, including the conformal and calibration numbers for this task,
-in `CLINC150.md`.
+classes). It also tested out-of-scope detection: used as one more
+softmax class, the explicit out-of-scope label caught only 16.1% of true
+out-of-scope queries (vs 84.2% in-scope accuracy), even though training
+data is balanced (100 examples per class, oos included). The confidence
+score does most of the work instead: rejecting answers whose top
+probability is below a validation-tuned threshold
+(`clinc150_oos_threshold.py`) raises oos recall to 85.7%, at a cost of
+about 10 points of in-scope accuracy. Full writeup, including the
+conformal and calibration numbers for this task, in `CLINC150.md`.
 
 ## Files
 - `prepare_data.py` / `model.py` / `train.py` / `calibrate.py` / `serve.py`
-  — single-task (Noul only) pipeline.
+  — single-task (Noul only) pipeline. `model.py` holds the shared
+  encoder for every pipeline (mean or attention pooling).
 - `prepare_multitask.py` / `train_multitask.py` / `calibrate_multitask.py`
   / `serve_multitask.py` — multi-task (Noul + Choice + Score) pipeline,
   shared encoder.
@@ -360,15 +365,26 @@ in `CLINC150.md`.
   robustness stress test (the repo's sharpest finding — see above).
 - `conformal.py` — split conformal prediction (Noul/Choice/Score), verified
   coverage guarantees; full writeup in `CONFORMAL.md`.
+- `score_cqr.py` — conformalized quantile regression for the Score head
+  (adaptive intervals), compared with the constant-width method; see
+  `CONFORMAL.md`.
 - `augment_and_retrain.py` — typo-noise data augmentation retrain, testing
   whether it fixes the Phase 5b calibration gap; results in FINDINGS.md.
+- `heldout_noise_test.py` — scores the baseline and augmented models on
+  typo types the augmentation never trained on (perturbations in
+  `noise.py`).
 - `clinc150_pipeline.py` — Workstream D: standalone 151-class (150 intents
   + out-of-scope) task on a second, independently licensed dataset,
   testing whether the typo-miscalibration finding generalizes; full
   writeup in `CLINC150.md`.
-- `attention_pooling_experiment.py` — Workstream E: one scoped architecture
-  experiment (learned attention pooling vs mean pooling), same recipe
-  and data as `train_multitask.py`; results in FINDINGS.md.
+- `clinc150_oos_threshold.py` — out-of-scope detection on CLINC150 by
+  thresholding the model's confidence (threshold picked on validation).
+- `multiseed_sweep.py` — Workstream E: mean vs attention pooling across
+  three training seeds, also giving seed variance for Choice and Score;
+  results in FINDINGS.md.
+- `calib_utils.py` — shared ECE and split-conformal helpers.
+- `tests/` — fast unit tests (no data or checkpoints needed), run in CI by
+  `.github/workflows/tests.yml`.
 - `DATA_LICENSES.md` — the canonical, per-dataset license verification
   record for every dataset used in this repo (required before using any
   new dataset, per this project's own rules).
@@ -403,9 +419,17 @@ python3 calibration_sweep.py   # Phase 4
 python3 ood_stress_test.py     # Phase 5
 python3 adversarial_stress_test.py  # Phase 5b
 python3 conformal.py                # Conformal prediction (see CONFORMAL.md)
+python3 score_cqr.py                # Adaptive (CQR) intervals for Score
+python3 augment_and_retrain.py      # Typo-augmentation retrain (Workstream B)
+python3 heldout_noise_test.py       # ...and its test on unseen typo types
+python3 multiseed_sweep.py          # Mean vs attention pooling, 3 seeds (Workstream E, slow)
 
 # Workstream D: second independent domain-breadth task (see CLINC150.md)
 python3 clinc150_pipeline.py
+python3 clinc150_oos_threshold.py
+
+# Unit tests
+pip install pytest && python3 -m pytest -q tests
 
 # Real cross-seed uncertainty measurement (Noul pipeline, ~10-15 min for 3 seeds)
 python3 seed_variation_sweep.py

@@ -50,7 +50,8 @@ Target coverage: 90% (alpha=0.10) for all three heads.
 |---|---|---|---|---|---|
 | Noul | 418 / 836 | Threshold (LAC) conformal | 90% | **90.91%** | avg 0.92 of 2 classes (see note below) |
 | Choice | 750 / 3080 | APS (non-randomized) | 90% | **98.83%** | avg 7.07 of 77 classes (median 6) |
-| Score | 759 / 1517 | Absolute-residual conformal | 90% | **89.85%** | constant width 1.066 (on [0,1] scale) |
+| Score | 759 / 1517 | Absolute-residual conformal | 90% | **89.85%** | raw width 1.066; mean 0.656 after clipping to the [0,1] label range |
+| Score | 759 / 1517 | CQR (`score_cqr.py`) | 90% | **90.11%** | mean 0.608, median 0.570, clipped to [0,1] |
 
 **The coverage guarantee held in all three cases** — measured coverage
 was at or above target in every case (89.85% for Score is a hair under
@@ -104,35 +105,60 @@ categories to reach the guarantee, and the largest set seen was 35 of
 the time would find this useful roughly half the time (49.4% of
 examples get a set of 5 or fewer) and unwieldy the rest.
 
-### Score: valid, but the interval is not actionable
+### Score: valid, wide, and uneven across rating levels
 
-89.85% coverage against 90% target — essentially exact. But the
-interval width is **1.066 on a [0,1]-scale target variable** — wider
-than the entire possible range of the label. A predicted score of 0.5
-with this interval spans roughly [-0.03, 1.03], i.e. effectively "the
-score is somewhere in [0,1]," which is true by construction of the task
-and tells a caller nothing. **This is a technically valid but practically
-useless result, and it is reported as such rather than hidden or
-qualified away.**
+89.85% coverage against the 90% target, essentially exact. The raw
+interval is ±0.533 on the [0,1] rating scale (width 1.066).
 
-Why: this repo's absolute-residual conformal method (see below) produces
-one CONSTANT width for every test point, calibrated to cover the 90th
-percentile of calibration-set absolute error. The Score head's error
-distribution is heavily right-skewed (median absolute error 0.090, but
-the 90th percentile is 0.538 and the 95th is 0.724) — verified directly:
-the test set is majority 5-star reviews (932 of 1517, 61%), which the
-model predicts well, alongside a harder minority of lower-star reviews
-it predicts poorly. A constant-width interval calibrated to cover the
-90th percentile of error across ALL points has to be wide enough for the
-hard minority tail, which makes it needlessly (uselessly) wide for the
-easy majority. This is exactly the scenario conformalized quantile
-regression (CQR) is designed to fix — CQR would very plausibly give
-narrow, useful intervals for easy/majority-class inputs and wide,
-honest intervals for the hard minority-class ones, rather than one
-number for everyone. **CQR was not implemented here** (this repo used
-the simpler standard method, as the original brief for this workstream
-explicitly allowed); this result is the concrete evidence for why CQR
-would likely matter here specifically, not a generic caveat.
+**Correction to an earlier version of this document.** It called that
+width "wider than the entire possible range of the label" and the result
+"practically useless". The first part is true of the raw interval, but
+the label can only lie in [0,1], so clipping the interval to [0,1] loses
+no coverage. After clipping, the mean width is 0.656 (median 0.589),
+about 2.6 of the 4 steps on the 1-5 star scale. That is wide, and no test
+interval is narrower than 2 stars, but it is not literally uninformative.
+
+Why so wide: absolute-residual conformal gives every input the same
+width, sized to the 90th percentile of calibration-set error. The Score
+head's error is heavily right-skewed (median absolute error 0.090, 90th
+percentile 0.538, 95th 0.724) because the test set is mostly 5-star
+reviews (932 of 1517, 61%), which the model predicts well, plus a
+minority of lower ratings it predicts poorly. One width has to cover
+that hard tail, so it is too wide for the easy majority.
+
+**Conformalized quantile regression (CQR)** is the standard fix and is
+now implemented (`score_cqr.py`). Two quantile heads (5th and 95th
+percentile, pinball loss) are fit on the frozen encoder's pooled
+features using the training split, the epoch is picked on val_a, the
+intervals are conformalized on val_b, and the result is measured once on
+the test set:
+
+| Method (test n=1517, clipped to [0,1]) | Coverage | Mean width | Median width | Intervals under 2 stars (<0.5) |
+|---|---|---|---|---|
+| Absolute residual | 0.8985 | 0.656 | 0.589 | 0% |
+| CQR | 0.9011 | 0.608 | 0.570 | 41% |
+
+CQR keeps the guarantee, is modestly narrower on average, and adapts:
+41% of its intervals span less than 2 stars. But its coverage by true
+rating shows what "90% coverage" does and does not promise:
+
+| True rating | n | CQR coverage | CQR mean width |
+|---|---|---|---|
+| 1 star | 162 | 52.5% | 0.824 |
+| 2 stars | 82 | 78.0% | 0.830 |
+| 3 stars | 119 | 86.6% | 0.788 |
+| 4 stars | 222 | 95.0% | 0.642 |
+| 5 stars | 932 | 97.0% | 0.521 |
+
+The guarantee is *marginal*: 90% averaged over the test distribution.
+Because 61% of reviews are 5-star and covered 97% of the time, the
+average reaches 90% even though a 1-star review's true rating falls
+inside its interval only about half the time. Split conformal methods
+cannot guarantee coverage conditional on the true label (it is unknown
+at prediction time). A deployment that cares most about negative
+reviews would need to measure coverage on that group directly, and to
+collect more low-rating data or conformalize within predicted-rating
+groups. An average coverage number alone would hide the problem.
 
 ## What this adds over temperature/Platt/isotonic scaling, honestly
 
@@ -141,7 +167,8 @@ would likely matter here specifically, not a generic caveat.
   a genuine methodological upgrade over ECE alone.
 - **It does not fix the underlying model.** Conformal prediction
   calibrates the SET, not the point estimate — a weak Score model still
-  produces a wide (here, useless) interval; a Choice model with real but
+  produces wide intervals (CQR narrows them somewhat but leaves 1-star
+  reviews covered only about half the time); a Choice model with real but
   imperfect discriminative power still needs a set of ~7 classes on
   average to guarantee coverage. Conformal prediction makes weakness
   visible and quantified rather than hidden behind a single miscalibrated
@@ -151,11 +178,11 @@ would likely matter here specifically, not a generic caveat.
   output" pitch as a complete trustworthiness story.** A typed API that
   must always return a SINGLE typed answer (as Jev's basic interface
   does) cannot, by definition, return "I need to say {6 possible
-  categories}" or "this could be anywhere in [0,1]" — it has to pick one
+  categories}" or "somewhere between 2 and 5 stars" — it has to pick one
   value. Conformal prediction's honest answer, when forced into a
   single-point interface, is either the point estimate alone (silently
   discarding the uncertainty this section just measured) or a visibly
-  unwieldy/useless set exposed to the caller. Neither resolves the
+  unwieldy set or interval exposed to the caller. Neither resolves the
   tension; this section's job was to make the tension visible and
   measured, which it does.
 
