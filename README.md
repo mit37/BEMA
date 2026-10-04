@@ -382,6 +382,10 @@ conformal and calibration numbers for this task, in `CLINC150.md`.
   writeup in `CLINC150.md`.
 - `clinc150_oos_threshold.py` — out-of-scope detection on CLINC150 by
   thresholding the model's confidence (threshold picked on validation).
+- `self_pretrain.py` / `mlm.py` — pretrains the encoder ourselves with
+  masked-token prediction on training-split text (no download needed),
+  fine-tunes it, and compares with training from scratch across 3 seeds;
+  results in FINDINGS.md §8.
 - `multiseed_sweep.py` — Workstream E: mean vs attention pooling across
   three training seeds, also giving seed variance for Choice and Score;
   results in FINDINGS.md.
@@ -432,6 +436,7 @@ python3 conformal_typo.py           # Conformal coverage under typo noise
 python3 augment_and_retrain.py      # Typo-augmentation retrain (Workstream B)
 python3 heldout_noise_test.py       # ...and its test on unseen typo types
 python3 multiseed_sweep.py          # Mean vs attention pooling, 3 seeds (Workstream E, slow)
+python3 self_pretrain.py            # Self-supervised pretraining + fine-tune, 3 seeds (~2.5 h on 4 CPUs)
 
 # Workstream D: second independent domain-breadth task (see CLINC150.md)
 python3 clinc150_pipeline.py

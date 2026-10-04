@@ -11,7 +11,9 @@ and a multi-seed pooling comparison. That round also corrected two
 earlier claims (CLINC150 "class imbalance"; the Score interval being
 "wider than the output range"), marked where they appear. A third pass
 (2026-09-24) added bootstrap confidence intervals (§3), conformal
-coverage under typo noise, and group-conditional CQR. This document summarizes what an independent,
+coverage under typo noise, and group-conditional CQR. A fourth pass
+(2026-09-30) pretrained BEMA's encoder in-house with masked-token
+prediction, since no pretrained encoder can be downloaded (§8). This document summarizes what an independent,
 from-scratch reproduction of Jev's core interface shape (typed state in,
 typed calibrated decision out, one non-autoregressive forward pass)
 found when actually built and tested, rather than assumed. All numbers
@@ -634,7 +636,9 @@ subword tokenizer" already named above as insufficient to answer this
 item's actual question. The two findings are complementary, not
 duplicates: one shows the gap generalizes across domains, the other
 (still open) is about whether it would shrink or vanish with real
-pretrained subword embeddings.
+pretrained subword embeddings. §8 adds the closest experiment possible
+here, pretraining BEMA's own encoder on ~1.1M tokens: it improves clean
+accuracy slightly but leaves the typo collapse unchanged.
 
 It is not evidence
 either for or against the calibration gap being a general
@@ -679,3 +683,53 @@ here supports switching pooling methods. That fits the usual expectation
 that pooling choice matters little for short inputs (48-64 tokens) and a
 small encoder, and it says nothing about attention pooling at larger
 scale.
+
+## 8. Self-supervised pretraining, done here instead of downloaded
+
+§6's experiment (swap in a downloaded pretrained encoder) is still
+blocked, so `self_pretrain.py` does the nearest thing that is possible:
+it pretrains BEMA's own encoder with masked-token prediction (BERT-style:
+hide 15% of tokens, predict them) on unlabeled text, then fine-tunes the
+multitask model with exactly `train_multitask.py`'s recipe.
+
+- **Corpus:** the text of every training split this repo uses (SMS,
+  BANKING77, Amazon reviews, CLINC150), labels ignored, no validation or
+  test text: 34,581 texts, cut into 42,699 windows of up to 64 tokens,
+  1.13M tokens in total. 5% of windows were held out to pick the epoch.
+- **Pretraining:** 20 epochs (~90 minutes on 4 CPU cores). Held-out loss
+  fell from 6.80 to 5.23 and masked-token accuracy rose from 5.7% to
+  21.6%, i.e. the encoder learned real word statistics, but from a tiny
+  corpus by pretraining standards.
+- **Comparison:** fine-tuned with seeds 42, 123 and 2024 and compared with
+  the from-scratch models for the same seeds (fixed data split; Choice
+  n=3080, Score n=1517, Noul n=836; typo sets as in `heldout_noise_test.py`).
+
+| Test metric (mean ± std over 3 seeds) | From scratch | Self-pretrained | Paired difference |
+|---|---|---|---|
+| Choice accuracy (clean) | 0.8195 ± 0.0011 | 0.8281 ± 0.0048 | **+0.0087 ± 0.0047** (better on all 3 seeds) |
+| Score Pearson r | 0.5605 ± 0.0234 | 0.5892 ± 0.0103 | **+0.0286 ± 0.0182** (better on all 3 seeds) |
+| Noul accuracy | 0.9801 ± 0.0050 | 0.9833 ± 0.0032 | +0.0032 ± 0.0070 (mixed signs) |
+| Choice ECE (calibrated, clean) | 0.0341 ± 0.0042 | 0.0342 ± 0.0026 | +0.0001 ± 0.0046 |
+| Score MAE | 0.1858 ± 0.0055 | 0.1857 ± 0.0046 | −0.0000 ± 0.0071 |
+| Choice accuracy drop, keyboard typos | 0.3088 ± 0.0154 | 0.3126 ± 0.0054 | +0.0038 ± 0.0171 |
+| Choice accuracy drop, mixed typos | 0.3827 ± 0.0112 | 0.3851 ± 0.0031 | +0.0024 ± 0.0142 |
+| Overconfidence under mixed typos | 0.1395 ± 0.0006 | 0.1389 ± 0.0009 | −0.0006 ± 0.0015 |
+
+**Result: small, consistent gains on clean text; no effect at all on the
+typo problem.** Pretraining raised clean Choice accuracy by about 0.9
+points and Score correlation by about 0.03, both on every seed, with
+calibration on clean text unchanged. But the accuracy collapse under
+typos and the overconfidence that comes with it are the same as training
+from scratch, to within seed noise, for every corruption tested. For
+comparison, training on typo-augmented data (§5) cut the same collapse
+by 11-17 points. On this evidence, the typo miscalibration is not caused
+by a lack of general language knowledge that pretraining supplies; it
+comes from never seeing corrupted text, and the direct fix works where
+pretraining does not.
+
+**What this does not settle.** 1.1M tokens of clean, in-domain text is
+orders of magnitude less than a production pretrained encoder sees, and a
+web-scale corpus contains plenty of real typos. So this does not answer
+§6's question about a model like BERT or DistilBERT, which could behave
+differently. It does show that pretraining in itself, at the scale
+possible here, is not a remedy.

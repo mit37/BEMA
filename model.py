@@ -92,12 +92,14 @@ class JevCloneEncoder(nn.Module):
         self.temperature = nn.Parameter(torch.ones(1) * 1.0, requires_grad=False)
         self.choice_temperature = nn.Parameter(torch.ones(1) * 1.0, requires_grad=False)
 
+    def token_states(self, ids, mask):
+        """Per-token hidden states from the shared trunk (used by pretraining)."""
+        x = self.pos(self.embed(ids))
+        return self.encoder(x, src_key_padding_mask=mask == 0)
+
     def encode(self, ids, mask):
         """Run the shared trunk once. Returns one pooled state vector per example."""
-        x = self.embed(ids)
-        x = self.pos(x)
-        key_padding_mask = mask == 0  # True where padded
-        h = self.encoder(x, src_key_padding_mask=key_padding_mask)
+        h = self.token_states(ids, mask)
 
         if self.pooling == "attn":
             scores = self.attn_query(h).squeeze(-1).masked_fill(mask == 0, float("-inf"))
