@@ -13,7 +13,10 @@ earlier claims (CLINC150 "class imbalance"; the Score interval being
 (2026-09-24) added bootstrap confidence intervals (§3), conformal
 coverage under typo noise, and group-conditional CQR. A fourth pass
 (2026-09-30) pretrained BEMA's encoder in-house with masked-token
-prediction, since no pretrained encoder can be downloaded (§8). This document summarizes what an independent,
+prediction, since no pretrained encoder can be downloaded (§8). A fifth
+pass (2026-10-04) added a classical TF-IDF baseline, which beat the
+transformer everywhere, then rebuilt BEMA's trunk from hashed n-grams and
+tuned and ensembled it for accuracy (§9). This document summarizes what an independent,
 from-scratch reproduction of Jev's core interface shape (typed state in,
 typed calibrated decision out, one non-autoregressive forward pass)
 found when actually built and tested, rather than assumed. All numbers
@@ -733,3 +736,78 @@ web-scale corpus contains plenty of real typos. So this does not answer
 §6's question about a model like BERT or DistilBERT, which could behave
 differently. It does show that pretraining in itself, at the scale
 possible here, is not a remedy.
+
+## 9. Accuracy: a linear baseline, an n-gram trunk, and ensembles
+
+**The baseline came first, and it was unflattering.** `linear_baseline.py`
+fits TF-IDF features (word 1-2 grams plus character 2-5 grams) with a
+linear model per task, regularization chosen on validation. On the same
+test splits it beat the transformer BEMA on every task, and it showed no
+overconfidence under typos. So the typo miscalibration in §5 is a property
+of the small from-scratch transformer, not of typed-decision models in
+general.
+
+**BEMA with an n-gram trunk.** `ngram_model.py` keeps BEMA's design (one
+shared state per input, read by fixed-shape Noul / Choice / Score heads,
+all three trained jointly with `train_multitask.py`'s data and checkpoint
+rule), but builds the state from the mean embedding of hashed word and
+character n-grams instead of a transformer. Hyperparameters were chosen
+by `train_ngram.py --val-only`: 8 settings (width 96/256, dropout
+0.15/0.4, embedding learning rate 3e-3/1e-3, 8 epochs), seed 42,
+validation only. The best was width 256, dropout 0.4, learning rate 3e-3.
+Test was scored once for that setting and once for the untuned default.
+
+**Ensembles.** `ensemble.py` averages the three tuned seeds' calibrated
+probabilities, and mixes that average with the linear baseline. The
+mixing weight was picked on Choice validation accuracy from
+{0, .25, .5, .75, 1}: 0.914, 0.920, **0.925**, 0.918, 0.909, so w = 0.5.
+The ensemble temperature was refitted on validation.
+
+Test results. Single models are mean ± std over seeds 42/123/2024;
+ensembles and the linear model are single deterministic runs. Choice
+n=3080, Score n=1517, Noul n=836.
+
+| Test metric | Transformer BEMA (§8) | Linear TF-IDF | n-gram BEMA, default | n-gram BEMA, tuned | 3-seed n-gram ensemble | n-gram ensemble + linear (w=0.5) |
+|---|---|---|---|---|---|---|
+| Choice accuracy (clean) | 0.8195 ± 0.0011 | 0.9114 | 0.8898 ± 0.0020 | 0.8966 ± 0.0058 | 0.9153 | **0.9201** |
+| Choice ECE (calibrated) | 0.0341 ± 0.0042 | 0.0159 | 0.0158 ± 0.0011 | 0.0081 ± 0.0006 | 0.0207 | 0.0173 |
+| Choice accuracy, keyboard typos | — | 0.8471 | 0.8156 ± 0.0081 | 0.8315 ± 0.0089 | 0.8601 | **0.8669** |
+| Choice accuracy, mixed typos | — | 0.8253 | 0.7923 ± 0.0111 | 0.8075 ± 0.0074 | 0.8425 | **0.8529** |
+| Drop under keyboard / mixed typos | 0.309 / 0.383 | 0.064 / 0.086 | 0.074 / 0.098 | 0.065 / 0.089 | 0.055 / 0.073 | 0.053 / 0.067 |
+| Overconfidence, mixed typos | +0.1395 | −0.0421 | +0.0039 | +0.0162 ± 0.0075 | −0.0302 | −0.0437 |
+| Score MAE | 0.1858 ± 0.0055 | 0.1503 | 0.1298 ± 0.0015 | 0.1244 ± 0.0016 | **0.1232** | 0.1351 |
+| Score Pearson r | 0.5605 ± 0.0234 | 0.7821 | 0.7776 ± 0.0040 | 0.7818 ± 0.0022 | 0.7896 | **0.8012** |
+| Noul accuracy | 0.9801 ± 0.0050 | 0.9880 | 0.9852 ± 0.0030 | 0.9852 ± 0.0042 | 0.9868 | **0.9904** |
+
+What this shows, and what it does not:
+
+- **Choice accuracy went from 82.0% (transformer) to 92.0%.** The trunk
+  swap gives most of it; tuning adds about 0.7 points; seed ensembling 1.9
+  more; mixing with the linear model another 0.5. A single tuned n-gram
+  model (89.7%) is still 1.5 points below the linear baseline. Only
+  ensembles beat it, the mix by 0.87 points on one test split; no
+  bootstrap CI was computed for that gap.
+- **Typo robustness:** every n-gram variant loses 5-10 points under typos,
+  against 31-38 for the transformer, and their mean overconfidence under
+  typos stays within ±0.05 (worst single seed: +0.023, tuned model, mixed
+  typos), against +0.14 for the transformer. The ensembles lean slightly *under*confident
+  (−0.02 to −0.04), as does the linear model; that is the safe direction
+  for a decision model, but it is still miscalibration.
+- **Calibration:** the best clean ECE belongs to the single tuned model
+  (0.008); ensembling raised it to about 0.02 even after refitting the
+  temperature.
+- **Score and Noul:** the mixing weight was chosen on Choice validation
+  only and reused for Score and Noul. It helps Score correlation and Noul
+  but makes Score MAE worse than the n-gram ensemble alone (0.135 vs
+  0.123), because the linear Ridge model's MAE is worse. The Noul
+  differences are a few of 836 messages (0.9904 vs 0.9880 is 2 messages)
+  and are not meaningful.
+- **Cost:** the 3-seed ensemble is three forward passes, and the mix adds
+  a TF-IDF transform and a linear model. It is still non-autoregressive
+  with a fixed output shape, but it is not "one forward pass".
+- **For the Jev comparison:** the accuracy gain comes from swapping the
+  learned-from-scratch transformer for n-gram features, i.e. from a
+  better input representation, not from anything specific to the
+  typed-head design. Jev's claims should be judged against strong
+  classical baselines like this one, not against a weak neural one.
+

@@ -386,6 +386,15 @@ conformal and calibration numbers for this task, in `CLINC150.md`.
   masked-token prediction on training-split text (no download needed),
   fine-tunes it, and compares with training from scratch across 3 seeds;
   results in FINDINGS.md §8.
+- `linear_baseline.py` — TF-IDF (word + character n-grams) linear models
+  for all three tasks on the same splits; the classical baseline in
+  FINDINGS.md §9.
+- `ngram_model.py` / `train_ngram.py` — BEMA with a hashed n-gram trunk
+  in place of the transformer (same heads, data and checkpoint rule);
+  `--val-only` runs a validation-only hyperparameter search.
+- `ensemble.py` — the 3-seed n-gram ensemble and its mix with the linear
+  baseline, mixing weight chosen on validation; the most accurate
+  configuration in this repo (FINDINGS.md §9).
 - `multiseed_sweep.py` — Workstream E: mean vs attention pooling across
   three training seeds, also giving seed variance for Choice and Score;
   results in FINDINGS.md.
@@ -437,6 +446,9 @@ python3 augment_and_retrain.py      # Typo-augmentation retrain (Workstream B)
 python3 heldout_noise_test.py       # ...and its test on unseen typo types
 python3 multiseed_sweep.py          # Mean vs attention pooling, 3 seeds (Workstream E, slow)
 python3 self_pretrain.py            # Self-supervised pretraining + fine-tune, 3 seeds (~2.5 h on 4 CPUs)
+python3 linear_baseline.py          # TF-IDF linear baseline
+python3 train_ngram.py --d-model 256 --dropout 0.4 --sparse-lr 3e-3 --epochs 8 --tag _tuned  # n-gram BEMA, 3 seeds
+python3 ensemble.py                 # Seed ensemble + linear mix (needs the _tuned checkpoints)
 
 # Workstream D: second independent domain-breadth task (see CLINC150.md)
 python3 clinc150_pipeline.py
