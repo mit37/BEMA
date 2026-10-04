@@ -29,6 +29,8 @@ score_cqr_results.pkl
 self_pretrain_results.pkl
 linear_baseline_results.pkl
 ngram_results.pkl
+ngram_tuned_results.pkl
+ensemble_results.pkl
 
 # OS
 .DS_Store
