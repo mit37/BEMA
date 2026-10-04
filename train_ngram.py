@@ -13,6 +13,7 @@ heads use AdamW.
 
 Usage: python3 train_ngram.py
 """
+import argparse
 import math
 import os
 import pickle
@@ -59,10 +60,15 @@ def predict(model, feats, chunk=512):
     return {k: torch.cat(v) for k, v in out.items()}
 
 
-def train(seed, path):
+def make_model(cfg):
+    return NgramEncoder(d_model=cfg.d_model, dropout=cfg.dropout,
+                        num_choice_classes=num_choice_classes, enable_score=True)
+
+
+def train(seed, path, cfg):
     torch.manual_seed(seed)
     gen = torch.Generator().manual_seed(seed)
-    model = NgramEncoder(num_choice_classes=num_choice_classes, enable_score=True)
+    model = make_model(cfg)
     B = model.buckets
     tr = {t: featurized(t, "train", B) for t in ("noul", "choice", "score")}
     va = {t: featurized(t, "val", B) for t in ("noul", "choice", "score")}
@@ -70,13 +76,13 @@ def train(seed, path):
 
     n_pos = sum(tr["noul"][1])
     noul_loss = nn.BCEWithLogitsLoss(pos_weight=torch.tensor([(len(tr["noul"][1]) - n_pos) / n_pos]))
-    sparse_opt = torch.optim.SparseAdam(list(model.bag.parameters()), lr=3e-3)
+    sparse_opt = torch.optim.SparseAdam(list(model.bag.parameters()), lr=cfg.sparse_lr)
     dense = [p for n, p in model.named_parameters() if not n.startswith("bag.") and p.requires_grad]
     dense_opt = torch.optim.AdamW(dense, lr=1e-3, weight_decay=1e-4)
     steps = math.ceil(len(tr["choice"][0]) / BATCH)
 
     best, best_state = -1.0, None
-    for epoch in range(EPOCHS):
+    for epoch in range(cfg.epochs):
         model.train()
         total = 0.0
         for _ in range(steps):
@@ -99,8 +105,9 @@ def train(seed, path):
             best = n_acc + c_acc + (1 - s_mae)
             best_state = {k: v.clone() for k, v in model.state_dict().items()}
     model.load_state_dict(best_state)
-    torch.save(model.state_dict(), path)
-    return model
+    if path:
+        torch.save(model.state_dict(), path)
+    return model, best
 
 
 def evaluate(model):
@@ -131,15 +138,29 @@ def evaluate(model):
 
 
 if __name__ == "__main__":
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--d-model", type=int, default=96)
+    ap.add_argument("--dropout", type=float, default=0.15)
+    ap.add_argument("--sparse-lr", type=float, default=3e-3)
+    ap.add_argument("--epochs", type=int, default=EPOCHS)
+    ap.add_argument("--tag", default="")
+    ap.add_argument("--val-only", action="store_true",
+                    help="train seed 42 only and print its best combined validation score; never touches test")
+    cfg = ap.parse_args()
     random.seed(0)
+    if cfg.val_only:
+        _, best = train(42, None, cfg)
+        print(f"VAL d_model={cfg.d_model} dropout={cfg.dropout} sparse_lr={cfg.sparse_lr} "
+              f"epochs={cfg.epochs} best_combined_val={best:.4f}")
+        raise SystemExit
     results = {}
     for seed in SEEDS:
-        path = f"bema_ngram_seed{seed}.pt"
+        path = f"bema_ngram{cfg.tag}_seed{seed}.pt"
         if os.path.exists(path):
-            model = NgramEncoder(num_choice_classes=num_choice_classes, enable_score=True)
+            model = make_model(cfg)
             model.load_state_dict(torch.load(path))
         else:
-            model = train(seed, path)
+            model, _ = train(seed, path, cfg)
         results[seed] = evaluate(model)
         print(f"[seed {seed}] " + " ".join(f"{k}={v:.4f}" for k, v in results[seed].items()), flush=True)
 
@@ -149,6 +170,6 @@ if __name__ == "__main__":
     for k in keys:
         v = np.array([results[s][k] for s in SEEDS])
         print(f"  {k:<18}{v.mean():.4f} +/- {v.std(ddof=1):.4f}")
-    with open("ngram_results.pkl", "wb") as f:
-        pickle.dump(results, f)
-    print("Saved ngram_results.pkl")
+    with open(f"ngram{cfg.tag}_results.pkl", "wb") as f:
+        pickle.dump({"config": vars(cfg), "results": results}, f)
+    print(f"Saved ngram{cfg.tag}_results.pkl")
