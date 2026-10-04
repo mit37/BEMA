@@ -27,6 +27,8 @@ heldout_noise_results.pkl
 clinc150_oos_results.pkl
 score_cqr_results.pkl
 self_pretrain_results.pkl
+linear_baseline_results.pkl
+ngram_results.pkl
 
 # OS
 .DS_Store
