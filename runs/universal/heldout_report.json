@@ -7,5 +7,59 @@
    65.3,
    68.2
   ]
+ },
+ "claude-fable-5.1/twitter_fin_topic_s1000": {
+  "n": 1000,
+  "accuracy_pct": 73.2,
+  "ece": 0.081,
+  "ci95": [
+   70.4,
+   75.9
+  ]
+ },
+ "jev on the same 1000 tweets": {
+  "n": 1000,
+  "accuracy_pct": 67.8,
+  "ece": 0.151,
+  "ci95": [
+   64.8,
+   70.6
+  ]
+ },
+ "claude-haiku-5.5/twitter_fin_topic": {
+  "n": 4117,
+  "accuracy_pct": 67.1,
+  "ece": 0.1044,
+  "ci95": [
+   65.7,
+   68.6
+  ]
+ },
+ "claude-opus-5.5/twitter_fin_topic_s1000": {
+  "n": 1000,
+  "accuracy_pct": 75.1,
+  "ece": 0.0432,
+  "ci95": [
+   72.3,
+   77.7
+  ]
+ },
+ "claude-sonnet-5.5/twitter_fin_topic": {
+  "n": 4117,
+  "accuracy_pct": 73.2,
+  "ece": 0.0403,
+  "ci95": [
+   71.8,
+   74.5
+  ]
+ },
+ "qwen3.8-flash/twitter_fin_topic": {
+  "n": 4060,
+  "accuracy_pct": 66.2,
+  "ece": 0.2803,
+  "ci95": [
+   64.7,
+   67.6
+  ]
  }
 }
