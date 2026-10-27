@@ -226,7 +226,7 @@ def spent(prov=None):
     tot = 0.0
     for p in glob.glob(f"{OUT}/*/*.jsonl"):
         for r in B.read_jsonl(p):
-            if r.get("status") == "ok":
+            if r.get("status") == "ok" and not r.get("seeded_from"):   # seeded copies were paid for once, in the s250 file
                 if prov and ("/" in r.get("model", "")) != (prov == "openrouter"):
                     continue
                 tot += float((r.get("usage") or {}).get("cost") or 0)
@@ -299,8 +299,10 @@ async def run_model(c, model, tests):
 def tests_for(m, tests):
     if m in RATE_LIMITED:
         return [t for t in tests if t in RATE_LIMITED_TESTS]
-    if m == "claude-fable-5.1":
+    if m == "claude-fable-5.1" and os.environ.get("FABLE_FULL") != "1":
         return [t for t in tests if t in RATE_LIMITED_TESTS]
+    if m == "claude-fable-5.1":   # FABLE_FULL=1: the full 1,000-query tests (s250 answers seeded in, see seed_from_s250)
+        return [t for t in tests if t not in RATE_LIMITED_TESTS or t == "latency_sequential"]
     return [t for t in tests if t not in RATE_LIMITED_TESTS or t == "latency_sequential"]
 
 

@@ -111,6 +111,7 @@ def report():
         res[name] = {"n": n, "accuracy_pct": round(100 * acc, 1), "ece": round(e, 4) if e is not None else None,
                      "ci95": [round(100 * x, 1) for x in B.wilson(sum(p == gold[i] for i, p, _ in pairs), n)]}
     p = "runs/universal/jev/twitter_fin_topic.jsonl"
+    jev_pairs = []
     if os.path.exists(p):
         pairs = []
         for r in B.read_jsonl(p):
@@ -120,6 +121,7 @@ def report():
             a = r["response"]["answers"]["topic"]
             pairs.append((r["idx"], a["choice"], a.get("confidence")))
         score("jev", pairs)
+        jev_pairs = pairs
     for d in sorted(os.listdir("runs/universal/llm")) if os.path.isdir("runs/universal/llm") else []:
         for fn in sorted(os.listdir(f"runs/universal/llm/{d}")):
             pairs = []
@@ -135,6 +137,9 @@ def report():
                     c = None
                 pairs.append((r["idx"], t, c))
             score(f"{d}/{fn[:-6]}", pairs)
+            if "_s" in fn and jev_pairs:
+                keys = {i for i, _, _ in pairs}
+                score(f"jev on the same {fn[:-6].split('_s')[-1]} tweets", [x for x in jev_pairs if x[0] in keys])
     bdir = "runs/universal/bema"
     for fn in sorted(os.listdir(bdir)) if os.path.isdir(bdir) else []:
         pairs = []
