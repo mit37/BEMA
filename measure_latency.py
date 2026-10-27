@@ -5,6 +5,7 @@ training period were inflated by CPU contention and are not reported).
 
 Protocol: the first 300 clean BANKING77 test queries, 20 warm-up passes, then
 one query at a time; tokenization is timed separately from the forward pass.
+Also times the spelling step on 300 typo'd (swap2) queries, where it actually rewrites words.
 Writes runs/bema/timing_quiet.json.
 """
 import json
@@ -76,6 +77,16 @@ def main():
     out["bema_v2_spell"] = {"median_ms": statistics.median([a + b for a, b in zip(fw, sp)]),
                             "speller_median_ms": statistics.median(sp),
                             "note": "BEMA v2 forward pass plus the spelling correction step"}
+    # the speller only changes misspelled words, so also time it on typo'd text
+    sw = [r["text"] for r in B.load_inputs("banking77", "swap2")[:300]]
+    sp2, changed = [], 0
+    for t in sw:
+        t0 = time.perf_counter(); c = S.correct(speller, t); t1 = time.perf_counter()
+        sp2.append((t1 - t0) * 1000); changed += c != t
+    out["bema_spell_on_swap2"] = {"speller_median_ms": statistics.median(sp2), "p90_ms": sorted(sp2)[int(0.9 * len(sp2))],
+                                  "queries_changed": changed, "n": len(sw),
+                                  "note": "spelling step alone on the first 300 swap2 queries (2 swapped letters each)"}
+    out["_machine"]["load_avg_at_end"] = os.getloadavg()
     os.makedirs("runs/bema", exist_ok=True)
     json.dump(out, open("runs/bema/timing_quiet.json", "w"), indent=2)
     print(json.dumps(out, indent=1))

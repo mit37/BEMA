@@ -142,6 +142,7 @@ for cond in B.TASKS["spam"]["conditions"]:
 train_texts = {r["text"] for r in B.load_data()["noul"]["train"]}
 dup = {str(r["idx"]) for r in B.load_inputs("spam", "clean") if r["text"] in train_texts}
 sec["test_messages_also_in_training"] = len(dup)
+sec["duplicate_rule"] = "exact text match with a training message (88 if case and whitespace are normalised)"
 sec["clean_excluding_duplicates"] = {}
 for m in ["jev", "bema_baseline", "bema_v2", "claude-haiku-5.5", "qwen3.8-flash", "claude-sonnet-5.5", "claude-opus-5.5"]:
     d = jev_core("spam", "clean") if m == "jev" else (llm_test(m, "spam_clean") if m in L.MODELS else bema_core(m, "spam", "clean"))
@@ -152,8 +153,11 @@ OUT["sections"]["spam"] = sec
 # paired accuracy differences vs Jev on the full clean BANKING77 set (same 3,080 queries)
 jc = jev_core("banking77", "clean")
 paired = {}
-for m in ["bema_baseline", "bema_v2", "bema_v2_spell", "claude-haiku-5.5", "qwen3.8-flash", "claude-sonnet-5.5", "claude-opus-5.5"]:
+for m in ["bema_baseline", "bema_v2", "bema_v2_spell", "zs_offshelf", "zs_from_clinc", "zs_offshelf_bge_base",
+          "claude-haiku-5.5", "qwen3.8-flash", "claude-sonnet-5.5", "claude-opus-5.5"]:
     d = llm_test(m, "banking77_clean") if m in L.MODELS else bema_core(m, "banking77", "clean")
+    if not d:
+        continue
     ks = sorted(set(d) & set(jc))
     diffs = [d[k][0] - jc[k][0] for k in ks]
     lo, hi = B.boot_ci(diffs)
@@ -210,7 +214,7 @@ for label, t in tests.items():
 OUT["sections"]["slice250_all_models"] = sec
 
 # ---------------------------------------------------------------- 4. injection, 1,000-query sample
-sec = {"source": "runs/redteam (Jev, BEMA) and runs/llm (Haiku, Qwen); 1,000 BANKING77 queries", "rows": {}}
+sec = {"source": "runs/redteam (Jev, BEMA) and runs/llm (Haiku, Qwen, Sonnet, Opus); 1,000 BANKING77 queries", "rows": {}}
 for label, t in [("explicit_note_end", "injection_banking"), ("explicit_note_start", "injection_prefix_banking"),
                  ("casual_ps", "injection_casual_banking"), ("neutral_note_control", "injection_control_banking"),
                  ("explicit_note_defended", "injection_defended_banking"),
@@ -277,12 +281,15 @@ for m, T in llm["models"].items():
                 "usd_per_1000_banking_decisions": round(b["cost_per_1000_calls_usd"], 4) if b else None,
                 "usd_per_1000_spam_decisions": round(s["cost_per_1000_calls_usd"], 4) if s else None}
 if os.path.exists("runs/bema/timing_quiet.json"):
+    run1 = json.load(open("runs/bema/timing_quiet_run1.json")) if os.path.exists("runs/bema/timing_quiet_run1.json") else {}
     for m, v in json.load(open("runs/bema/timing_quiet.json")).items():
         if m.startswith("_"):
             speed["_bema_timing_machine"] = v
             continue
-        speed[m] = {"median_ms_one_at_a_time": v["median_ms"], "note": v.get("note"),
+        speed[m] = {"median_ms_one_at_a_time": v.get("median_ms", v.get("speller_median_ms")), "note": v.get("note"),
                     "usd_per_1000_banking_decisions": "local CPU; no API cost"}
+        if m in run1:
+            speed[m]["median_ms_earlier_quiet_run"] = run1[m].get("median_ms")
 OUT["sections"]["speed_cost"] = {"source": "Jev/LLM latency is client-side wall clock from the same cloud machine, "
                                            "including the network round trip; BEMA latency is local CPU forward pass",
                                  "rows": speed, "jev_price_assumption": B.PRICE_SOURCE}
