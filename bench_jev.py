@@ -453,8 +453,37 @@ def cmd_bema(args):
 # report: every number recomputed from the raw files
 # ----------------------------------------------------------------------------
 def ece(confs, correct):
+    """Repo-standard ECE (calib_utils.ece). Its float32 bin edges put a confidence of exactly
+    0.90 into the (0.9, 1.0] bin; kept only for the cross-check against heldout_noise_test.py."""
     from calib_utils import ece as _ece
     return _ece(confs, correct)
+
+
+def ece_exact(confs, correct, n_bins=10):
+    """ECE with exact decimal bin edges: bin 0 is [0, 0.1], the rest (lo, hi]. Used for every
+    reported number, because Jev rounds probabilities to 2 decimals and many land exactly on an
+    edge (an independent audit found float32 edges shift spam/clean ECE by 0.002)."""
+    from fractions import Fraction
+    bins = [[] for _ in range(n_bins)]
+    for c, a in zip(confs, correct):
+        f = Fraction(str(c)) * n_bins
+        i = 0 if f <= 1 else min(n_bins - 1, int(-(-f // 1)) - 1)   # ceil(f) - 1, with 0 in bin 0
+        bins[i].append((c, a))
+    n = len(confs)
+    return float(sum(len(b) / n * abs(sum(a for _, a in b) / len(b) - sum(c for c, _ in b) / len(b))
+                     for b in bins if b))
+
+
+def wilson(k, n, z=1.959964):
+    """Wilson score 95% interval for a proportion (well-behaved at 0% and 100%, unlike the
+    percentile bootstrap, which collapses to [1, 1] at 116/116)."""
+    if n == 0:
+        return (None, None)
+    p = k / n
+    d = 1 + z * z / n
+    c = (p + z * z / (2 * n)) / d
+    h = z * ((p * (1 - p) / n + z * z / (4 * n * n)) ** 0.5) / d
+    return (max(0.0, c - h), min(1.0, c + h))
 
 
 def boot_ci(values, n_boot=2000, seed=0):
@@ -470,9 +499,21 @@ def boot_ci(values, n_boot=2000, seed=0):
 def summarize(correct, confs):
     acc = sum(correct) / len(correct)
     mc = sum(confs) / len(confs)
-    lo, hi = boot_ci(correct)
-    return {"n": len(correct), "accuracy": acc, "accuracy_ci95": [lo, hi], "mean_confidence": mc,
-            "overconfidence": mc - acc, "ece": ece(confs, correct)}
+    lo, hi = wilson(sum(correct), len(correct))
+    return {"n": len(correct), "accuracy": acc, "accuracy_ci95": [lo, hi], "ci_method": "Wilson score",
+            "mean_confidence": mc, "overconfidence": mc - acc, "ece": ece_exact(confs, correct),
+            "ece_repo_float32_edges": ece(confs, correct)}
+
+
+def spam_prf(preds, labels):
+    tp = sum(1 for p, y in zip(preds, labels) if p == 1 and y == 1)
+    fp = sum(1 for p, y in zip(preds, labels) if p == 1 and y == 0)
+    fn = sum(1 for p, y in zip(preds, labels) if p == 0 and y == 1)
+    prec = tp / (tp + fp) if tp + fp else None
+    rec = tp / (tp + fn) if tp + fn else None
+    f1 = 2 * prec * rec / (prec + rec) if prec and rec else None
+    return {"spam_precision": prec, "spam_recall": rec, "spam_f1": f1, "false_alarms_on_ham": fp,
+            "missed_spam": fn}
 
 
 def cmd_report(args):
@@ -509,11 +550,15 @@ def cmd_report(args):
                     v = rec["response"].get("model", "unreported")
                     versions[v] = versions.get(v, 0) + 1
                 res["jev"] = summarize(c, conf)
+                res["jev"]["_correct_by_idx"] = dict(zip(sorted(jev), c))
                 res["jev"]["n_failed_calls"] = errors
                 res["jev"]["n_missing"] = len(inputs) - len(jev)
                 if all(x is not None for x in own):
                     res["jev"]["ece_using_jev_confidence_field"] = ece(own, c)
                 jev_correct = dict(zip(sorted(jev), c))
+                if task == "spam":
+                    res["jev"].update(spam_prf([parse_answer(task, jev[i]["response"])[0] for i in sorted(jev)],
+                                               [by_idx[i]["label"] for i in sorted(jev)]))
             for name in REPORT_MODELS:
                 rows = read_jsonl(f"runs/bema/{name}_{task}_{cond}.jsonl")
                 if not rows:
@@ -526,6 +571,9 @@ def cmd_report(args):
                     p = cats[r["pred"]] if task == "banking77" else r["pred"]
                     return 1.0 if p == gold(task, by_idx[r["idx"]]["label"]) else 0.0
                 res[name] = summarize([ok(r) for r in rows], [r["conf"] for r in rows])
+                res[name]["_correct_by_idx"] = {r["idx"]: ok(r) for r in rows}
+                if task == "spam":
+                    res[name].update(spam_prf([r["pred"] for r in rows], [by_idx[r["idx"]]["label"] for r in rows]))
                 if jev:  # paired on exactly the examples Jev answered
                     bema_c = {r["idx"]: ok(r) for r in rows}
                     diffs = [jev_correct[i] - bema_c[i] for i in sorted(jev_correct)]
@@ -534,7 +582,7 @@ def cmd_report(args):
                                                          "ci95": [lo, hi]}
             report["tasks"][task][cond] = res
 
-    for task, conds in report["tasks"].items():   # drop from clean, per model
+    for task, conds in report["tasks"].items():   # drop from clean, per model, with a paired CI
         clean = conds.get("clean", {})
         for cond, res in conds.items():
             if cond == "clean":
@@ -543,6 +591,15 @@ def cmd_report(args):
                 if model in res and model in clean:
                     res[model]["accuracy_drop_from_clean"] = clean[model]["accuracy"] - res[model]["accuracy"]
                     res[model]["confidence_drop_from_clean"] = clean[model]["mean_confidence"] - res[model]["mean_confidence"]
+                    a, b = clean[model]["_correct_by_idx"], res[model]["_correct_by_idx"]
+                    common = sorted(set(a) & set(b))
+                    res[model]["accuracy_drop_ci95_paired_bootstrap"] = list(boot_ci([a[i] - b[i] for i in common]))
+    for conds in report["tasks"].values():
+        for res in conds.values():
+            for m in res.values():
+                if isinstance(m, dict):
+                    m.pop("_correct_by_idx", None)
+    report["spam_majority_baseline_accuracy"] = 1 - sum(r["label"] for r in load_inputs("spam", "clean")) / len(load_inputs("spam", "clean"))
 
     if all_lat:
         s = sorted(all_lat)
@@ -562,7 +619,7 @@ def cmd_report(args):
         mism = []
         for (m, c), v in ref.items():
             ours = report["tasks"]["banking77"].get(c, {}).get(mapping[m])
-            if ours and (abs(ours["accuracy"] - v["acc"]) > 1e-9 or abs(ours["ece"] - v["ece"]) > 1e-6):
+            if ours and (abs(ours["accuracy"] - v["acc"]) > 1e-9 or abs(ours["ece_repo_float32_edges"] - v["ece"]) > 1e-6):
                 mism.append((m, c, v["acc"], ours["accuracy"]))
         report["crosscheck_vs_heldout_noise_test"] = "match" if not mism else mism
 

@@ -243,6 +243,17 @@ def build_repeat_banking():
     return items
 
 
+def build_repeat_banking_spread():
+    """Like repeat_banking, but the 200 queries are a random draw from the 1,000-query sample
+    (repeat_banking took the first 200 of a list sorted by intent, covering only 15 intents)."""
+    rows, cats, items = banking_rows(), B.categories(), []
+    for i in sorted(random.Random(12).sample(sample_idx(), 200)):
+        for k in range(5):
+            items.append({"key": f"{i}-r{k}", "state": rows[i]["text"], "qset": "banking",
+                          "gold": cats[rows[i]["label"]], "meta": {"idx": i, "repeat": k}})
+    return items
+
+
 def build_question_count():
     rows, items = B.load_inputs("spam", "clean")[:60], []
     for r in rows:
@@ -298,6 +309,7 @@ TESTS = {
     "injection_defended_banking": lambda: build_injection_banking("explicit", qset="banking_defended"),
     "injection_oos_clinc": build_injection_oos_clinc,
     "injection_casual_defended_banking": lambda: build_injection_banking("casual", qset="banking_defended"),
+    "repeat_banking_spread": build_repeat_banking_spread,
     "latency_sequential_banking": lambda: [
         {"key": str(r["idx"]), "state": r["text"], "qset": "banking", "gold": B.categories()[r["label"]],
          "meta": {"idx": r["idx"]}} for r in banking_rows()[:100]],
@@ -616,7 +628,7 @@ def cmd_report():
             R["jev"]["mean_abs_change_in_p_gold"] = frac(dgold)
             for ck in bemas:
                 R[ck]["note"] = "BEMA has a fixed output layer, so option order cannot affect it"
-        elif name == "repeat_banking":
+        elif name in ("repeat_banking", "repeat_banking_spread"):
             groups = {}
             for it in items:
                 if it["key"] in jev:
@@ -625,7 +637,8 @@ def cmd_report():
             R["jev"] = {"n_queries": len(groups), "calls": sum(len(g) for g in groups.values()),
                         "share_same_answer_all_repeats": frac([float(len({p for p, _, _ in g}) == 1) for g in groups.values()]),
                         "share_identical_probabilities_all_repeats": frac([float(len({s for *_, s in g}) == 1) for g in groups.values()]),
-                        "mean_confidence_spread_max_minus_min": frac([max(c for _, c, _ in g) - min(c for _, c, _ in g) for g in groups.values()])}
+                        "mean_confidence_spread_max_minus_min": frac([max(c for _, c, _ in g) - min(c for _, c, _ in g) for g in groups.values()]),
+                        "distinct_gold_intents_covered": len({it["gold"] for it in items})}
         elif name == "latency_sequential_banking":
             lat = sorted(r["latency_ms"] for r in jev.values())
             R["jev"] = {"calls": len(lat), "median_latency_ms": statistics.median(lat),
@@ -647,6 +660,15 @@ def cmd_report():
                                       "all_questions_answered": all(a == n_q for a in answered)}
             if "1" in R["jev"] and "16" in R["jev"]:
                 R["jev"]["latency_ratio_16_vs_1"] = R["jev"]["16"]["median_latency_ms"] / R["jev"]["1"]["median_latency_ms"]
+                per = {}
+                for it in items:
+                    r = jev.get(it["key"])
+                    if r:
+                        per.setdefault(it["meta"]["idx"], {})[it["meta"]["n_questions"]] = r["latency_ms"]
+                ratios = [v[16] / v[1] for v in per.values() if 16 in v and 1 in v]
+                R["jev"]["median_paired_ratio_16_vs_1_same_message"] = statistics.median(ratios)
+                R["jev"]["scope_note"] = ("60 short SMS texts, yes/no questions only, one call at a time; "
+                                          "input tokens rise with the number of questions")
         elif name.startswith("score_amazon"):
             J = [(it, *parse_stars(jev[it["key"]]["response"])) for it in items if it["key"] in jev]
             gold = [it["gold"] for it, *_ in J]
@@ -656,7 +678,7 @@ def cmd_report():
                         "mae_stars_expected": frac([abs(e - g) for e, g in zip(exp, gold)]),
                         "exact_star_accuracy_argmax": frac([float(a == g) for a, g in zip(arg, gold)]),
                         "within_one_star_argmax": frac([float(abs(a - g) <= 1) for a, g in zip(arg, gold)]),
-                        "ece_argmax": B.ece([c for *_, c, _ in J], [float(a == g) for a, g in zip(arg, gold)])}
+                        "ece_argmax": B.ece_exact([c for *_, c, _ in J], [float(a == g) for a, g in zip(arg, gold)])}
             for ck, recs in bemas.items():
                 b = [(it, recs[it["key"]]["stars_expected"]) for it in items if it["key"] in recs]
                 g2, e2 = [it["gold"] for it, _ in b], [e for _, e in b]
@@ -666,7 +688,8 @@ def cmd_report():
                          "within_one_star_rounded": frac([float(abs(round(e) - g) <= 1) for e, g in zip(e2, g2)])}
             R["gold_distribution"] = {str(s): gold.count(s) for s in range(1, 6)}
             R["note"] = ("BEMA reads only the first 64 tokens of each review (its trained input length); "
-                         "Jev reads the whole review.")
+                         "Jev reads the whole review. Jev's expected stars divide by the sum of its returned "
+                         "probabilities, which is 0.99 on a few rows because Jev rounds to 2 decimals.")
         elif name.startswith("clinc150"):
             J = [(it, *parse_choice(jev[it["key"]]["response"])) for it in items if it["key"] in jev]
             def clinc_metrics(rows):

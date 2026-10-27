@@ -64,12 +64,17 @@ def redteam_items(name):
              "gold": r["gold"], "meta": r["meta"]} for r in rows]
 
 
-def subsample(items, n=250):
+def subsample_keys(n=250):
     """OpenAI models via OpenRouter are capped at 20 requests/min for new accounts, so they
-    run on the first n queries of the fixed 1,000-query sample the red-team tests use
-    (random.Random(7)); Jev and the other models can be compared on exactly these keys."""
+    run on a random n of the fixed 1,000-query sample the red-team tests use. The draw is
+    random (random.Random(11)), NOT the first n: the test split is sorted by intent, so the
+    first n indices would cover only a handful of intents."""
     import redteam_jev
-    keep = {str(i) for i in redteam_jev.sample_idx()[:n]}
+    return {str(i) for i in random.Random(11).sample(redteam_jev.sample_idx(), n)}
+
+
+def subsample(items, n=250):
+    keep = subsample_keys(n)
     return [it for it in items if it["key"] in keep]
 
 
@@ -300,11 +305,11 @@ def cmd_report():
         M = {}
         for name in TESTS:
             path = f"{OUT}/{model}/{name}.jsonl"
-            recs = {r["key"]: r for r in B.read_jsonl(path) if r["status"] == "ok"}
-            if not recs:
-                continue
             items = TESTS[name]()
             by = {it["key"]: it for it in items}
+            recs = {r["key"]: r for r in B.read_jsonl(path) if r["status"] == "ok" and r["key"] in by}
+            if not recs:
+                continue
             for k, r in recs.items():
                 if r["state_sha256"] != B.sha(by[k]["state"]):
                     sys.exit(f"hash mismatch {model}/{name}/{k}")
@@ -322,18 +327,18 @@ def cmd_report():
                  "invalid_output": sum(1 for *_, v in rows if not v),
                  "invalid_output_rate": sum(1 for *_, v in rows if not v) / len(rows),
                  "accuracy_invalid_counted_wrong": sum(correct) / len(correct),
-                 "accuracy_ci95": list(B.boot_ci(correct))}
+                 "accuracy_ci95": list(B.wilson(sum(correct), len(correct)))}
             if withconf:
                 T.update({"n_with_confidence": len(withconf),
                           "mean_stated_confidence": sum(c for _, c in withconf) / len(withconf),
                           "accuracy_on_those": sum(a for a, _ in withconf) / len(withconf),
-                          "ece_stated_confidence": B.ece([c for _, c in withconf], [a for a, _ in withconf])})
+                          "ece_stated_confidence": B.ece_exact([c for _, c in withconf], [a for a, _ in withconf])})
                 T["overconfidence"] = T["mean_stated_confidence"] - T["accuracy_on_those"]
             if model in LOGPROB_MODELS and kind != "spam":
                 lpc = [(c, logprob_conf(r, pred)) for c, (it, r, pred, conf, v) in zip(correct, rows) if v]
                 lpc = [(a, q) for a, q in lpc if q is not None]
                 if lpc:
-                    T["ece_token_probability"] = B.ece([q for _, q in lpc], [a for a, _ in lpc])
+                    T["ece_token_probability"] = B.ece_exact([q for _, q in lpc], [a for a, _ in lpc])
                     T["mean_token_probability"] = sum(q for _, q in lpc) / len(lpc)
                     T["n_token_probability"] = len(lpc)
             if name.startswith("injection") and rows[0][0]["meta"].get("target"):
