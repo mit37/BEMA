@@ -612,8 +612,9 @@ def cmd_report(args):
                               "usd": tokens_in / 1e6 * PRICE_PER_M_INPUT, "price_source": PRICE_SOURCE}
         report["jev_model_versions_reported"] = versions
         report["jev_failed_calls_total"] = n_err
-    if os.path.exists("runs/bema/timing.json"):
-        report["bema_latency"] = json.load(open("runs/bema/timing.json"))
+    if os.path.exists("runs/bema/timing_quiet.json"):
+        # timing.json was written while other jobs shared the 2 CPU cores; only the quiet re-measure is reported
+        report["bema_latency"] = json.load(open("runs/bema/timing_quiet.json"))
 
     # Cross-check against the repo's own script on identical text.
     if os.path.exists("heldout_noise_results.pkl"):

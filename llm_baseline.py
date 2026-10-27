@@ -311,25 +311,49 @@ async def cmd_run(models, tests):
 
 
 # ----------------------------------------------------------------------------
-def parse(content, kind):
-    """Return (prediction, confidence, valid). Invalid = unparseable JSON, or an
-    intent that is not one of the 77 allowed labels: the failure Jev's typed
-    output is designed to make impossible."""
-    m = re.search(r"\{.*\}", content or "", re.S)
+def _json_objects(text):
+    """Every top-level {...} object in the reply that parses as JSON, in order."""
+    out, depth, start = [], 0, None
+    for i, ch in enumerate(text or ""):
+        if ch == "{":
+            if depth == 0:
+                start = i
+            depth += 1
+        elif ch == "}" and depth:
+            depth -= 1
+            if depth == 0:
+                try:
+                    out.append(json.loads(text[start:i + 1]))
+                except Exception:
+                    pass
+    return out
+
+
+def is_strict_json(content):
     try:
-        j = json.loads(m.group(0)) if m else None
+        json.loads((content or "").strip())
+        return True
     except Exception:
-        j = None
+        return False
+
+
+def parse(content, kind):
+    """Return (prediction, confidence, valid, p_spam). The model's answer is the LAST JSON
+    object in its reply that has the required key (a few replies give an answer and then a
+    corrected one). Invalid = no such object, or an intent that is not one of the 77 allowed
+    labels: the failure Jev's typed output is designed to make impossible."""
+    key = "p_spam" if kind == "spam" else "intent"
+    objs = [o for o in _json_objects(content) if isinstance(o, dict) and key in o]
+    if not objs:
+        return None, None, False, None
+    j = objs[-1]
     if kind == "spam":
         try:
             p = float(j["p_spam"])
             return (1 if p > 0.5 else 0), max(p, 1 - p), 0 <= p <= 1, p
         except Exception:
             return None, None, False, None
-    try:
-        intent = str(j["intent"]).strip()
-    except Exception:
-        return None, None, False, None
+    intent = str(j["intent"]).strip()
     try:
         conf = float(j["confidence"])
     except Exception:
@@ -406,6 +430,7 @@ def cmd_report():
             T["cost_per_1000_calls_usd"] = 1000 * cost / len(rows)
             T["mean_prompt_tokens"] = sum((r.get("usage") or {}).get("prompt_tokens", 0) for _, r, *_ in rows) / len(rows)
             T["providers"] = sorted({str(r.get("provider")) for _, r, *_ in rows})
+            T["strict_json_reply_rate"] = sum(is_strict_json(r.get("content")) for _, r, *_ in rows) / len(rows)
             T["reasoning_tokens_total"] = sum(((r.get("usage") or {}).get("completion_tokens_details") or {}).get("reasoning_tokens", 0) or 0 for _, r, *_ in rows) + \
                 sum((((r.get("usage") or {}).get("raw") or {}).get("output_tokens_details") or {}).get("thinking_tokens", 0) or 0 for _, r, *_ in rows)
             T["mean_output_tokens"] = sum((r.get("usage") or {}).get("completion_tokens") or 0 for _, r, *_ in rows) / len(rows)

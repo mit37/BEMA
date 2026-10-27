@@ -139,12 +139,32 @@ for cond in B.TASKS["spam"]["conditions"]:
         a, n = acc(d)
         row[m] = {"accuracy_pct": pct(a), "n": n, "ece": round(ece_of(d), 4) if ece_of(d) is not None else None}
     sec["rows"][cond] = row
+train_texts = {r["text"] for r in B.load_data()["noul"]["train"]}
+dup = {str(r["idx"]) for r in B.load_inputs("spam", "clean") if r["text"] in train_texts}
+sec["test_messages_also_in_training"] = len(dup)
+sec["clean_excluding_duplicates"] = {}
+for m in ["jev", "bema_baseline", "bema_v2", "claude-haiku-5.5", "qwen3.8-flash", "claude-sonnet-5.5", "claude-opus-5.5"]:
+    d = jev_core("spam", "clean") if m == "jev" else (llm_test(m, "spam_clean") if m in L.MODELS else bema_core(m, "spam", "clean"))
+    a, n = acc({k: v for k, v in d.items() if k not in dup})
+    sec["clean_excluding_duplicates"][m] = {"accuracy_pct": pct(a), "n": n}
 OUT["sections"]["spam"] = sec
+
+# paired accuracy differences vs Jev on the full clean BANKING77 set (same 3,080 queries)
+jc = jev_core("banking77", "clean")
+paired = {}
+for m in ["bema_baseline", "bema_v2", "bema_v2_spell", "claude-haiku-5.5", "qwen3.8-flash", "claude-sonnet-5.5", "claude-opus-5.5"]:
+    d = llm_test(m, "banking77_clean") if m in L.MODELS else bema_core(m, "banking77", "clean")
+    ks = sorted(set(d) & set(jc))
+    diffs = [d[k][0] - jc[k][0] for k in ks]
+    lo, hi = B.boot_ci(diffs)
+    paired[m] = {"minus_jev_points": round(100 * sum(diffs) / len(diffs), 1), "ci95_points": [round(100 * lo, 1), round(100 * hi, 1)], "n": len(ks)}
+OUT["sections"]["banking77_paired_vs_jev"] = {"source": "per-query paired bootstrap, clean BANKING77", "rows": paired}
 
 # ---------------------------------------------------------------- 3. 250-query slice: every model on identical keys
 keys = L.subsample_keys()
 sec = {"source": "random 250 of the 1,000-query red-team sample (random.Random(11)); identical keys for every model",
-       "n_keys": len(keys), "rows": {}}
+       "n_keys": len(keys), "rows": {},
+       "note": "BEMA cannot read instructions: its injection_casual_defended answers are its injection_casual answers."}
 tests = {"clean": ("banking77", "clean"), "swap2": ("banking77", "swap2"), "injection_explicit": "injection_banking",
          "injection_control": "injection_control_banking", "injection_casual": "injection_casual_banking",
          "injection_casual_defended": "injection_casual_defended_banking"}
