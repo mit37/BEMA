@@ -79,6 +79,8 @@ def main():
     model = V.BemaV2(path, data["num_choice_classes"])
     model.load_state_dict(V.torch.load(V.CKPT, map_location="cpu"))
     model.eval()
+    t_noul, t_choice = model.t_noul.clone(), model.t_choice.clone()
+    model.to(V.DEVICE)
     os.makedirs("runs/bema/spell_texts", exist_ok=True)
     for task, spec in B.TASKS.items():
         for cond in spec["conditions"]:
@@ -88,11 +90,11 @@ def main():
                 for r, t in zip(rows, fixed):
                     f.write(json.dumps({"idx": r["idx"], "original": r["text"], "corrected": t}) + "\n")
             if spec["head"] == "choice":
-                probs = V.torch.softmax(V.logits_on(model, tok, fixed, "choice") / model.t_choice, -1)
+                probs = V.torch.softmax(V.logits_on(model, tok, fixed, "choice") / t_choice, -1)
                 conf, pred = probs.max(-1)
                 out = [{"pred": int(p), "conf": float(c)} for p, c in zip(pred, conf)]
             else:
-                p = V.torch.sigmoid(V.logits_on(model, tok, fixed, "noul").squeeze(-1) / model.t_noul)
+                p = V.torch.sigmoid(V.logits_on(model, tok, fixed, "noul").squeeze(-1) / t_noul)
                 out = [{"pred": int(q > 0.5), "conf": float(max(q, 1 - q)), "p_yes": float(q)} for q in p]
             with open(f"runs/bema/{V.NAME}_spell_{task}_{cond}.jsonl", "w") as f:
                 for r, o in zip(rows, out):

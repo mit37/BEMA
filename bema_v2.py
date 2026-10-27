@@ -45,7 +45,9 @@ import bench_jev as B
 from noise import NOISE, perturb
 
 SEED = 1234
-MODEL_ID = "sentence-transformers/all-MiniLM-L6-v2"
+MODEL_ID = os.environ.get("V2_MODEL_ID", "sentence-transformers/all-MiniLM-L6-v2")
+DEVICE = os.environ.get("V2_DEVICE") or ("cuda" if torch.cuda.is_available() else
+                                         "mps" if torch.backends.mps.is_available() else "cpu")
 MAX_LEN = 64
 BATCH = 32
 EPOCHS = int(os.environ.get("V2_EPOCHS", "2"))
@@ -100,10 +102,11 @@ def batches(rows, rnd, augment):
 def logits_on(model, tok, texts, head):
     model.eval()
     out = []
+    dev = next(model.parameters()).device
     for i in range(0, len(texts), 128):
         ids, mask = enc(tok, texts[i:i + 128])
-        p = model.pool(ids, mask)
-        out.append({"noul": model.noul_head, "choice": model.choice_head, "score": model.score_head}[head](p))
+        p = model.pool(ids.to(dev), mask.to(dev))
+        out.append({"noul": model.noul_head, "choice": model.choice_head, "score": model.score_head}[head](p).float().cpu())
     return torch.cat(out)
 
 
@@ -125,7 +128,8 @@ def fit_temperature(logits, labels, binary):
 def train():
     data = B.load_data()
     path, tok = load_tok()
-    model = BemaV2(path, data["num_choice_classes"])
+    model = BemaV2(path, data["num_choice_classes"]).to(DEVICE)
+    print(f"device: {DEVICE}", flush=True)
     # Only 2 CPU cores are available, so the embeddings and the bottom FREEZE_LAYERS
     # transformer layers stay at their pretrained values; the top layers and heads train.
     for p_ in model.enc.embeddings.parameters():
@@ -140,7 +144,7 @@ def train():
     it_c = batches(data["choice"]["train"], rnd, True)
     it_s = batches(data["score"]["train"], rnd, True)
     n_pos = sum(r["label"] for r in data["noul"]["train"])
-    bce = nn.BCEWithLogitsLoss(pos_weight=torch.tensor([(len(data["noul"]["train"]) - n_pos) / n_pos]))
+    bce = nn.BCEWithLogitsLoss(pos_weight=torch.tensor([(len(data["noul"]["train"]) - n_pos) / n_pos], device=DEVICE))
     ce, mse = nn.CrossEntropyLoss(), nn.MSELoss()
     steps = int(os.environ.get("V2_MAX_STEPS", "0")) or math.ceil(len(data["choice"]["train"]) / BATCH)
     opt = torch.optim.AdamW([p_ for p_ in model.parameters() if p_.requires_grad], lr=LR, weight_decay=0.01)
@@ -154,13 +158,14 @@ def train():
             loss = 0
             for (texts, labels), head in ((next(it_n), "noul"), (next(it_c), "choice"), (next(it_s), "score")):
                 ids, mask = enc(tok, texts)
-                p = model.pool(ids, mask)
+                p = model.pool(ids.to(DEVICE), mask.to(DEVICE))
                 if head == "noul":
-                    loss = loss + bce(model.noul_head(p).squeeze(-1), torch.tensor(labels, dtype=torch.float))
+                    loss = loss + bce(model.noul_head(p).squeeze(-1), torch.tensor(labels, dtype=torch.float, device=DEVICE))
                 elif head == "choice":
-                    loss = loss + ce(model.choice_head(p), torch.tensor(labels))
+                    loss = loss + ce(model.choice_head(p), torch.tensor(labels, device=DEVICE))
                 else:
-                    loss = loss + mse(torch.sigmoid(model.score_head(p).squeeze(-1)), torch.tensor(labels, dtype=torch.float))
+                    loss = loss + mse(torch.sigmoid(model.score_head(p).squeeze(-1)),
+                                      torch.tensor(labels, dtype=torch.float, device=DEVICE))
             opt.zero_grad()
             loss.backward()
             torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
@@ -183,10 +188,10 @@ def train():
     model.load_state_dict(best_state)
     nv = logits_on(model, tok, [r["text"] for r in val["noul"]], "noul")
     cv = logits_on(model, tok, [r["text"] for r in val["choice"]], "choice")
-    model.t_noul.fill_(fit_temperature(nv, torch.tensor([r["label"] for r in val["noul"]]), True))
-    model.t_choice.fill_(fit_temperature(cv, torch.tensor([r["label"] for r in val["choice"]]), False))
+    model.t_noul.fill_(fit_temperature(nv.detach(), torch.tensor([r["label"] for r in val["noul"]]), True))
+    model.t_choice.fill_(fit_temperature(cv.detach(), torch.tensor([r["label"] for r in val["choice"]]), False))
     print(f"Temperatures: noul {model.t_noul.item():.3f}, choice {model.t_choice.item():.3f}")
-    torch.save(model.state_dict(), CKPT)
+    torch.save({k: v.cpu() for k, v in model.state_dict().items()}, CKPT)
     print(f"Saved {CKPT}")
 
 
@@ -196,15 +201,17 @@ def predict():
     model = BemaV2(path, data["num_choice_classes"])
     model.load_state_dict(torch.load(CKPT, map_location="cpu"))
     model.eval()
+    t_noul, t_choice = model.t_noul.clone(), model.t_choice.clone()
+    model.to(DEVICE)
     cats = B.categories()
 
     def run(texts, kind):
         if kind == "choice":
-            probs = torch.softmax(logits_on(model, tok, texts, "choice") / model.t_choice, -1)
+            probs = torch.softmax(logits_on(model, tok, texts, "choice") / t_choice, -1)
             conf, pred = probs.max(-1)
             return [{"pred": int(p), "conf": float(c)} for p, c in zip(pred, conf)]
         if kind == "noul":
-            p = torch.sigmoid(logits_on(model, tok, texts, "noul").squeeze(-1) / model.t_noul)
+            p = torch.sigmoid(logits_on(model, tok, texts, "noul").squeeze(-1) / t_noul)
             return [{"pred": int(q > 0.5), "conf": float(max(q, 1 - q)), "p_yes": float(q)} for q in p]
         s = torch.sigmoid(logits_on(model, tok, texts, "score").squeeze(-1))
         return [{"stars_expected": 1 + 4 * float(v)} for v in s]
@@ -238,18 +245,24 @@ def predict():
     rows = B.load_inputs("banking77", "clean")[:300]
     lat = []
     with torch.no_grad():
+        sync = torch.cuda.synchronize if DEVICE == "cuda" else (lambda: None)
         for r in rows[:20]:
-            model.pool(*enc(tok, [r["text"]]))
+            ids, mask = enc(tok, [r["text"]])
+            model.pool(ids.to(DEVICE), mask.to(DEVICE))
         for r in rows:
             ids, mask = enc(tok, [r["text"]])
+            ids, mask = ids.to(DEVICE), mask.to(DEVICE)
+            sync()
             t0 = time.perf_counter()
             p = model.pool(ids, mask)
             model.noul_head(p), model.choice_head(p), model.score_head(p)
+            sync()
             lat.append((time.perf_counter() - t0) * 1000)
     timing = json.load(open("runs/bema/timing.json")) if os.path.exists("runs/bema/timing.json") else {}
     timing[NAME] = {"n": len(lat), "median_ms": sorted(lat)[len(lat) // 2], "p90_ms": sorted(lat)[int(0.9 * len(lat))],
-                    "threads": torch.get_num_threads(),
-                    "note": "encoder + 3 heads forward pass, batch size 1, CPU, excludes tokenization"}
+                    "threads": torch.get_num_threads(), "device": DEVICE,
+                    "gpu": torch.cuda.get_device_name(0) if DEVICE == "cuda" else None,
+                    "note": f"encoder + 3 heads forward pass, batch size 1, {DEVICE}, excludes tokenization"}
     json.dump(timing, open("runs/bema/timing.json", "w"), indent=2)
     print("timing:", timing[NAME])
 

@@ -46,7 +46,10 @@ import redteam_jev as R
 MODEL_ID = os.environ.get("ZS_MODEL_ID", "sentence-transformers/all-MiniLM-L6-v2")
 OFFSHELF_NAME = os.environ.get("ZS_OFFSHELF_NAME", "zs_offshelf")
 ONLY_CLEAN = os.environ.get("ZS_ONLY_CLEAN") == "1"
-POOL = os.environ.get("ZS_POOL", "mean")   # bigger models: clean + one typo condition only
+POOL = os.environ.get("ZS_POOL", "mean")
+PREFIX = os.environ.get("ZS_PREFIX", "zs")          # output names: <prefix>_from_clinc, <prefix>_from_banking
+DEVICE = os.environ.get("ZS_DEVICE") or ("cuda" if torch.cuda.is_available() else
+                                         "mps" if torch.backends.mps.is_available() else "cpu")   # bigger models: clean + one typo condition only
 SEED = 4321
 MAX_LEN = 64
 BATCH = 32
@@ -66,16 +69,19 @@ def load(path):
 def embed(tok, model, texts, grad=False):
     out = []
     ctx = torch.enable_grad() if grad else torch.no_grad()
+    dev = next(model.parameters()).device
     with ctx:
         for i in range(0, len(texts), 128):
             x = tok(texts[i:i + 128], padding=True, truncation=True, max_length=MAX_LEN, return_tensors="pt")
+            x = {k: v.to(dev) for k, v in x.items()}
             h = model(**x).last_hidden_state
             if POOL == "cls":   # BGE models are trained with [CLS] pooling
                 out.append(F.normalize(h[:, 0], dim=-1))
                 continue
             m = x["attention_mask"].unsqueeze(-1).float()
             out.append(F.normalize((h * m).sum(1) / m.sum(1).clamp(min=1), dim=-1))
-    return torch.cat(out)
+    out = torch.cat(out)
+    return out if grad else out.cpu()
 
 
 # --- label sets: the exact strings Jev received --------------------------------
@@ -119,6 +125,7 @@ FREEZE_LAYERS = int(os.environ.get("ZS_FREEZE", "3"))
 
 def train_on(name, rows, keys, descs):
     tok, model = load(base_path())
+    model.to(DEVICE)
     model.train()
     # 2 CPU cores only: keep embeddings and the bottom FREEZE_LAYERS layers at pretrained values.
     for p_ in model.embeddings.parameters():
@@ -145,7 +152,7 @@ def train_on(name, rows, keys, descs):
             pos = {o: j for j, o in enumerate(opts)}
             e_t = embed(tok, model, [t for t, _ in chunk], grad=True)
             e_l = embed(tok, model, [descs[o] for o in opts], grad=True)
-            loss = F.cross_entropy(scale * e_t @ e_l.T, torch.tensor([pos[g] for _, g in chunk]))
+            loss = F.cross_entropy(scale * e_t @ e_l.T, torch.tensor([pos[g] for _, g in chunk], device=e_t.device))
             opt.zero_grad()
             loss.backward()
             torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
@@ -153,6 +160,7 @@ def train_on(name, rows, keys, descs):
             if s % 50 == 0:
                 print(f"  {name} epoch {ep + 1} step {s}/{steps} loss {loss.item():.3f} ({time.time() - t0:.0f}s)", flush=True)
     os.makedirs(name, exist_ok=True)
+    model.to("cpu")
     model.save_pretrained(name)
     tok.save_pretrained(name)
     print(f"saved {name}/")
@@ -160,9 +168,9 @@ def train_on(name, rows, keys, descs):
 
 def train():
     k, d = clinc_labels()
-    train_on("zs_from_clinc", clinc_split("train"), k, d)
+    train_on(f"{PREFIX}_from_clinc", clinc_split("train"), k, d)
     k, d = banking_labels()
-    train_on("zs_from_banking", banking_split("train"), k, d)
+    train_on(f"{PREFIX}_from_banking", banking_split("train"), k, d)
 
 
 def temperature_on_source(tok, model, source):
@@ -181,15 +189,18 @@ def predict():
     # (model path, target -> dataset whose VALIDATION split sets the temperature).
     # The temperature always comes from the other dataset, never the one being scored.
     variants = {OFFSHELF_NAME: (base_path(), {"banking": "clinc", "clinc": "banking"})}
-    if OFFSHELF_NAME == "zs_offshelf":
-        variants.update({"zs_from_clinc": ("zs_from_clinc", {"banking": "clinc"}),
-                         "zs_from_banking": ("zs_from_banking", {"clinc": "banking"})})
+    if os.environ.get("ZS_SKIP_OFFSHELF") == "1":
+        variants = {}
+    if os.path.isdir(f"{PREFIX}_from_clinc") or os.path.isdir(f"{PREFIX}_from_banking"):
+        variants.update({f"{PREFIX}_from_clinc": (f"{PREFIX}_from_clinc", {"banking": "clinc"}),
+                         f"{PREFIX}_from_banking": (f"{PREFIX}_from_banking", {"clinc": "banking"})})
     summary = {}
     for name, (path, plan) in variants.items():
         if not os.path.isdir(path):
             print(f"{name}: no model at {path}, skipped")
             continue
         tok, model = load(path)
+        model.to(DEVICE)
         model.eval()
         temps = {tgt: temperature_on_source(tok, model, src) for tgt, src in plan.items()}
         summary[name] = {tgt: {"temperature": temps[tgt], "fit_on": f"{src} validation split"}

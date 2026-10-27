@@ -1,0 +1,129 @@
+{
+ "runs/inputs/banking77_clean.jsonl": {
+  "lines": 3080,
+  "sha256_of_text_hashes": "c56a23586526a577dec024fd528e41b2bef3281f352b30d4380d1df81a0c90e5"
+ },
+ "runs/inputs/banking77_delete2.jsonl": {
+  "lines": 3080,
+  "sha256_of_text_hashes": "42262ee719de7adf1c772081b0da5d786b2e83efc181f47fd09be8c8b0972df0"
+ },
+ "runs/inputs/banking77_insert2.jsonl": {
+  "lines": 3080,
+  "sha256_of_text_hashes": "efc9fd8d5405e99792f9d75a289a2ad6d56d22badb55c74dd31f4f0b6ed4dfaf"
+ },
+ "runs/inputs/banking77_keyboard2.jsonl": {
+  "lines": 3080,
+  "sha256_of_text_hashes": "7f2e845202f10f042c953621de3b0a00b07d1f85154443b1f5c33f86609dc06a"
+ },
+ "runs/inputs/banking77_mixed3.jsonl": {
+  "lines": 3080,
+  "sha256_of_text_hashes": "4b5abb1d97250a921441d25217c66bb23a3fe502f27020eb04c74946927b68ae"
+ },
+ "runs/inputs/banking77_swap2.jsonl": {
+  "lines": 3080,
+  "sha256_of_text_hashes": "eff860e3ab73bdde5b53417984cfa17a512548d63627c2cd8a16e57b2c9eb3b8"
+ },
+ "runs/inputs/banking77_swap4.jsonl": {
+  "lines": 3080,
+  "sha256_of_text_hashes": "5d43a391c06c291c417306bf1272ad13b49f22a182c308e312f0b2d4ce8e4e33"
+ },
+ "runs/inputs/spam_clean.jsonl": {
+  "lines": 836,
+  "sha256_of_text_hashes": "7222b0693f008da8312710d4cb8fe08c97d918d23c3ce17f2770639e0598e58e"
+ },
+ "runs/inputs/spam_keyboard2.jsonl": {
+  "lines": 836,
+  "sha256_of_text_hashes": "828ea74f8eafc6460e9ea25bc4696e6e489fb1296aa6dfc915291bc4f543bb88"
+ },
+ "runs/inputs/spam_mixed3.jsonl": {
+  "lines": 836,
+  "sha256_of_text_hashes": "bdcc4b03c2ab289348b9e65efa5e4c86c974ca4f520ecc536340d94593aa2df8"
+ },
+ "runs/inputs/spam_swap2.jsonl": {
+  "lines": 836,
+  "sha256_of_text_hashes": "5ae5ee1b22ee556a1196179fff79483249b7fdc1a7577bcf2ab3f57e59dd3c6d"
+ },
+ "runs/redteam/inputs/clinc150_clean.jsonl": {
+  "lines": 5500,
+  "sha256_of_text_hashes": "e25cf48bb17cdf2ce60371d899338b69a94b9b0bc1cd5c7b29671f84bec7db8d"
+ },
+ "runs/redteam/inputs/clinc150_swap2.jsonl": {
+  "lines": 5500,
+  "sha256_of_text_hashes": "13d021c218f54be6f48eb5c48f4c2db9cac219aea3f04a951e708c2573316bcd"
+ },
+ "runs/redteam/inputs/evasion_spam.jsonl": {
+  "lines": 116,
+  "sha256_of_text_hashes": "453c2291caac199bb660fb000ceb3cecff1d8cb49b7e7a82c804bba8d608b27e"
+ },
+ "runs/redteam/inputs/gibberish_banking.jsonl": {
+  "lines": 100,
+  "sha256_of_text_hashes": "274147bb32fa9b0f09a5e6e5522ba1102dd28fccd7fdd21cb92c13beb8f3a3fd"
+ },
+ "runs/redteam/inputs/injection_banking.jsonl": {
+  "lines": 1000,
+  "sha256_of_text_hashes": "45e0d3b592cefb5b526c1e1f93e57808b5aecc4a40997dfffacf373ed5c32600"
+ },
+ "runs/redteam/inputs/injection_casual_banking.jsonl": {
+  "lines": 1000,
+  "sha256_of_text_hashes": "19863d04fc832f629d646cde4d82a05a342bedaf902e6dd7ee7d1e3557438c5a"
+ },
+ "runs/redteam/inputs/injection_casual_defended_banking.jsonl": {
+  "lines": 1000,
+  "sha256_of_text_hashes": "19863d04fc832f629d646cde4d82a05a342bedaf902e6dd7ee7d1e3557438c5a"
+ },
+ "runs/redteam/inputs/injection_control_banking.jsonl": {
+  "lines": 1000,
+  "sha256_of_text_hashes": "1e52caea827fa096b29157d338e94f940a017a63a8dd4fbb644a2108b3e7ca16"
+ },
+ "runs/redteam/inputs/injection_defended_banking.jsonl": {
+  "lines": 1000,
+  "sha256_of_text_hashes": "45e0d3b592cefb5b526c1e1f93e57808b5aecc4a40997dfffacf373ed5c32600"
+ },
+ "runs/redteam/inputs/injection_oos_clinc.jsonl": {
+  "lines": 1000,
+  "sha256_of_text_hashes": "d83495aa1c3961e0ecaf3c33ca476e1552fc15665a7c42dc7a3b4002fc929c4c"
+ },
+ "runs/redteam/inputs/injection_prefix_banking.jsonl": {
+  "lines": 1000,
+  "sha256_of_text_hashes": "c725512ac3addb3b106c28cef506e49cd322ec6641564b1a3bff6cf84ba2a121"
+ },
+ "runs/redteam/inputs/injection_spam.jsonl": {
+  "lines": 116,
+  "sha256_of_text_hashes": "87ceb8db305f5e08726a4cdaba1a6a75f9cfcdf7380dbf7ce7219447ce459739"
+ },
+ "runs/redteam/inputs/latency_sequential_banking.jsonl": {
+  "lines": 100,
+  "sha256_of_text_hashes": "74c9485448472f4383dc1e5eb55b36aeb11f019a84e5424d76fe6188a87c884d"
+ },
+ "runs/redteam/inputs/ood_spam_on_banking.jsonl": {
+  "lines": 1000,
+  "sha256_of_text_hashes": "3eef65de61ce04cc074617c26ef1bdb1d89bfe75863c6dbbf57873ec0f713d95"
+ },
+ "runs/redteam/inputs/order_shuffle_banking.jsonl": {
+  "lines": 1000,
+  "sha256_of_text_hashes": "3eef65de61ce04cc074617c26ef1bdb1d89bfe75863c6dbbf57873ec0f713d95"
+ },
+ "runs/redteam/inputs/question_count.jsonl": {
+  "lines": 300,
+  "sha256_of_text_hashes": "4899bd72ebde54f95b077e806dd8c1853af2f9004511cffc61c6f1ec89cc06d4"
+ },
+ "runs/redteam/inputs/repeat_banking.jsonl": {
+  "lines": 1000,
+  "sha256_of_text_hashes": "7cfd446189e8799104c81f5e2913362c2e91c08b43dff26b51e3fba98dadb0fc"
+ },
+ "runs/redteam/inputs/repeat_banking_spread.jsonl": {
+  "lines": 1000,
+  "sha256_of_text_hashes": "80e8f7e7032b02aa92b61f6c18b436ab3c72f8792a71ec269e92ddb05aa942d3"
+ },
+ "runs/redteam/inputs/score_amazon_clean.jsonl": {
+  "lines": 1517,
+  "sha256_of_text_hashes": "e4ed526279d5d72fe61189c464cda80ddd8a244c769e2dc00b42ebf7468e89e9"
+ },
+ "runs/redteam/inputs/score_amazon_swap2.jsonl": {
+  "lines": 1517,
+  "sha256_of_text_hashes": "9389e0712cbcb34879b0de3518fee0963ce8dbea2f1fd3abeba9270a111e3d9c"
+ },
+ "runs/inputs/categories.json": {
+  "sha256": "4350ea1d3be2f58419cfc3c023c0268b9b0cdf7a175fd1130def0cedb36af8a8"
+ }
+}
