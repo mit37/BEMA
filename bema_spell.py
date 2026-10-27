@@ -94,7 +94,7 @@ def main():
             else:
                 p = V.torch.sigmoid(V.logits_on(model, tok, fixed, "noul").squeeze(-1) / model.t_noul)
                 out = [{"pred": int(q > 0.5), "conf": float(max(q, 1 - q)), "p_yes": float(q)} for q in p]
-            with open(f"runs/bema/bema_v2_spell_{task}_{cond}.jsonl", "w") as f:
+            with open(f"runs/bema/{V.NAME}_spell_{task}_{cond}.jsonl", "w") as f:
                 for r, o in zip(rows, out):
                     f.write(json.dumps({"idx": r["idx"], "text_sha256": r["text_sha256"], **o}) + "\n")
             changed = sum(a != r["text"] for a, r in zip(fixed, rows))

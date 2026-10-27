@@ -75,7 +75,7 @@ CHECKPOINTS = {"bema_baseline": "jev_clone_multitask_calibrated.pt",
                "bema_typo_augmented": "jev_clone_multitask_augmented_calibrated.pt"}
 
 # BEMA v2 predictions come from bema_v2.py; zero-shot variants from bema_zeroshot.py
-REPORT_MODELS = [*CHECKPOINTS, "bema_v2", "bema_v2_spell", "zs_offshelf", "zs_from_clinc"]
+REPORT_MODELS = [*CHECKPOINTS, "bema_v2", "bema_v2_spell", "bema_v2_full", "bema_v2_full_spell", "zs_offshelf", "zs_from_clinc"]
 MOCK = os.environ.get("JEV_MOCK") == "1"
 RUNS = "runs/mock" if MOCK else "runs"
 INPUTS = "runs/inputs"   # shared by real and mock runs: inputs never depend on Jev

@@ -14,8 +14,9 @@ constraint.
             probability 0.5, re-drawn every time it is sampled (v1's augmented
             model instead added one fixed typo'd duplicate per example). Only
             swap2 is used in training, so the other noise types stay held out.
-  Compute:  2 CPU cores only, so embeddings and the bottom 3 of 6 encoder layers
-            stay frozen, the top 3 layers + heads train for 2 epochs (lr 1e-4).
+  Compute:  2 CPU cores. The first run ("bema_v2") froze the embeddings and the
+            bottom 3 of 6 layers and trained 2 epochs at lr 1e-4. The full run
+            ("bema_v2_full": V2_FREEZE=0 V2_EPOCHS=3 V2_LR=5e-5) trains every layer.
   Selection and calibration: best epoch by validation score; then one
             temperature per head fit on the clean validation split.
 
@@ -49,9 +50,9 @@ MAX_LEN = 64
 BATCH = 32
 EPOCHS = int(os.environ.get("V2_EPOCHS", "2"))
 FREEZE_LAYERS = int(os.environ.get("V2_FREEZE", "3"))   # bottom encoder layers kept frozen (CPU budget)
-LR = 5e-5
+LR = float(os.environ.get("V2_LR", "1e-4"))
 CKPT = os.environ.get("V2_CKPT", "bema_v2.pt")
-NAME = "bema_v2"
+NAME = os.environ.get("V2_NAME", "bema_v2")
 torch.manual_seed(SEED)
 random.seed(SEED)
 torch.set_num_threads(max(1, os.cpu_count() or 1))
@@ -142,8 +143,8 @@ def train():
     bce = nn.BCEWithLogitsLoss(pos_weight=torch.tensor([(len(data["noul"]["train"]) - n_pos) / n_pos]))
     ce, mse = nn.CrossEntropyLoss(), nn.MSELoss()
     steps = int(os.environ.get("V2_MAX_STEPS", "0")) or math.ceil(len(data["choice"]["train"]) / BATCH)
-    opt = torch.optim.AdamW([p_ for p_ in model.parameters() if p_.requires_grad], lr=LR * 2, weight_decay=0.01)
-    sched = torch.optim.lr_scheduler.OneCycleLR(opt, max_lr=LR * 2, total_steps=steps * EPOCHS, pct_start=0.1)
+    opt = torch.optim.AdamW([p_ for p_ in model.parameters() if p_.requires_grad], lr=LR, weight_decay=0.01)
+    sched = torch.optim.lr_scheduler.OneCycleLR(opt, max_lr=LR, total_steps=steps * EPOCHS, pct_start=0.1)
     val = {t: data[t]["val"] for t in ("noul", "choice", "score")}
     best, best_state = -1e9, None
     for ep in range(EPOCHS):
