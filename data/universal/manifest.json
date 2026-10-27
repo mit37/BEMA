@@ -1,0 +1,17 @@
+{
+ "data/universal/train.jsonl": {
+  "sha256": "d2301b48ec71570ec53d62fcba40e5c4588f01f026499439840744a18e56822f",
+  "lines": 193229
+ },
+ "data/universal/val.jsonl": {
+  "sha256": "1cbed527eb620d48d09db895ec5ffc85499dcd20769147a3b8400b48090135a9",
+  "lines": 3900
+ },
+ "runs/universal/inputs/twitter_fin_topic.jsonl": {
+  "sha256": "6e17dc5eb5c5727574e5192e93bdc81c6436db08fdeaa929eb2ce725ebee1ea7",
+  "lines": 4117
+ },
+ "data/universal/label_sets.json": {
+  "sha256": "712417e25d5c1531cd61ea1883d03a24cb18b1b13828b243b806c60193be0dda"
+ }
+}
