@@ -34,3 +34,7 @@ self_pretrain_results.pkl
 # Benchmark run outputs (bench_jev.py). Real, verified results are
 # committed deliberately with `git add -f`; mock runs never are.
 runs/
+
+# Zero-shot fine-tuned encoders (large, reproducible from bema_zeroshot.py)
+zs_from_clinc/
+zs_from_banking/
