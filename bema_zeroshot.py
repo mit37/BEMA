@@ -18,6 +18,9 @@ Three variants, all evaluated on the identical frozen inputs Jev saw:
 Option descriptions are exactly the strings Jev was given (bench_jev.py /
 redteam_jev.py `criteria`), so both systems see the same label text.
 
+Compute: 2 CPU cores, so fine-tuning trains only the top 3 of 6 encoder layers
+for at most ZS_MAX_STEPS steps of 32 examples (lr 6e-5).
+
 Fine-tuning uses the human labels of the SOURCE dataset only; the target
 dataset's labels are used only for scoring. Temperatures are fit on the SOURCE
 validation split, never on the target.
@@ -105,12 +108,21 @@ def fit_temperature(sims, gold_idx):
     return float(t.exp().detach())   # multiplier on cosine similarity
 
 
+FREEZE_LAYERS = int(os.environ.get("ZS_FREEZE", "3"))
+
+
 def train_on(name, rows, keys, descs):
     tok, model = load(base_path())
     model.train()
+    # 2 CPU cores only: keep embeddings and the bottom FREEZE_LAYERS layers at pretrained values.
+    for p_ in model.embeddings.parameters():
+        p_.requires_grad = False
+    for layer in model.encoder.layer[:FREEZE_LAYERS]:
+        for p_ in layer.parameters():
+            p_.requires_grad = False
     idx = {k: i for i, k in enumerate(keys)}
     rows = [(t, idx[l]) for t, l in rows if l in idx]
-    opt = torch.optim.AdamW(model.parameters(), lr=LR, weight_decay=0.01)
+    opt = torch.optim.AdamW([p_ for p_ in model.parameters() if p_.requires_grad], lr=LR * 2, weight_decay=0.01)
     rnd = random.Random(SEED)
     scale = 20.0   # fixed similarity scale during training (as in sentence-transformers' MNRL)
     steps = int(os.environ.get("ZS_MAX_STEPS", "0")) or len(rows) // BATCH
