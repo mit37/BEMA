@@ -94,8 +94,10 @@ def follow(d, items, keys=None):
 
 
 # ---------------------------------------------------------------- 1. banking typos, full test set
-BANK_MODELS = ["jev", "bema_baseline", "bema_typo_augmented", "bema_v2", "bema_v2_spell", "zs_offshelf",
-               "zs_from_clinc", "claude-haiku-5.5", "qwen3.8-flash"]
+BANK_MODELS = ["jev", "bema_baseline", "bema_typo_augmented", "bema_v2", "bema_v2_spell",
+               "bema_v2_full", "bema_v2_full_spell", "bema_v2_full_gpu", "bema_v2_full_gpu_spell", "bema_v3", "bema_v3_spell",
+               "zs_offshelf", "zs_from_clinc", "zs_offshelf_bge_base", "zs3_from_clinc",
+               "claude-haiku-5.5", "qwen3.8-flash", "claude-sonnet-5.5", "claude-opus-5.5"]
 sec = {"source": "runs/jev, runs/bema, runs/llm raw files; n=3,080 BANKING77 test queries", "rows": {}}
 for cond in B.TASKS["banking77"]["conditions"]:
     row = {}
@@ -121,7 +123,9 @@ labels = [r["label"] for r in B.load_inputs("spam", "clean")]
 sec["majority_baseline_pct"] = pct(1 - sum(labels) / len(labels))
 for cond in B.TASKS["spam"]["conditions"]:
     row = {}
-    for m in ["jev", "bema_baseline", "bema_typo_augmented", "bema_v2", "bema_v2_spell", "claude-haiku-5.5", "qwen3.8-flash"]:
+    for m in ["jev", "bema_baseline", "bema_typo_augmented", "bema_v2", "bema_v2_spell", "bema_v2_full",
+              "bema_v2_full_spell", "bema_v2_full_gpu", "bema_v2_full_gpu_spell", "bema_v3", "bema_v3_spell",
+              "claude-haiku-5.5", "qwen3.8-flash", "claude-sonnet-5.5", "claude-opus-5.5"]:
         if m == "jev":
             d = jev_core("spam", cond)
         elif m in L.MODELS:
@@ -146,11 +150,13 @@ tests = {"clean": ("banking77", "clean"), "swap2": ("banking77", "swap2"), "inje
          "injection_casual_defended": "injection_casual_defended_banking"}
 for label, t in tests.items():
     row = {}
-    for m in ["jev", "bema_v2", "bema_v2_spell", "claude-haiku-5.5", "qwen3.8-flash", "gpt-6-luna", "gpt-6.1-terra"]:
+    for m in ["jev", "bema_v2", "bema_v2_spell", "bema_v2_full", "bema_v2_full_spell", "bema_v3", "bema_v3_spell",
+              "claude-haiku-5.5", "qwen3.8-flash", "gpt-6-luna", "gpt-6.1-terra",
+              "claude-sonnet-5.5", "claude-opus-5.5", "claude-fable-5.1"]:
         if isinstance(t, tuple):
             if m == "jev":
                 d = jev_core(*t)
-            elif m in ("gpt-6-luna", "gpt-6.1-terra"):
+            elif m in ("gpt-6-luna", "gpt-6.1-terra", "claude-fable-5.1"):
                 p = f"runs/llm/{m}/banking77_{t[1]}_s250.jsonl"
                 d = llm_test(m, f"banking77_{t[1]}_s250") if os.path.exists(p) else {}
             elif m in L.MODELS:
@@ -162,18 +168,16 @@ for label, t in tests.items():
             items = {it["key"]: it for it in B.read_jsonl(f"runs/redteam/inputs/{t}.jsonl")}
             if m == "jev":
                 d, _ = redteam_jev(t)
-            elif m in ("gpt-6-luna", "gpt-6.1-terra"):
+            elif m in ("gpt-6-luna", "gpt-6.1-terra", "claude-fable-5.1"):
                 p = f"runs/llm/{m}/{t}_s250.jsonl"
                 d = llm_test(m, f"{t}_s250") if os.path.exists(p) else {}
             elif m in L.MODELS:
                 d = llm_test(m, t)
             else:
-                if m == "bema_v2_spell" or t == "injection_casual_defended_banking" and m.startswith("bema"):
-                    # BEMA takes no instructions, so the "defended" question is identical to undefended
-                    t2 = t.replace("_defended", "") if m != "bema_v2_spell" else None
-                    d = redteam_bema(t2, m) if t2 else {}
-                else:
-                    d = redteam_bema(t, m)
+                # BEMA takes no instructions, so its "defended" answers are its undefended ones;
+                # spell-corrected variants were only scored on the typo test sets.
+                t2 = None if m.endswith("_spell") else t.replace("_defended", "")
+                d = redteam_bema(t2, m) if t2 and os.path.exists(f"runs/redteam/bema/{t2}__{m}.jsonl") else {}
         sub = {k: v for k, v in d.items() if k in keys}
         if not sub:
             continue
@@ -194,7 +198,8 @@ for label, t in [("explicit_note_end", "injection_banking"), ("explicit_note_sta
     items = {it["key"]: it for it in B.read_jsonl(f"runs/redteam/inputs/{t}.jsonl")}
     has_target = bool(next(iter(items.values()))["meta"].get("target"))
     row = {}
-    for m in ["jev", "bema_baseline", "bema_v2", "claude-haiku-5.5", "qwen3.8-flash"]:
+    for m in ["jev", "bema_baseline", "bema_v2", "bema_v2_full", "bema_v3", "claude-haiku-5.5", "qwen3.8-flash",
+              "claude-sonnet-5.5", "claude-opus-5.5"]:
         if m == "jev":
             d, _ = redteam_jev(t)
         elif m in L.MODELS:
@@ -203,6 +208,8 @@ for label, t in [("explicit_note_end", "injection_banking"), ("explicit_note_sta
             d = llm_test(m, t)
         else:
             src = t.replace("_defended", "") if "defended" in t else t
+            if not os.path.exists(f"runs/redteam/bema/{src}__{m}.jsonl"):
+                continue
             d = redteam_bema(src, m)
         if not d:
             continue
@@ -261,8 +268,9 @@ OUT["sections"]["speed_cost"] = {"source": "Jev/LLM latency is client-side wall 
                                  "rows": speed, "jev_price_assumption": B.PRICE_SOURCE}
 
 # ---------------------------------------------------------------- 7. spend
-OUT["spend"] = {"jev_usd_estimate": round(B.spent_usd(), 3),
-                "openrouter_usd_reported": round(L.spent(), 3),
+OUT["spend"] = {"jev_usd_estimate_from_tokens": round(B.spent_usd(), 3),
+                "openrouter_usd_reported_by_openrouter": round(L.spent("openrouter"), 3),
+                "anthropic_usd_from_tokens_x_list_price": round(L.spent("anthropic"), 3),
                 "openrouter_usd_set_aside_runs": "see runs/llm_partial_ratelimited (rate-limited and wrong-subset GPT calls, excluded)"}
 
 with open("runs/results_summary.json", "w") as f:
