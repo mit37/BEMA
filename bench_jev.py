@@ -193,6 +193,12 @@ def mock_transport():
                 best = max(probs, key=probs.get)
                 answers[name] = {"type": "choice", "choice": best, "probabilities": probs,
                                  "confidence": probs[best]}
+            elif q["type"] == "score":
+                w = [random.random() ** 4 for _ in q["criteria"]]
+                probs = {str(i): x / sum(w) for i, x in enumerate(w)}
+                answers[name] = {"type": "score", "score": sum(int(k) * v for k, v in probs.items()),
+                                 "confidence": max(probs.values()), "probabilities": probs,
+                                 "legend": {str(i): c for i, c in enumerate(q["criteria"])}}
             else:
                 answers[name] = {"type": "noul", "noul": random.random()}
         if random.random() < 0.02:
@@ -219,8 +225,11 @@ def model_name():
     return os.environ.get("JEV_MODEL", "jev-latest")
 
 
-async def call_jev(c, task, text, max_attempts=6):
-    body = {"model": model_name(), "state": text, "questions": question_spec(task)}
+def jev_body(task, text, questions=None):
+    return {"model": model_name(), "state": text, "questions": questions or question_spec(task)}
+
+
+async def call_jev(c, body, max_attempts=6):
     attempt, last = 0, None
     while attempt < max_attempts:
         attempt += 1
@@ -243,6 +252,38 @@ async def call_jev(c, task, text, max_attempts=6):
             continue
         break  # 4xx other than 429: retrying will not help
     return {"status": "error", "attempts": attempt, **(last or {})}
+
+
+BUDGET_USD = float(os.environ.get("JEV_BUDGET_USD", "4.50"))
+DEFAULT_TOKENS = {"banking77": 1700, "spam": 330}
+
+
+def spent_usd():
+    """Input tokens actually reported by Jev across every raw file, priced."""
+    import glob
+    tok = 0
+    for path in glob.glob(f"{RUNS}/**/*.jsonl", recursive=True):
+        if not MOCK and path.startswith("runs/mock/"):
+            continue   # mock runs live under runs/mock; never count them as real spend
+        for r in read_jsonl(path):
+            if r.get("status") == "ok":
+                tok += (r.get("response") or {}).get("usage", {}).get("input_tokens", 0) or 0
+    return tok / 1e6 * PRICE_PER_M_INPUT
+
+
+def avg_tokens(path, fallback):
+    toks = [r["response"]["usage"]["input_tokens"] for r in read_jsonl(path)
+            if r.get("status") == "ok" and r.get("response", {}).get("usage")]
+    return sum(toks) / len(toks) if toks else fallback
+
+
+def check_budget(n_calls, tokens_per_call, label):
+    spent = spent_usd()
+    projected = n_calls * tokens_per_call / 1e6 * PRICE_PER_M_INPUT
+    print(f"  budget: spent ${spent:.3f}, this step ~${projected:.3f}, cap ${BUDGET_USD:.2f}", flush=True)
+    if spent + projected > BUDGET_USD:
+        sys.exit(f"STOP: {label} would take spend to ~${spent + projected:.2f}, over the "
+                 f"${BUDGET_USD:.2f} cap. Nothing was called for this step.")
 
 
 def manifest():
@@ -293,11 +334,12 @@ async def run_jev(args):
                 print(f"{task}/{cond}: {len(done)} cached, {len(todo)} to call", flush=True)
                 if not todo:
                     continue
+                check_budget(len(todo), avg_tokens(path, DEFAULT_TOKENS[task]), f"{task}/{cond}")
                 lock, counter = asyncio.Lock(), {"n": 0, "err": 0}
 
                 async def one(row, f):
                     async with sem:
-                        rec = await call_jev(c, task, row["text"])
+                        rec = await call_jev(c, jev_body(task, row["text"]))
                     rec.update({"idx": row["idx"], "text_sha256": row["text_sha256"],
                                 "ts_utc": datetime.now(timezone.utc).isoformat()})
                     async with lock:
@@ -324,7 +366,7 @@ async def run_smoke(args):
     async with client() as c:
         for task in TASKS:
             for row in load_inputs(task, "clean")[:3]:
-                rec = await call_jev(c, task, row["text"], max_attempts=2)
+                rec = await call_jev(c, jev_body(task, row["text"]), max_attempts=2)
                 print(f"\n=== {task} idx={row['idx']} gold={gold(task, row['label'])!r}")
                 print(f"text: {row['text'][:160]!r}")
                 print(json.dumps({k: v for k, v in rec.items() if k != "response"}))
