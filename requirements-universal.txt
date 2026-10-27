@@ -1,0 +1,8 @@
+transformers
+huggingface_hub
+tokenizers
+sentencepiece
+protobuf
+numpy
+scikit-learn
+symspellpy
