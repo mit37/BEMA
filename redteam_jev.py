@@ -298,6 +298,9 @@ TESTS = {
     "injection_defended_banking": lambda: build_injection_banking("explicit", qset="banking_defended"),
     "injection_oos_clinc": build_injection_oos_clinc,
     "injection_casual_defended_banking": lambda: build_injection_banking("casual", qset="banking_defended"),
+    "latency_sequential_banking": lambda: [
+        {"key": str(r["idx"]), "state": r["text"], "qset": "banking", "gold": B.categories()[r["label"]],
+         "meta": {"idx": r["idx"]}} for r in banking_rows()[:100]],
 }
 
 
@@ -333,7 +336,7 @@ async def run_test(c, name):
         return
     B.check_budget(len(todo), B.avg_tokens(path, TOKENS_GUESS.get(todo[0]["qset"], 600)), name)
     # Latency test runs one call at a time so calls don't queue behind each other.
-    sem = asyncio.Semaphore(1 if name == "question_count" else int(os.environ.get("JEV_CONCURRENCY", "8")))
+    sem = asyncio.Semaphore(1 if name in ("question_count", "latency_sequential_banking") else int(os.environ.get("JEV_CONCURRENCY", "8")))
     lock, n = asyncio.Lock(), {"n": 0, "err": 0}
 
     async def one(it, f):
@@ -623,6 +626,11 @@ def cmd_report():
                         "share_same_answer_all_repeats": frac([float(len({p for p, _, _ in g}) == 1) for g in groups.values()]),
                         "share_identical_probabilities_all_repeats": frac([float(len({s for *_, s in g}) == 1) for g in groups.values()]),
                         "mean_confidence_spread_max_minus_min": frac([max(c for _, c, _ in g) - min(c for _, c, _ in g) for g in groups.values()])}
+        elif name == "latency_sequential_banking":
+            lat = sorted(r["latency_ms"] for r in jev.values())
+            R["jev"] = {"calls": len(lat), "median_latency_ms": statistics.median(lat),
+                        "p90_latency_ms": lat[int(0.9 * len(lat))],
+                        "note": "one call at a time, same 100 clean BANKING77 queries as the LLM latency test"}
         elif name == "question_count":
             by_n = {}
             for it in items:
