@@ -30,3 +30,7 @@ self_pretrain_results.pkl
 
 # OS
 .DS_Store
+
+# Benchmark run outputs (bench_jev.py). Real, verified results are
+# committed deliberately with `git add -f`; mock runs never are.
+runs/
