@@ -1,6 +1,6 @@
 # Results summary (generated)
 
-Generated 2026-10-27T22:48:41.512999+00:00 by `python3 results_summary.py` from raw files.
+Generated 2026-10-27T23:36:38.796137+00:00 by `python3 results_summary.py` from raw files.
 
 ## banking77_typos
 
@@ -1309,6 +1309,12 @@ Generated 2026-10-27T22:48:41.512999+00:00 by `python3 results_summary.py` from 
     "n": 1000,
     "mean_confidence": 0.803,
     "followed_injection_pct": 8.2
+   },
+   "claude-fable-5.1": {
+    "accuracy_pct": 84.2,
+    "n": 1000,
+    "mean_confidence": 0.874,
+    "followed_injection_pct": 0.5
    }
   },
   "explicit_note_start": {
@@ -1409,6 +1415,12 @@ Generated 2026-10-27T22:48:41.512999+00:00 by `python3 results_summary.py` from 
     "n": 1000,
     "mean_confidence": 0.721,
     "followed_injection_pct": 3.9
+   },
+   "claude-fable-5.1": {
+    "accuracy_pct": 83.7,
+    "n": 1000,
+    "mean_confidence": 0.824,
+    "followed_injection_pct": 1.9
    }
   },
   "neutral_note_control": {
@@ -1461,6 +1473,11 @@ Generated 2026-10-27T22:48:41.512999+00:00 by `python3 results_summary.py` from 
     "accuracy_pct": 89.1,
     "n": 1000,
     "mean_confidence": 0.798
+   },
+   "claude-fable-5.1": {
+    "accuracy_pct": 85.9,
+    "n": 1000,
+    "mean_confidence": 0.864
    }
   },
   "explicit_note_defended": {
@@ -1561,6 +1578,12 @@ Generated 2026-10-27T22:48:41.512999+00:00 by `python3 results_summary.py` from 
     "n": 1000,
     "mean_confidence": 0.808,
     "followed_injection_pct": 0.3
+   },
+   "claude-fable-5.1": {
+    "accuracy_pct": 84.8,
+    "n": 1000,
+    "mean_confidence": 0.878,
+    "followed_injection_pct": 0.6
    }
   }
  },
@@ -2423,9 +2446,15 @@ Generated 2026-10-27T22:48:41.512999+00:00 by `python3 results_summary.py` from 
 
 ```json
 {
- "jev_usd_estimate_from_tokens": 3.583,
+ "jev_usd_estimate_from_tokens": 3.695,
  "openrouter_usd_reported_by_openrouter": 3.115,
- "anthropic_usd_from_tokens_x_list_price": 110.575,
- "openrouter_usd_set_aside_runs": "see runs/llm_partial_ratelimited (rate-limited and wrong-subset GPT calls, excluded)"
+ "anthropic_usd_from_tokens_x_list_price": 141.54,
+ "openrouter_usd_set_aside_runs": "see runs/llm_partial_ratelimited (rate-limited and wrong-subset GPT calls, excluded)",
+ "bema_u_study": {
+  "claude_written_training_material_usd": 12.072,
+  "heldout_finance_anthropic_usd": 10.065,
+  "heldout_finance_openrouter_usd": 0.341,
+  "note": "Jev's held-out finance calls are included in jev_usd_estimate_from_tokens above"
+ }
 }
 ```

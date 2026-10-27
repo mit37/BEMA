@@ -54,11 +54,11 @@
   ]
  },
  "qwen3.8-flash/twitter_fin_topic": {
-  "n": 4060,
+  "n": 4117,
   "accuracy_pct": 66.2,
-  "ece": 0.2803,
+  "ece": 0.2799,
   "ci95": [
-   64.7,
+   64.8,
    67.6
   ]
  }

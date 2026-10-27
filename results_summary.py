@@ -5,6 +5,7 @@ comes from. The paper, slides and infographic quote only runs/results_summary.js
 
   python3 results_summary.py      # writes runs/results_summary.json and runs/RESULTS.md
 """
+import glob
 import json
 import os
 import pickle
@@ -230,7 +231,7 @@ for label, t in [("explicit_note_end", "injection_banking"), ("explicit_note_sta
     row = {}
     for m in ["jev", "bema_baseline", "bema_v2", "bema_v2_full", "bema_v2_full_gpu", "bema_v3", "zs3_from_clinc",
               "claude-haiku-5.5", "qwen3.8-flash",
-              "claude-sonnet-5.5", "claude-opus-5.5"]:
+              "claude-sonnet-5.5", "claude-opus-5.5", "claude-fable-5.1"]:
         if m == "jev":
             d, _ = redteam_jev(t)
         elif m in L.MODELS:
@@ -311,6 +312,23 @@ OUT["spend"] = {"jev_usd_estimate_from_tokens": round(B.spent_usd(), 3),
                 "openrouter_usd_reported_by_openrouter": round(L.spent("openrouter"), 3),
                 "anthropic_usd_from_tokens_x_list_price": round(L.spent("anthropic"), 3),
                 "openrouter_usd_set_aside_runs": "see runs/llm_partial_ratelimited (rate-limited and wrong-subset GPT calls, excluded)"}
+
+
+def _cost(paths):
+    tot = 0.0
+    for p_ in paths:
+        for r in B.read_jsonl(p_):
+            if r.get("status") == "ok" and not r.get("seeded_from"):
+                tot += float((r.get("usage") or {}).get("cost") or 0)
+    return tot
+
+
+_ul = glob.glob("runs/universal/llm/*/*.jsonl")
+OUT["spend"]["bema_u_study"] = {
+    "claude_written_training_material_usd": round(_cost(glob.glob("data/universal/claude_raw/*.jsonl")), 3),
+    "heldout_finance_anthropic_usd": round(_cost([p_ for p_ in _ul if "/claude-" in p_ and "haiku" not in p_]), 3),
+    "heldout_finance_openrouter_usd": round(_cost([p_ for p_ in _ul if "haiku" in p_ or "qwen" in p_ or "gpt" in p_]), 3),
+    "note": "Jev's held-out finance calls are included in jev_usd_estimate_from_tokens above"}
 
 with open("runs/results_summary.json", "w") as f:
     json.dump(OUT, f, indent=2)

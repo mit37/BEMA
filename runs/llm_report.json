@@ -1,0 +1,1958 @@
+{
+  "generated_utc": "2026-10-27T23:34:43.554374+00:00",
+  "mock": false,
+  "models": {
+    "claude-haiku-5.5": {
+      "banking77_clean": {
+        "n": 3080,
+        "n_missing": 0,
+        "invalid_output": 2,
+        "invalid_output_rate": 0.0006493506493506494,
+        "accuracy_invalid_counted_wrong": 0.7678571428571429,
+        "accuracy_ci95": [
+          0.7526185895930859,
+          0.7824283711539037
+        ],
+        "n_with_confidence": 3078,
+        "mean_stated_confidence": 0.8540578297595841,
+        "accuracy_on_those": 0.7683560753736193,
+        "ece_stated_confidence": 0.08570175438596492,
+        "overconfidence": 0.08570175438596483,
+        "latency_ms": {
+          "median": 1066.8870074998722,
+          "p90": 1239.2685730001176
+        },
+        "cost_usd": 0.3092229,
+        "cost_per_1000_calls_usd": 0.10039704545454546,
+        "mean_prompt_tokens": 867.7577922077922,
+        "providers": [
+          "Claude Platform on AWS"
+        ],
+        "strict_json_reply_rate": 0.9993506493506493,
+        "reasoning_tokens_total": 0,
+        "mean_output_tokens": 27.242532467532467
+      },
+      "banking77_swap2": {
+        "n": 3080,
+        "n_missing": 0,
+        "invalid_output": 5,
+        "invalid_output_rate": 0.0016233766233766235,
+        "accuracy_invalid_counted_wrong": 0.7470779220779221,
+        "accuracy_ci95": [
+          0.73142518340055,
+          0.7621151040278854
+        ],
+        "n_with_confidence": 3075,
+        "mean_stated_confidence": 0.8501463414634146,
+        "accuracy_on_those": 0.7482926829268293,
+        "ece_stated_confidence": 0.10275121951219512,
+        "overconfidence": 0.10185365853658535,
+        "latency_ms": {
+          "median": 1077.337276499975,
+          "p90": 1256.394223999905
+        },
+        "cost_usd": 0.3100794,
+        "cost_per_1000_calls_usd": 0.10067512987012987,
+        "mean_prompt_tokens": 870.4883116883117,
+        "providers": [
+          "Claude Platform on AWS"
+        ],
+        "strict_json_reply_rate": 0.9983766233766234,
+        "reasoning_tokens_total": 0,
+        "mean_output_tokens": 27.252597402597402
+      },
+      "banking77_mixed3": {
+        "n": 3080,
+        "n_missing": 0,
+        "invalid_output": 5,
+        "invalid_output_rate": 0.0016233766233766235,
+        "accuracy_invalid_counted_wrong": 0.7256493506493507,
+        "accuracy_ci95": [
+          0.7096180082400291,
+          0.7411185223286471
+        ],
+        "n_with_confidence": 3075,
+        "mean_stated_confidence": 0.8326666666666666,
+        "accuracy_on_those": 0.7268292682926829,
+        "ece_stated_confidence": 0.10711869918699185,
+        "overconfidence": 0.10583739837398365,
+        "latency_ms": {
+          "median": 1098.8214245001018,
+          "p90": 1297.376616999827
+        },
+        "cost_usd": 0.3102469,
+        "cost_per_1000_calls_usd": 0.10072951298701298,
+        "mean_prompt_tokens": 870.8097402597402,
+        "providers": [
+          "Claude Platform on AWS"
+        ],
+        "strict_json_reply_rate": 0.999025974025974,
+        "reasoning_tokens_total": 0,
+        "mean_output_tokens": 27.29707792207792
+      },
+      "spam_clean": {
+        "n": 836,
+        "n_missing": 0,
+        "invalid_output": 0,
+        "invalid_output_rate": 0.0,
+        "accuracy_invalid_counted_wrong": 0.9401913875598086,
+        "accuracy_ci95": [
+          0.92201444185723,
+          0.9543414372397401
+        ],
+        "n_with_confidence": 836,
+        "mean_stated_confidence": 0.9414712918660286,
+        "accuracy_on_those": 0.9401913875598086,
+        "ece_stated_confidence": 0.03496411483253593,
+        "overconfidence": 0.0012799043062200477,
+        "latency_ms": {
+          "median": 1043.5891545000686,
+          "p90": 1249.5337679997647
+        },
+        "cost_usd": 0.0159113,
+        "cost_per_1000_calls_usd": 0.019032655502392342,
+        "mean_prompt_tokens": 120.32655502392345,
+        "providers": [
+          "Claude Platform on AWS"
+        ],
+        "strict_json_reply_rate": 1.0,
+        "reasoning_tokens_total": 0,
+        "mean_output_tokens": 14.0
+      },
+      "spam_swap2": {
+        "n": 836,
+        "n_missing": 0,
+        "invalid_output": 0,
+        "invalid_output_rate": 0.0,
+        "accuracy_invalid_counted_wrong": 0.9174641148325359,
+        "accuracy_ci95": [
+          0.8968461054117277,
+          0.9342631386231705
+        ],
+        "n_with_confidence": 836,
+        "mean_stated_confidence": 0.9294138755980861,
+        "accuracy_on_those": 0.9174641148325359,
+        "ece_stated_confidence": 0.05604066985645928,
+        "overconfidence": 0.01194976076555021,
+        "latency_ms": {
+          "median": 1052.2171245002028,
+          "p90": 1204.9459380004919
+        },
+        "cost_usd": 0.0160787,
+        "cost_per_1000_calls_usd": 0.01923289473684211,
+        "mean_prompt_tokens": 122.32894736842105,
+        "providers": [
+          "Claude Platform on AWS"
+        ],
+        "strict_json_reply_rate": 1.0,
+        "reasoning_tokens_total": 0,
+        "mean_output_tokens": 14.0
+      },
+      "injection_banking": {
+        "n": 1000,
+        "n_missing": 0,
+        "invalid_output": 11,
+        "invalid_output_rate": 0.011,
+        "accuracy_invalid_counted_wrong": 0.591,
+        "accuracy_ci95": [
+          0.5602359546668262,
+          0.6210675752778575
+        ],
+        "n_with_confidence": 989,
+        "mean_stated_confidence": 0.814206268958544,
+        "accuracy_on_those": 0.5975733063700708,
+        "ece_stated_confidence": 0.23964610717896861,
+        "overconfidence": 0.2166329625884732,
+        "followed_injected_label": 0.241,
+        "latency_ms": {
+          "median": 1108.1402554996203,
+          "p90": 1295.046831000036
+        },
+        "cost_usd": 0.1032951,
+        "cost_per_1000_calls_usd": 0.1032951,
+        "mean_prompt_tokens": 891.996,
+        "providers": [
+          "Claude Platform on AWS"
+        ],
+        "strict_json_reply_rate": 0.981,
+        "reasoning_tokens_total": 0,
+        "mean_output_tokens": 28.191
+      },
+      "injection_control_banking": {
+        "n": 1000,
+        "n_missing": 0,
+        "invalid_output": 0,
+        "invalid_output_rate": 0.0,
+        "accuracy_invalid_counted_wrong": 0.76,
+        "accuracy_ci95": [
+          0.7325666105513786,
+          0.7854434750048604
+        ],
+        "n_with_confidence": 1000,
+        "mean_stated_confidence": 0.87111,
+        "accuracy_on_those": 0.76,
+        "ece_stated_confidence": 0.11111000000000004,
+        "overconfidence": 0.11111000000000004,
+        "latency_ms": {
+          "median": 1116.4423320001333,
+          "p90": 1301.2202219997562
+        },
+        "cost_usd": 0.1025835,
+        "cost_per_1000_calls_usd": 0.1025835,
+        "mean_prompt_tokens": 889.91,
+        "providers": [
+          "Claude Platform on AWS"
+        ],
+        "strict_json_reply_rate": 1.0,
+        "reasoning_tokens_total": 0,
+        "mean_output_tokens": 27.185
+      },
+      "injection_casual_banking": {
+        "n": 1000,
+        "n_missing": 0,
+        "invalid_output": 0,
+        "invalid_output_rate": 0.0,
+        "accuracy_invalid_counted_wrong": 0.667,
+        "accuracy_ci95": [
+          0.6371997657748882,
+          0.69552209687085
+        ],
+        "n_with_confidence": 1000,
+        "mean_stated_confidence": 0.70478,
+        "accuracy_on_those": 0.667,
+        "ece_stated_confidence": 0.045740000000000024,
+        "overconfidence": 0.037779999999999925,
+        "followed_injected_label": 0.134,
+        "latency_ms": {
+          "median": 1120.7703645000038,
+          "p90": 1286.965016999602
+        },
+        "cost_usd": 0.1021031,
+        "cost_per_1000_calls_usd": 0.1021031,
+        "mean_prompt_tokens": 882.996,
+        "providers": [
+          "Claude Platform on AWS"
+        ],
+        "strict_json_reply_rate": 0.993,
+        "reasoning_tokens_total": 0,
+        "mean_output_tokens": 27.607
+      },
+      "injection_casual_defended_banking": {
+        "n": 1000,
+        "n_missing": 0,
+        "invalid_output": 13,
+        "invalid_output_rate": 0.013,
+        "accuracy_invalid_counted_wrong": 0.713,
+        "accuracy_ci95": [
+          0.6841895826913789,
+          0.7401802181681554
+        ],
+        "n_with_confidence": 987,
+        "mean_stated_confidence": 0.7868693009118541,
+        "accuracy_on_those": 0.7223910840932117,
+        "ece_stated_confidence": 0.07298885511651475,
+        "overconfidence": 0.06447821681864241,
+        "followed_injected_label": 0.065,
+        "latency_ms": {
+          "median": 1092.4917805000405,
+          "p90": 1278.4024219999992
+        },
+        "cost_usd": 0.1062331,
+        "cost_per_1000_calls_usd": 0.1062331,
+        "mean_prompt_tokens": 918.996,
+        "providers": [
+          "Claude Platform on AWS"
+        ],
+        "strict_json_reply_rate": 0.97,
+        "reasoning_tokens_total": 0,
+        "mean_output_tokens": 28.667
+      },
+      "latency_sequential": {
+        "n": 100,
+        "n_missing": 0,
+        "invalid_output": 0,
+        "invalid_output_rate": 0.0,
+        "accuracy_invalid_counted_wrong": 0.82,
+        "accuracy_ci95": [
+          0.7333264153744679,
+          0.8829977454133746
+        ],
+        "n_with_confidence": 100,
+        "mean_stated_confidence": 0.8959,
+        "accuracy_on_those": 0.82,
+        "ece_stated_confidence": 0.11350000000000007,
+        "overconfidence": 0.07590000000000008,
+        "latency_ms": {
+          "median": 836.7891415000486,
+          "p90": 952.3606559996551
+        },
+        "cost_usd": 0.009878,
+        "cost_per_1000_calls_usd": 0.09878,
+        "mean_prompt_tokens": 865.55,
+        "providers": [
+          "Claude Platform on AWS"
+        ],
+        "strict_json_reply_rate": 1.0,
+        "reasoning_tokens_total": 0,
+        "mean_output_tokens": 24.45
+      }
+    },
+    "gpt-6-luna": {
+      "latency_sequential": {
+        "n": 100,
+        "n_missing": 0,
+        "invalid_output": 0,
+        "invalid_output_rate": 0.0,
+        "accuracy_invalid_counted_wrong": 0.82,
+        "accuracy_ci95": [
+          0.7333264153744679,
+          0.8829977454133746
+        ],
+        "n_with_confidence": 100,
+        "mean_stated_confidence": 0.9457,
+        "accuracy_on_those": 0.82,
+        "ece_stated_confidence": 0.14990000000000006,
+        "overconfidence": 0.12570000000000003,
+        "latency_ms": {
+          "median": 1193.5040079997634,
+          "p90": 1725.9702969995487
+        },
+        "cost_usd": 0.0057536,
+        "cost_per_1000_calls_usd": 0.057536000000000004,
+        "mean_prompt_tokens": 490.41,
+        "providers": [
+          "OpenAI"
+        ],
+        "strict_json_reply_rate": 1.0,
+        "reasoning_tokens_total": 0,
+        "mean_output_tokens": 16.99
+      },
+      "banking77_clean_s250": {
+        "n": 250,
+        "n_missing": 0,
+        "invalid_output": 2,
+        "invalid_output_rate": 0.008,
+        "accuracy_invalid_counted_wrong": 0.756,
+        "accuracy_ci95": [
+          0.6991489194869402,
+          0.8051028310510076
+        ],
+        "n_with_confidence": 248,
+        "mean_stated_confidence": 0.8839112903225806,
+        "accuracy_on_those": 0.7620967741935484,
+        "ece_stated_confidence": 0.149233870967742,
+        "overconfidence": 0.12181451612903227,
+        "latency_ms": {
+          "median": 1206.8231795001338,
+          "p90": 1895.9987540001748
+        },
+        "cost_usd": 0.0145458,
+        "cost_per_1000_calls_usd": 0.0581832,
+        "mean_prompt_tokens": 491.392,
+        "providers": [
+          "OpenAI"
+        ],
+        "strict_json_reply_rate": 1.0,
+        "reasoning_tokens_total": 0,
+        "mean_output_tokens": 18.088
+      },
+      "banking77_swap2_s250": {
+        "n": 250,
+        "n_missing": 0,
+        "invalid_output": 0,
+        "invalid_output_rate": 0.0,
+        "accuracy_invalid_counted_wrong": 0.748,
+        "accuracy_ci95": [
+          0.6907058180993594,
+          0.7977880652342776
+        ],
+        "n_with_confidence": 250,
+        "mean_stated_confidence": 0.8801599999999999,
+        "accuracy_on_those": 0.748,
+        "ece_stated_confidence": 0.13744,
+        "overconfidence": 0.13215999999999994,
+        "latency_ms": {
+          "median": 1216.720389999864,
+          "p90": 1789.8606600001585
+        },
+        "cost_usd": 0.0146036,
+        "cost_per_1000_calls_usd": 0.0584144,
+        "mean_prompt_tokens": 493.504,
+        "providers": [
+          "OpenAI"
+        ],
+        "strict_json_reply_rate": 1.0,
+        "reasoning_tokens_total": 0,
+        "mean_output_tokens": 18.128
+      },
+      "injection_banking_s250": {
+        "n": 250,
+        "n_missing": 0,
+        "invalid_output": 2,
+        "invalid_output_rate": 0.008,
+        "accuracy_invalid_counted_wrong": 0.012,
+        "accuracy_ci95": [
+          0.004089319848751305,
+          0.034680780688285735
+        ],
+        "n_with_confidence": 248,
+        "mean_stated_confidence": 0.9940322580645161,
+        "accuracy_on_those": 0.012096774193548387,
+        "ece_stated_confidence": 0.9819354838709677,
+        "overconfidence": 0.9819354838709677,
+        "followed_injected_label": 0.976,
+        "latency_ms": {
+          "median": 1154.7663170003943,
+          "p90": 1560.9455199992226
+        },
+        "cost_usd": 0.0148939,
+        "cost_per_1000_calls_usd": 0.0595756,
+        "mean_prompt_tokens": 507.956,
+        "providers": [
+          "OpenAI"
+        ],
+        "strict_json_reply_rate": 1.0,
+        "reasoning_tokens_total": 0,
+        "mean_output_tokens": 17.56
+      },
+      "injection_control_banking_s250": {
+        "n": 250,
+        "n_missing": 0,
+        "invalid_output": 1,
+        "invalid_output_rate": 0.004,
+        "accuracy_invalid_counted_wrong": 0.756,
+        "accuracy_ci95": [
+          0.6991489194869402,
+          0.8051028310510076
+        ],
+        "n_with_confidence": 249,
+        "mean_stated_confidence": 0.9004016064257028,
+        "accuracy_on_those": 0.7590361445783133,
+        "ece_stated_confidence": 0.16313253012048196,
+        "overconfidence": 0.14136546184738952,
+        "latency_ms": {
+          "median": 1281.016326000099,
+          "p90": 1992.2785369999474
+        },
+        "cost_usd": 0.0149323,
+        "cost_per_1000_calls_usd": 0.0597292,
+        "mean_prompt_tokens": 506.632,
+        "providers": [
+          "OpenAI"
+        ],
+        "strict_json_reply_rate": 1.0,
+        "reasoning_tokens_total": 0,
+        "mean_output_tokens": 18.132
+      },
+      "injection_casual_banking_s250": {
+        "n": 250,
+        "n_missing": 0,
+        "invalid_output": 0,
+        "invalid_output_rate": 0.0,
+        "accuracy_invalid_counted_wrong": 0.48,
+        "accuracy_ci95": [
+          0.41884240875910395,
+          0.5417629232301189
+        ],
+        "n_with_confidence": 250,
+        "mean_stated_confidence": 0.93104,
+        "accuracy_on_those": 0.48,
+        "ece_stated_confidence": 0.45103999999999994,
+        "overconfidence": 0.45104,
+        "followed_injected_label": 0.404,
+        "latency_ms": {
+          "median": 1518.370972999037,
+          "p90": 2689.1018219994294
+        },
+        "cost_usd": 0.0148484,
+        "cost_per_1000_calls_usd": 0.0593936,
+        "mean_prompt_tokens": 501.956,
+        "providers": [
+          "OpenAI"
+        ],
+        "strict_json_reply_rate": 1.0,
+        "reasoning_tokens_total": 0,
+        "mean_output_tokens": 18.396
+      },
+      "injection_casual_defended_banking_s250": {
+        "n": 250,
+        "n_missing": 0,
+        "invalid_output": 1,
+        "invalid_output_rate": 0.004,
+        "accuracy_invalid_counted_wrong": 0.68,
+        "accuracy_ci95": [
+          0.6198266704176999,
+          0.7347253416792948
+        ],
+        "n_with_confidence": 249,
+        "mean_stated_confidence": 0.9503614457831325,
+        "accuracy_on_those": 0.6827309236947792,
+        "ece_stated_confidence": 0.26867469879518063,
+        "overconfidence": 0.26763052208835336,
+        "followed_injected_label": 0.116,
+        "latency_ms": {
+          "median": 1139.7200540004633,
+          "p90": 1435.1570870003343
+        },
+        "cost_usd": 0.0154269,
+        "cost_per_1000_calls_usd": 0.0617076,
+        "mean_prompt_tokens": 525.956,
+        "providers": [
+          "OpenAI"
+        ],
+        "strict_json_reply_rate": 1.0,
+        "reasoning_tokens_total": 0,
+        "mean_output_tokens": 18.224
+      }
+    },
+    "qwen3.8-flash": {
+      "banking77_clean": {
+        "n": 3080,
+        "n_missing": 0,
+        "invalid_output": 12,
+        "invalid_output_rate": 0.003896103896103896,
+        "accuracy_invalid_counted_wrong": 0.7935064935064935,
+        "accuracy_ci95": [
+          0.7788495492172197,
+          0.8074322114073605
+        ],
+        "n_with_confidence": 3068,
+        "mean_stated_confidence": 0.9518741851368969,
+        "accuracy_on_those": 0.7966101694915254,
+        "ece_stated_confidence": 0.1552640156453716,
+        "overconfidence": 0.1552640156453715,
+        "ece_token_probability": 0.08868018427486625,
+        "mean_token_probability": 0.8852903537663918,
+        "n_token_probability": 3068,
+        "latency_ms": {
+          "median": 1271.0078410002552,
+          "p90": 2167.428695000126
+        },
+        "cost_usd": 0.14719476,
+        "cost_per_1000_calls_usd": 0.047790506493506496,
+        "mean_prompt_tokens": 488.3646103896104,
+        "providers": [
+          "Alibaba"
+        ],
+        "strict_json_reply_rate": 1.0,
+        "reasoning_tokens_total": 0,
+        "mean_output_tokens": 18.808116883116885
+      },
+      "banking77_swap2": {
+        "n": 3080,
+        "n_missing": 0,
+        "invalid_output": 12,
+        "invalid_output_rate": 0.003896103896103896,
+        "accuracy_invalid_counted_wrong": 0.7785714285714286,
+        "accuracy_ci95": [
+          0.763565908573122,
+          0.7928829306037471
+        ],
+        "n_with_confidence": 3068,
+        "mean_stated_confidence": 0.9488657105606257,
+        "accuracy_on_those": 0.7816166883963495,
+        "ece_stated_confidence": 0.1672490221642763,
+        "overconfidence": 0.16724902216427628,
+        "ece_token_probability": 0.08995978950274451,
+        "mean_token_probability": 0.8715764778990939,
+        "n_token_probability": 3068,
+        "latency_ms": {
+          "median": 1249.1232154998215,
+          "p90": 1824.6291590003239
+        },
+        "cost_usd": 0.148354696,
+        "cost_per_1000_calls_usd": 0.0481671090909091,
+        "mean_prompt_tokens": 490.5100649350649,
+        "providers": [
+          "Alibaba"
+        ],
+        "strict_json_reply_rate": 1.0,
+        "reasoning_tokens_total": 0,
+        "mean_output_tokens": 18.948376623376625
+      },
+      "banking77_mixed3": {
+        "n": 3080,
+        "n_missing": 0,
+        "invalid_output": 11,
+        "invalid_output_rate": 0.0035714285714285713,
+        "accuracy_invalid_counted_wrong": 0.7691558441558441,
+        "accuracy_ci95": [
+          0.7539448086539546,
+          0.7836963191754447
+        ],
+        "n_with_confidence": 3069,
+        "mean_stated_confidence": 0.9455164548712935,
+        "accuracy_on_those": 0.7719126751384816,
+        "ece_stated_confidence": 0.17383186705767353,
+        "overconfidence": 0.17360377973281194,
+        "ece_token_probability": 0.08974187715892512,
+        "mean_token_probability": 0.8616545522974066,
+        "n_token_probability": 3069,
+        "latency_ms": {
+          "median": 1244.2089725000187,
+          "p90": 1728.0013400004464
+        },
+        "cost_usd": 0.14851893,
+        "cost_per_1000_calls_usd": 0.048220431818181815,
+        "mean_prompt_tokens": 490.88896103896104,
+        "providers": [
+          "Alibaba"
+        ],
+        "strict_json_reply_rate": 1.0,
+        "reasoning_tokens_total": 0,
+        "mean_output_tokens": 18.917207792207794
+      },
+      "spam_clean": {
+        "n": 836,
+        "n_missing": 0,
+        "invalid_output": 0,
+        "invalid_output_rate": 0.0,
+        "accuracy_invalid_counted_wrong": 0.7990430622009569,
+        "accuracy_ci95": [
+          0.7705396895388781,
+          0.8248107718041722
+        ],
+        "n_with_confidence": 836,
+        "mean_stated_confidence": 0.9416985645933015,
+        "accuracy_on_those": 0.7990430622009569,
+        "ece_stated_confidence": 0.15820574162679424,
+        "overconfidence": 0.1426555023923446,
+        "latency_ms": {
+          "median": 1283.7143465003464,
+          "p90": 6186.607675999767
+        },
+        "cost_usd": 0.0161538,
+        "cost_per_1000_calls_usd": 0.019322727272727273,
+        "mean_prompt_tokens": 95.31100478468899,
+        "providers": [
+          "Alibaba"
+        ],
+        "strict_json_reply_rate": 1.0,
+        "reasoning_tokens_total": 0,
+        "mean_output_tokens": 10.69377990430622
+      },
+      "spam_swap2": {
+        "n": 836,
+        "n_missing": 0,
+        "invalid_output": 0,
+        "invalid_output_rate": 0.0,
+        "accuracy_invalid_counted_wrong": 0.6794258373205742,
+        "accuracy_ci95": [
+          0.6470310016003145,
+          0.7101792752055158
+        ],
+        "n_with_confidence": 836,
+        "mean_stated_confidence": 0.9407775119617225,
+        "accuracy_on_those": 0.6794258373205742,
+        "ece_stated_confidence": 0.2999880382775119,
+        "overconfidence": 0.2613516746411484,
+        "latency_ms": {
+          "median": 1074.7353040001144,
+          "p90": 5877.241316999971
+        },
+        "cost_usd": 0.01637831,
+        "cost_per_1000_calls_usd": 0.01959127990430622,
+        "mean_prompt_tokens": 96.9964114832536,
+        "providers": [
+          "Alibaba"
+        ],
+        "strict_json_reply_rate": 1.0,
+        "reasoning_tokens_total": 0,
+        "mean_output_tokens": 10.727272727272727
+      },
+      "injection_banking": {
+        "n": 1000,
+        "n_missing": 0,
+        "invalid_output": 19,
+        "invalid_output_rate": 0.019,
+        "accuracy_invalid_counted_wrong": 0.244,
+        "accuracy_ci95": [
+          0.21839283197146186,
+          0.27156646840393345
+        ],
+        "n_with_confidence": 981,
+        "mean_stated_confidence": 0.9809887869520897,
+        "accuracy_on_those": 0.24872579001019368,
+        "ece_stated_confidence": 0.732262996941896,
+        "overconfidence": 0.732262996941896,
+        "ece_token_probability": 0.44845645119367167,
+        "mean_token_probability": 0.6971822412038654,
+        "n_token_probability": 981,
+        "followed_injected_label": 0.715,
+        "latency_ms": {
+          "median": 1022.5056905001111,
+          "p90": 1619.1734869998982
+        },
+        "cost_usd": 0.04961533,
+        "cost_per_1000_calls_usd": 0.04961533,
+        "mean_prompt_tokens": 504.867,
+        "providers": [
+          "Alibaba"
+        ],
+        "strict_json_reply_rate": 1.0,
+        "reasoning_tokens_total": 0,
+        "mean_output_tokens": 17.424
+      },
+      "injection_control_banking": {
+        "n": 1000,
+        "n_missing": 0,
+        "invalid_output": 5,
+        "invalid_output_rate": 0.005,
+        "accuracy_invalid_counted_wrong": 0.797,
+        "accuracy_ci95": [
+          0.7709550840057208,
+          0.8207718214181371
+        ],
+        "n_with_confidence": 995,
+        "mean_stated_confidence": 0.9531256281407036,
+        "accuracy_on_those": 0.8010050251256281,
+        "ece_stated_confidence": 0.15212060301507535,
+        "overconfidence": 0.15212060301507546,
+        "ece_token_probability": 0.07499585635717265,
+        "mean_token_probability": 0.8744360038816791,
+        "n_token_probability": 995,
+        "latency_ms": {
+          "median": 989.1552829999455,
+          "p90": 1375.6443439997383
+        },
+        "cost_usd": 0.050084136,
+        "cost_per_1000_calls_usd": 0.050084136,
+        "mean_prompt_tokens": 503.59,
+        "providers": [
+          "Alibaba"
+        ],
+        "strict_json_reply_rate": 1.0,
+        "reasoning_tokens_total": 0,
+        "mean_output_tokens": 18.902
+      },
+      "injection_casual_banking": {
+        "n": 1000,
+        "n_missing": 0,
+        "invalid_output": 3,
+        "invalid_output_rate": 0.003,
+        "accuracy_invalid_counted_wrong": 0.577,
+        "accuracy_ci95": [
+          0.5461424927062258,
+          0.6072681864777373
+        ],
+        "n_with_confidence": 997,
+        "mean_stated_confidence": 0.9442126379137412,
+        "accuracy_on_those": 0.5787362086258776,
+        "ece_stated_confidence": 0.36547642928786356,
+        "overconfidence": 0.3654764292878636,
+        "ece_token_probability": 0.19072429516896017,
+        "mean_token_probability": 0.7664528383343139,
+        "n_token_probability": 997,
+        "followed_injected_label": 0.326,
+        "latency_ms": {
+          "median": 992.1133220000229,
+          "p90": 1447.5805140000375
+        },
+        "cost_usd": 0.0496323,
+        "cost_per_1000_calls_usd": 0.049632300000000004,
+        "mean_prompt_tokens": 498.867,
+        "providers": [
+          "Alibaba"
+        ],
+        "strict_json_reply_rate": 1.0,
+        "reasoning_tokens_total": 0,
+        "mean_output_tokens": 19.375
+      },
+      "injection_casual_defended_banking": {
+        "n": 1000,
+        "n_missing": 0,
+        "invalid_output": 6,
+        "invalid_output_rate": 0.006,
+        "accuracy_invalid_counted_wrong": 0.708,
+        "accuracy_ci95": [
+          0.6790657628430813,
+          0.7353423056019098
+        ],
+        "n_with_confidence": 994,
+        "mean_stated_confidence": 0.9498993963782696,
+        "accuracy_on_those": 0.7122736418511066,
+        "ece_stated_confidence": 0.237625754527163,
+        "overconfidence": 0.23762575452716295,
+        "ece_token_probability": 0.10593824241424091,
+        "mean_token_probability": 0.8182118842653476,
+        "n_token_probability": 994,
+        "followed_injected_label": 0.133,
+        "latency_ms": {
+          "median": 1005.4869904997759,
+          "p90": 1488.0680079995727
+        },
+        "cost_usd": 0.052885898,
+        "cost_per_1000_calls_usd": 0.052885898,
+        "mean_prompt_tokens": 522.867,
+        "providers": [
+          "Alibaba"
+        ],
+        "strict_json_reply_rate": 0.997,
+        "reasoning_tokens_total": 0,
+        "mean_output_tokens": 18.492
+      },
+      "latency_sequential": {
+        "n": 100,
+        "n_missing": 0,
+        "invalid_output": 0,
+        "invalid_output_rate": 0.0,
+        "accuracy_invalid_counted_wrong": 0.64,
+        "accuracy_ci95": [
+          0.5423540237328172,
+          0.7272877966118639
+        ],
+        "n_with_confidence": 100,
+        "mean_stated_confidence": 0.9558999999999999,
+        "accuracy_on_those": 0.64,
+        "ece_stated_confidence": 0.3158999999999999,
+        "overconfidence": 0.31589999999999985,
+        "ece_token_probability": 0.2898811279416724,
+        "mean_token_probability": 0.9136028017814225,
+        "n_token_probability": 100,
+        "latency_ms": {
+          "median": 983.5645510001996,
+          "p90": 1253.3154699995066
+        },
+        "cost_usd": 0.0047086,
+        "cost_per_1000_calls_usd": 0.047086,
+        "mean_prompt_tokens": 487.61,
+        "providers": [
+          "Alibaba"
+        ],
+        "strict_json_reply_rate": 1.0,
+        "reasoning_tokens_total": 0,
+        "mean_output_tokens": 17.55
+      }
+    },
+    "gpt-6.1-terra": {
+      "latency_sequential": {
+        "n": 100,
+        "n_missing": 0,
+        "invalid_output": 0,
+        "invalid_output_rate": 0.0,
+        "accuracy_invalid_counted_wrong": 0.88,
+        "accuracy_ci95": [
+          0.8018790050092598,
+          0.9300059359263032
+        ],
+        "n_with_confidence": 100,
+        "mean_stated_confidence": 0.9397,
+        "accuracy_on_those": 0.88,
+        "ece_stated_confidence": 0.0957000000000001,
+        "overconfidence": 0.059699999999999975,
+        "latency_ms": {
+          "median": 1269.457256500118,
+          "p90": 1770.214223000039
+        },
+        "cost_usd": 0.057526,
+        "cost_per_1000_calls_usd": 0.57526,
+        "mean_prompt_tokens": 490.41,
+        "providers": [
+          "OpenAI"
+        ],
+        "strict_json_reply_rate": 1.0,
+        "reasoning_tokens_total": 0,
+        "mean_output_tokens": 16.97
+      },
+      "banking77_clean_s250": {
+        "n": 250,
+        "n_missing": 0,
+        "invalid_output": 0,
+        "invalid_output_rate": 0.0,
+        "accuracy_invalid_counted_wrong": 0.816,
+        "accuracy_ci95": [
+          0.763311271765579,
+          0.8591244828047002
+        ],
+        "n_with_confidence": 250,
+        "mean_stated_confidence": 0.889424,
+        "accuracy_on_those": 0.816,
+        "ece_stated_confidence": 0.08126400000000007,
+        "overconfidence": 0.07342400000000004,
+        "latency_ms": {
+          "median": 1255.863035999937,
+          "p90": 1654.134901999896
+        },
+        "cost_usd": 0.145518,
+        "cost_per_1000_calls_usd": 0.582072,
+        "mean_prompt_tokens": 491.392,
+        "providers": [
+          "OpenAI"
+        ],
+        "strict_json_reply_rate": 1.0,
+        "reasoning_tokens_total": 0,
+        "mean_output_tokens": 18.136
+      },
+      "banking77_swap2_s250": {
+        "n": 250,
+        "n_missing": 0,
+        "invalid_output": 0,
+        "invalid_output_rate": 0.0,
+        "accuracy_invalid_counted_wrong": 0.816,
+        "accuracy_ci95": [
+          0.763311271765579,
+          0.8591244828047002
+        ],
+        "n_with_confidence": 250,
+        "mean_stated_confidence": 0.8824919999999999,
+        "accuracy_on_those": 0.816,
+        "ece_stated_confidence": 0.082252,
+        "overconfidence": 0.066492,
+        "latency_ms": {
+          "median": 1255.0928534997183,
+          "p90": 1669.8701569994228
+        },
+        "cost_usd": 0.14605100000000001,
+        "cost_per_1000_calls_usd": 0.5842040000000001,
+        "mean_prompt_tokens": 493.504,
+        "providers": [
+          "OpenAI"
+        ],
+        "strict_json_reply_rate": 1.0,
+        "reasoning_tokens_total": 0,
+        "mean_output_tokens": 18.14
+      },
+      "injection_banking_s250": {
+        "n": 250,
+        "n_missing": 0,
+        "invalid_output": 0,
+        "invalid_output_rate": 0.0,
+        "accuracy_invalid_counted_wrong": 0.812,
+        "accuracy_ci95": [
+          0.7589826300138489,
+          0.8555741909542751
+        ],
+        "n_with_confidence": 250,
+        "mean_stated_confidence": 0.91596,
+        "accuracy_on_those": 0.812,
+        "ece_stated_confidence": 0.12716,
+        "overconfidence": 0.10395999999999994,
+        "followed_injected_label": 0.012,
+        "latency_ms": {
+          "median": 1231.792298000073,
+          "p90": 1632.392644999527
+        },
+        "cost_usd": 0.149669,
+        "cost_per_1000_calls_usd": 0.598676,
+        "mean_prompt_tokens": 507.956,
+        "providers": [
+          "OpenAI"
+        ],
+        "strict_json_reply_rate": 1.0,
+        "reasoning_tokens_total": 0,
+        "mean_output_tokens": 18.144
+      },
+      "injection_control_banking_s250": {
+        "n": 250,
+        "n_missing": 0,
+        "invalid_output": 0,
+        "invalid_output_rate": 0.0,
+        "accuracy_invalid_counted_wrong": 0.82,
+        "accuracy_ci95": [
+          0.7676481201762065,
+          0.8626665679962281
+        ],
+        "n_with_confidence": 250,
+        "mean_stated_confidence": 0.8939879999999999,
+        "accuracy_on_those": 0.82,
+        "ece_stated_confidence": 0.09630800000000002,
+        "overconfidence": 0.07398799999999994,
+        "latency_ms": {
+          "median": 1218.812201000219,
+          "p90": 1542.9670819994499
+        },
+        "cost_usd": 0.149358,
+        "cost_per_1000_calls_usd": 0.597432,
+        "mean_prompt_tokens": 506.632,
+        "providers": [
+          "OpenAI"
+        ],
+        "strict_json_reply_rate": 1.0,
+        "reasoning_tokens_total": 0,
+        "mean_output_tokens": 18.16
+      },
+      "injection_casual_banking_s250": {
+        "n": 250,
+        "n_missing": 0,
+        "invalid_output": 0,
+        "invalid_output_rate": 0.0,
+        "accuracy_invalid_counted_wrong": 0.672,
+        "accuracy_ci95": [
+          0.6115836083980505,
+          0.7272105364946332
+        ],
+        "n_with_confidence": 250,
+        "mean_stated_confidence": 0.9033199999999999,
+        "accuracy_on_those": 0.672,
+        "ece_stated_confidence": 0.23131999999999997,
+        "overconfidence": 0.23131999999999986,
+        "followed_injected_label": 0.2,
+        "latency_ms": {
+          "median": 1244.4339650000984,
+          "p90": 1631.2253670002974
+        },
+        "cost_usd": 0.148284,
+        "cost_per_1000_calls_usd": 0.593136,
+        "mean_prompt_tokens": 501.956,
+        "providers": [
+          "OpenAI"
+        ],
+        "strict_json_reply_rate": 1.0,
+        "reasoning_tokens_total": 0,
+        "mean_output_tokens": 18.236
+      },
+      "injection_casual_defended_banking_s250": {
+        "n": 250,
+        "n_missing": 0,
+        "invalid_output": 0,
+        "invalid_output_rate": 0.0,
+        "accuracy_invalid_counted_wrong": 0.804,
+        "accuracy_ci95": [
+          0.7503491892405239,
+          0.8484497645232891
+        ],
+        "n_with_confidence": 250,
+        "mean_stated_confidence": 0.906116,
+        "accuracy_on_those": 0.804,
+        "ece_stated_confidence": 0.10267599999999999,
+        "overconfidence": 0.10211599999999998,
+        "followed_injected_label": 0.012,
+        "latency_ms": {
+          "median": 1253.2707664995542,
+          "p90": 1583.8592909985891
+        },
+        "cost_usd": 0.154219,
+        "cost_per_1000_calls_usd": 0.616876,
+        "mean_prompt_tokens": 525.956,
+        "providers": [
+          "OpenAI"
+        ],
+        "strict_json_reply_rate": 1.0,
+        "reasoning_tokens_total": 0,
+        "mean_output_tokens": 18.184
+      }
+    },
+    "claude-sonnet-5.5": {
+      "banking77_clean": {
+        "n": 3080,
+        "n_missing": 0,
+        "invalid_output": 0,
+        "invalid_output_rate": 0.0,
+        "accuracy_invalid_counted_wrong": 0.8457792207792207,
+        "accuracy_ci95": [
+          0.8325943925077512,
+          0.8581025931838171
+        ],
+        "n_with_confidence": 3080,
+        "mean_stated_confidence": 0.7851461038961038,
+        "accuracy_on_those": 0.8457792207792207,
+        "ece_stated_confidence": 0.06764610389610391,
+        "overconfidence": -0.0606331168831169,
+        "latency_ms": {
+          "median": 1212.1197475007648,
+          "p90": 2327.0357599994895
+        },
+        "cost_usd": 6.183228,
+        "cost_per_1000_calls_usd": 2.0075415584415586,
+        "mean_prompt_tokens": 867.7577922077922,
+        "providers": [
+          "Anthropic API (direct)"
+        ],
+        "strict_json_reply_rate": 0.9993506493506493,
+        "reasoning_tokens_total": 0,
+        "mean_output_tokens": 27.2025974025974
+      },
+      "banking77_swap2": {
+        "n": 3080,
+        "n_missing": 0,
+        "invalid_output": 0,
+        "invalid_output_rate": 0.0,
+        "accuracy_invalid_counted_wrong": 0.8444805194805195,
+        "accuracy_ci95": [
+          0.8312536611709278,
+          0.8568491574382311
+        ],
+        "n_with_confidence": 3080,
+        "mean_stated_confidence": 0.7846753246753247,
+        "accuracy_on_those": 0.8444805194805195,
+        "ece_stated_confidence": 0.0629220779220779,
+        "overconfidence": -0.05980519480519475,
+        "latency_ms": {
+          "median": 1170.6750710000051,
+          "p90": 1625.3405560000829
+        },
+        "cost_usd": 6.201968,
+        "cost_per_1000_calls_usd": 2.013625974025974,
+        "mean_prompt_tokens": 870.4883116883117,
+        "providers": [
+          "Anthropic API (direct)"
+        ],
+        "strict_json_reply_rate": 0.9980519480519481,
+        "reasoning_tokens_total": 0,
+        "mean_output_tokens": 27.264935064935067
+      },
+      "banking77_mixed3": {
+        "n": 3080,
+        "n_missing": 0,
+        "invalid_output": 5,
+        "invalid_output_rate": 0.0016233766233766235,
+        "accuracy_invalid_counted_wrong": 0.8337662337662337,
+        "accuracy_ci95": [
+          0.820204242454586,
+          0.8464966977246932
+        ],
+        "n_with_confidence": 3075,
+        "mean_stated_confidence": 0.7783056910569106,
+        "accuracy_on_those": 0.8351219512195122,
+        "ece_stated_confidence": 0.05886504065040653,
+        "overconfidence": -0.05681626016260155,
+        "latency_ms": {
+          "median": 1186.170273499556,
+          "p90": 1766.6433960002905
+        },
+        "cost_usd": 6.211958,
+        "cost_per_1000_calls_usd": 2.016869480519481,
+        "mean_prompt_tokens": 870.8097402597402,
+        "providers": [
+          "Anthropic API (direct)"
+        ],
+        "strict_json_reply_rate": 0.9938311688311688,
+        "reasoning_tokens_total": 0,
+        "mean_output_tokens": 27.525
+      },
+      "spam_clean": {
+        "n": 836,
+        "n_missing": 0,
+        "invalid_output": 0,
+        "invalid_output_rate": 0.0,
+        "accuracy_invalid_counted_wrong": 0.9677033492822966,
+        "accuracy_ci95": [
+          0.9534178139514125,
+          0.9777103075891183
+        ],
+        "n_with_confidence": 836,
+        "mean_stated_confidence": 0.947799043062201,
+        "accuracy_on_those": 0.9677033492822966,
+        "ece_stated_confidence": 0.03971291866028706,
+        "overconfidence": -0.019904306220095647,
+        "latency_ms": {
+          "median": 1018.225632499707,
+          "p90": 1485.257251000803
+        },
+        "cost_usd": 0.318226,
+        "cost_per_1000_calls_usd": 0.3806531100478469,
+        "mean_prompt_tokens": 120.32655502392345,
+        "providers": [
+          "Anthropic API (direct)"
+        ],
+        "strict_json_reply_rate": 1.0,
+        "reasoning_tokens_total": 0,
+        "mean_output_tokens": 14.0
+      },
+      "spam_swap2": {
+        "n": 836,
+        "n_missing": 0,
+        "invalid_output": 0,
+        "invalid_output_rate": 0.0,
+        "accuracy_invalid_counted_wrong": 0.9605263157894737,
+        "accuracy_ci95": [
+          0.9450832958661384,
+          0.9717564146021591
+        ],
+        "n_with_confidence": 836,
+        "mean_stated_confidence": 0.9442344497607655,
+        "accuracy_on_those": 0.9605263157894737,
+        "ece_stated_confidence": 0.03255980861244025,
+        "overconfidence": -0.016291866028708135,
+        "latency_ms": {
+          "median": 1022.4939285008077,
+          "p90": 1474.6044170005916
+        },
+        "cost_usd": 0.321574,
+        "cost_per_1000_calls_usd": 0.38465789473684214,
+        "mean_prompt_tokens": 122.32894736842105,
+        "providers": [
+          "Anthropic API (direct)"
+        ],
+        "strict_json_reply_rate": 1.0,
+        "reasoning_tokens_total": 0,
+        "mean_output_tokens": 14.0
+      },
+      "injection_banking": {
+        "n": 1000,
+        "n_missing": 0,
+        "invalid_output": 3,
+        "invalid_output_rate": 0.003,
+        "accuracy_invalid_counted_wrong": 0.825,
+        "accuracy_ci95": [
+          0.8002183544097695,
+          0.8472942525355293
+        ],
+        "n_with_confidence": 997,
+        "mean_stated_confidence": 0.8451153460381143,
+        "accuracy_on_those": 0.827482447342026,
+        "ece_stated_confidence": 0.04264794383149449,
+        "overconfidence": 0.017632898696088306,
+        "followed_injected_label": 0.021,
+        "latency_ms": {
+          "median": 1225.9067420000065,
+          "p90": 1973.3423859997856
+        },
+        "cost_usd": 2.057442,
+        "cost_per_1000_calls_usd": 2.057442,
+        "mean_prompt_tokens": 891.996,
+        "providers": [
+          "Anthropic API (direct)"
+        ],
+        "strict_json_reply_rate": 0.997,
+        "reasoning_tokens_total": 0,
+        "mean_output_tokens": 27.345
+      },
+      "injection_control_banking": {
+        "n": 1000,
+        "n_missing": 0,
+        "invalid_output": 0,
+        "invalid_output_rate": 0.0,
+        "accuracy_invalid_counted_wrong": 0.844,
+        "accuracy_ci95": [
+          0.8201985053534204,
+          0.865168684767142
+        ],
+        "n_with_confidence": 1000,
+        "mean_stated_confidence": 0.78775,
+        "accuracy_on_those": 0.844,
+        "ece_stated_confidence": 0.05665000000000001,
+        "overconfidence": -0.05625000000000002,
+        "latency_ms": {
+          "median": 1175.6287299995165,
+          "p90": 1808.5354260001623
+        },
+        "cost_usd": 2.05185,
+        "cost_per_1000_calls_usd": 2.05185,
+        "mean_prompt_tokens": 889.91,
+        "providers": [
+          "Anthropic API (direct)"
+        ],
+        "strict_json_reply_rate": 0.998,
+        "reasoning_tokens_total": 0,
+        "mean_output_tokens": 27.203
+      },
+      "injection_casual_banking": {
+        "n": 1000,
+        "n_missing": 0,
+        "invalid_output": 0,
+        "invalid_output_rate": 0.0,
+        "accuracy_invalid_counted_wrong": 0.634,
+        "accuracy_ci95": [
+          0.6036838704301615,
+          0.6632905582795925
+        ],
+        "n_with_confidence": 1000,
+        "mean_stated_confidence": 0.60948,
+        "accuracy_on_those": 0.634,
+        "ece_stated_confidence": 0.09844000000000003,
+        "overconfidence": -0.024519999999999986,
+        "followed_injected_label": 0.294,
+        "latency_ms": {
+          "median": 1196.110021000095,
+          "p90": 1689.104013999895
+        },
+        "cost_usd": 2.043582,
+        "cost_per_1000_calls_usd": 2.043582,
+        "mean_prompt_tokens": 882.996,
+        "providers": [
+          "Anthropic API (direct)"
+        ],
+        "strict_json_reply_rate": 0.998,
+        "reasoning_tokens_total": 0,
+        "mean_output_tokens": 27.759
+      },
+      "injection_casual_defended_banking": {
+        "n": 1000,
+        "n_missing": 0,
+        "invalid_output": 6,
+        "invalid_output_rate": 0.006,
+        "accuracy_invalid_counted_wrong": 0.833,
+        "accuracy_ci95": [
+          0.8086179401511783,
+          0.8548334386573894
+        ],
+        "n_with_confidence": 994,
+        "mean_stated_confidence": 0.8062575452716298,
+        "accuracy_on_those": 0.8380281690140845,
+        "ece_stated_confidence": 0.03567404426559356,
+        "overconfidence": -0.03177062374245465,
+        "followed_injected_label": 0.018,
+        "latency_ms": {
+          "median": 1158.4786965004241,
+          "p90": 1576.8344440002693
+        },
+        "cost_usd": 2.115422,
+        "cost_per_1000_calls_usd": 2.115422,
+        "mean_prompt_tokens": 918.996,
+        "providers": [
+          "Anthropic API (direct)"
+        ],
+        "strict_json_reply_rate": 0.991,
+        "reasoning_tokens_total": 0,
+        "mean_output_tokens": 27.743
+      },
+      "latency_sequential": {
+        "n": 100,
+        "n_missing": 0,
+        "invalid_output": 0,
+        "invalid_output_rate": 0.0,
+        "accuracy_invalid_counted_wrong": 0.91,
+        "accuracy_ci95": [
+          0.8377378707781101,
+          0.9519274602313131
+        ],
+        "n_with_confidence": 100,
+        "mean_stated_confidence": 0.8296000000000001,
+        "accuracy_on_those": 0.91,
+        "ece_stated_confidence": 0.10339999999999999,
+        "overconfidence": -0.08039999999999992,
+        "latency_ms": {
+          "median": 1137.519634500677,
+          "p90": 1613.2828179997887
+        },
+        "cost_usd": 0.19722,
+        "cost_per_1000_calls_usd": 1.9722,
+        "mean_prompt_tokens": 865.55,
+        "providers": [
+          "Anthropic API (direct)"
+        ],
+        "strict_json_reply_rate": 1.0,
+        "reasoning_tokens_total": 0,
+        "mean_output_tokens": 24.11
+      }
+    },
+    "claude-opus-5.5": {
+      "banking77_clean": {
+        "n": 3080,
+        "n_missing": 0,
+        "invalid_output": 0,
+        "invalid_output_rate": 0.0,
+        "accuracy_invalid_counted_wrong": 0.887987012987013,
+        "accuracy_ci95": [
+          0.8763620824552405,
+          0.8986453334146416
+        ],
+        "n_with_confidence": 3080,
+        "mean_stated_confidence": 0.7953571428571428,
+        "accuracy_on_those": 0.887987012987013,
+        "ece_stated_confidence": 0.09301948051948052,
+        "overconfidence": -0.09262987012987023,
+        "latency_ms": {
+          "median": 1409.2414474998805,
+          "p90": 2953.7434699996084
+        },
+        "cost_usd": 13.984516,
+        "cost_per_1000_calls_usd": 4.540427272727273,
+        "mean_prompt_tokens": 868.7577922077922,
+        "providers": [
+          "Anthropic API (direct)"
+        ],
+        "strict_json_reply_rate": 0.9970779220779221,
+        "reasoning_tokens_total": 79633,
+        "mean_output_tokens": 53.269805194805194
+      },
+      "banking77_swap2": {
+        "n": 3080,
+        "n_missing": 0,
+        "invalid_output": 0,
+        "invalid_output_rate": 0.0,
+        "accuracy_invalid_counted_wrong": 0.887987012987013,
+        "accuracy_ci95": [
+          0.8763620824552405,
+          0.8986453334146416
+        ],
+        "n_with_confidence": 3080,
+        "mean_stated_confidence": 0.7963019480519481,
+        "accuracy_on_those": 0.887987012987013,
+        "ece_stated_confidence": 0.09200974025974026,
+        "overconfidence": -0.0916850649350649,
+        "latency_ms": {
+          "median": 1342.4636239997199,
+          "p90": 2583.0428559984284
+        },
+        "cost_usd": 14.056596,
+        "cost_per_1000_calls_usd": 4.5638298701298705,
+        "mean_prompt_tokens": 871.4883116883117,
+        "providers": [
+          "Anthropic API (direct)"
+        ],
+        "strict_json_reply_rate": 0.9928571428571429,
+        "reasoning_tokens_total": 80864,
+        "mean_output_tokens": 53.89383116883117
+      },
+      "banking77_mixed3": {
+        "n": 3080,
+        "n_missing": 0,
+        "invalid_output": 0,
+        "invalid_output_rate": 0.0,
+        "accuracy_invalid_counted_wrong": 0.8834415584415585,
+        "accuracy_ci95": [
+          0.8716282054818988,
+          0.8942996255995496
+        ],
+        "n_with_confidence": 3080,
+        "mean_stated_confidence": 0.7880064935064935,
+        "accuracy_on_those": 0.8834415584415585,
+        "ece_stated_confidence": 0.09809740259740261,
+        "overconfidence": -0.09543506493506493,
+        "latency_ms": {
+          "median": 1364.6959075003906,
+          "p90": 2735.4630890004046
+        },
+        "cost_usd": 14.096036,
+        "cost_per_1000_calls_usd": 4.576635064935065,
+        "mean_prompt_tokens": 871.8097402597402,
+        "providers": [
+          "Anthropic API (direct)"
+        ],
+        "strict_json_reply_rate": 0.987987012987013,
+        "reasoning_tokens_total": 82125,
+        "mean_output_tokens": 54.4698051948052
+      },
+      "spam_clean": {
+        "n": 836,
+        "n_missing": 0,
+        "invalid_output": 0,
+        "invalid_output_rate": 0.0,
+        "accuracy_invalid_counted_wrong": 0.9964114832535885,
+        "accuracy_ci95": [
+          0.9895029197393926,
+          0.998778846090071
+        ],
+        "n_with_confidence": 836,
+        "mean_stated_confidence": 0.9641387559808612,
+        "accuracy_on_those": 0.9964114832535885,
+        "ece_stated_confidence": 0.0322727272727273,
+        "overconfidence": -0.03227272727272734,
+        "latency_ms": {
+          "median": 1054.8920100000032,
+          "p90": 1875.1779909998731
+        },
+        "cost_usd": 0.717216,
+        "cost_per_1000_calls_usd": 0.8579138755980862,
+        "mean_prompt_tokens": 121.32655502392345,
+        "providers": [
+          "Anthropic API (direct)"
+        ],
+        "strict_json_reply_rate": 0.9964114832535885,
+        "reasoning_tokens_total": 3689,
+        "mean_output_tokens": 18.630382775119617
+      },
+      "spam_swap2": {
+        "n": 836,
+        "n_missing": 0,
+        "invalid_output": 0,
+        "invalid_output_rate": 0.0,
+        "accuracy_invalid_counted_wrong": 0.9964114832535885,
+        "accuracy_ci95": [
+          0.9895029197393926,
+          0.998778846090071
+        ],
+        "n_with_confidence": 836,
+        "mean_stated_confidence": 0.9625837320574163,
+        "accuracy_on_those": 0.9964114832535885,
+        "ece_stated_confidence": 0.03562200956937803,
+        "overconfidence": -0.03382775119617221,
+        "latency_ms": {
+          "median": 1071.214921000319,
+          "p90": 1845.2793819997169
+        },
+        "cost_usd": 0.756892,
+        "cost_per_1000_calls_usd": 0.9053732057416268,
+        "mean_prompt_tokens": 123.32894736842105,
+        "providers": [
+          "Anthropic API (direct)"
+        ],
+        "strict_json_reply_rate": 0.992822966507177,
+        "reasoning_tokens_total": 5208,
+        "mean_output_tokens": 20.60287081339713
+      },
+      "injection_banking": {
+        "n": 1000,
+        "n_missing": 0,
+        "invalid_output": 0,
+        "invalid_output_rate": 0.0,
+        "accuracy_invalid_counted_wrong": 0.822,
+        "accuracy_ci95": [
+          0.7970731776054791,
+          0.8444623898910937
+        ],
+        "n_with_confidence": 1000,
+        "mean_stated_confidence": 0.80274,
+        "accuracy_on_those": 0.822,
+        "ece_stated_confidence": 0.06846,
+        "overconfidence": -0.019259999999999944,
+        "followed_injected_label": 0.082,
+        "latency_ms": {
+          "median": 2173.7615069996536,
+          "p90": 3100.227775001258
+        },
+        "cost_usd": 5.944624,
+        "cost_per_1000_calls_usd": 5.944624,
+        "mean_prompt_tokens": 892.996,
+        "providers": [
+          "Anthropic API (direct)"
+        ],
+        "strict_json_reply_rate": 1.0,
+        "reasoning_tokens_total": 91436,
+        "mean_output_tokens": 118.632
+      },
+      "injection_control_banking": {
+        "n": 1000,
+        "n_missing": 0,
+        "invalid_output": 0,
+        "invalid_output_rate": 0.0,
+        "accuracy_invalid_counted_wrong": 0.891,
+        "accuracy_ci95": [
+          0.8701675080724476,
+          0.9088399667448197
+        ],
+        "n_with_confidence": 1000,
+        "mean_stated_confidence": 0.7979400000000001,
+        "accuracy_on_those": 0.891,
+        "ece_stated_confidence": 0.09325999999999997,
+        "overconfidence": -0.09305999999999992,
+        "latency_ms": {
+          "median": 1385.8966285006318,
+          "p90": 2630.949579999651
+        },
+        "cost_usd": 4.88844,
+        "cost_per_1000_calls_usd": 4.88844,
+        "mean_prompt_tokens": 890.91,
+        "providers": [
+          "Anthropic API (direct)"
+        ],
+        "strict_json_reply_rate": 0.999,
+        "reasoning_tokens_total": 38996,
+        "mean_output_tokens": 66.24
+      },
+      "injection_casual_banking": {
+        "n": 1000,
+        "n_missing": 0,
+        "invalid_output": 0,
+        "invalid_output_rate": 0.0,
+        "accuracy_invalid_counted_wrong": 0.851,
+        "accuracy_ci95": [
+          0.8275879762849152,
+          0.8717256392160075
+        ],
+        "n_with_confidence": 1000,
+        "mean_stated_confidence": 0.72073,
+        "accuracy_on_those": 0.851,
+        "ece_stated_confidence": 0.14185,
+        "overconfidence": -0.13027,
+        "followed_injected_label": 0.039,
+        "latency_ms": {
+          "median": 2465.580332999707,
+          "p90": 3482.59448600038
+        },
+        "cost_usd": 6.456964,
+        "cost_per_1000_calls_usd": 6.456964,
+        "mean_prompt_tokens": 883.996,
+        "providers": [
+          "Anthropic API (direct)"
+        ],
+        "strict_json_reply_rate": 0.999,
+        "reasoning_tokens_total": 118811,
+        "mean_output_tokens": 146.049
+      },
+      "injection_casual_defended_banking": {
+        "n": 1000,
+        "n_missing": 0,
+        "invalid_output": 0,
+        "invalid_output_rate": 0.0,
+        "accuracy_invalid_counted_wrong": 0.888,
+        "accuracy_ci95": [
+          0.8669499761461334,
+          0.9060804592224079
+        ],
+        "n_with_confidence": 1000,
+        "mean_stated_confidence": 0.80771,
+        "accuracy_on_those": 0.888,
+        "ece_stated_confidence": 0.08068999999999998,
+        "overconfidence": -0.08028999999999997,
+        "followed_injected_label": 0.003,
+        "latency_ms": {
+          "median": 1739.6819950008648,
+          "p90": 2733.4983159998956
+        },
+        "cost_usd": 5.192684,
+        "cost_per_1000_calls_usd": 5.192684,
+        "mean_prompt_tokens": 919.996,
+        "providers": [
+          "Anthropic API (direct)"
+        ],
+        "strict_json_reply_rate": 0.997,
+        "reasoning_tokens_total": 48215,
+        "mean_output_tokens": 75.635
+      },
+      "latency_sequential": {
+        "n": 100,
+        "n_missing": 0,
+        "invalid_output": 0,
+        "invalid_output_rate": 0.0,
+        "accuracy_invalid_counted_wrong": 0.96,
+        "accuracy_ci95": [
+          0.9016292850152788,
+          0.9843366961172447
+        ],
+        "n_with_confidence": 100,
+        "mean_stated_confidence": 0.8449,
+        "accuracy_on_those": 0.96,
+        "ece_stated_confidence": 0.1251,
+        "overconfidence": -0.11509999999999998,
+        "latency_ms": {
+          "median": 1234.162661499795,
+          "p90": 2302.6833919993805
+        },
+        "cost_usd": 0.4245,
+        "cost_per_1000_calls_usd": 4.245,
+        "mean_prompt_tokens": 866.55,
+        "providers": [
+          "Anthropic API (direct)"
+        ],
+        "strict_json_reply_rate": 0.99,
+        "reasoning_tokens_total": 1419,
+        "mean_output_tokens": 38.94
+      }
+    },
+    "claude-fable-5.1": {
+      "injection_banking": {
+        "n": 1000,
+        "n_missing": 0,
+        "invalid_output": 0,
+        "invalid_output_rate": 0.0,
+        "accuracy_invalid_counted_wrong": 0.842,
+        "accuracy_ci95": [
+          0.8180901539098308,
+          0.8632923432449143
+        ],
+        "n_with_confidence": 1000,
+        "mean_stated_confidence": 0.87369,
+        "accuracy_on_those": 0.842,
+        "ece_stated_confidence": 0.04579000000000007,
+        "overconfidence": 0.031689999999999996,
+        "followed_injected_label": 0.005,
+        "latency_ms": {
+          "median": 1240.7494349997705,
+          "p90": 1668.1204510000498
+        },
+        "cost_usd": 10.28631,
+        "cost_per_1000_calls_usd": 10.28631,
+        "mean_prompt_tokens": 892.996,
+        "providers": [
+          "Anthropic API (direct)"
+        ],
+        "strict_json_reply_rate": 0.999,
+        "reasoning_tokens_total": 0,
+        "mean_output_tokens": 27.127
+      },
+      "injection_control_banking": {
+        "n": 1000,
+        "n_missing": 0,
+        "invalid_output": 0,
+        "invalid_output_rate": 0.0,
+        "accuracy_invalid_counted_wrong": 0.859,
+        "accuracy_ci95": [
+          0.8360535139205308,
+          0.8791988734436608
+        ],
+        "n_with_confidence": 1000,
+        "mean_stated_confidence": 0.86405,
+        "accuracy_on_those": 0.859,
+        "ece_stated_confidence": 0.020430000000000014,
+        "overconfidence": 0.005049999999999999,
+        "latency_ms": {
+          "median": 1238.3366020001176,
+          "p90": 1743.6178230000223
+        },
+        "cost_usd": 10.26485,
+        "cost_per_1000_calls_usd": 10.26485,
+        "mean_prompt_tokens": 890.91,
+        "providers": [
+          "Anthropic API (direct)"
+        ],
+        "strict_json_reply_rate": 1.0,
+        "reasoning_tokens_total": 0,
+        "mean_output_tokens": 27.115
+      },
+      "injection_casual_banking": {
+        "n": 1000,
+        "n_missing": 0,
+        "invalid_output": 0,
+        "invalid_output_rate": 0.0,
+        "accuracy_invalid_counted_wrong": 0.837,
+        "accuracy_ci95": [
+          0.8128247622391338,
+          0.8585960025010684
+        ],
+        "n_with_confidence": 1000,
+        "mean_stated_confidence": 0.82438,
+        "accuracy_on_those": 0.837,
+        "ece_stated_confidence": 0.034259999999999964,
+        "overconfidence": -0.012619999999999965,
+        "followed_injected_label": 0.019,
+        "latency_ms": {
+          "median": 1223.8816204996965,
+          "p90": 1741.4591550000296
+        },
+        "cost_usd": 10.19571,
+        "cost_per_1000_calls_usd": 10.195710000000002,
+        "mean_prompt_tokens": 883.996,
+        "providers": [
+          "Anthropic API (direct)"
+        ],
+        "strict_json_reply_rate": 1.0,
+        "reasoning_tokens_total": 0,
+        "mean_output_tokens": 27.115
+      },
+      "injection_casual_defended_banking": {
+        "n": 1000,
+        "n_missing": 0,
+        "invalid_output": 0,
+        "invalid_output_rate": 0.0,
+        "accuracy_invalid_counted_wrong": 0.848,
+        "accuracy_ci95": [
+          0.8244190784606505,
+          0.8689174975915462
+        ],
+        "n_with_confidence": 1000,
+        "mean_stated_confidence": 0.87838,
+        "accuracy_on_those": 0.848,
+        "ece_stated_confidence": 0.04310000000000002,
+        "overconfidence": 0.030380000000000074,
+        "followed_injected_label": 0.006,
+        "latency_ms": {
+          "median": 1245.7964320001338,
+          "p90": 1643.666549000045
+        },
+        "cost_usd": 10.55306,
+        "cost_per_1000_calls_usd": 10.55306,
+        "mean_prompt_tokens": 919.996,
+        "providers": [
+          "Anthropic API (direct)"
+        ],
+        "strict_json_reply_rate": 1.0,
+        "reasoning_tokens_total": 0,
+        "mean_output_tokens": 27.062
+      },
+      "latency_sequential": {
+        "n": 100,
+        "n_missing": 0,
+        "invalid_output": 0,
+        "invalid_output_rate": 0.0,
+        "accuracy_invalid_counted_wrong": 0.92,
+        "accuracy_ci95": [
+          0.8500189223072278,
+          0.9589065387268155
+        ],
+        "n_with_confidence": 100,
+        "mean_stated_confidence": 0.8822,
+        "accuracy_on_those": 0.92,
+        "ece_stated_confidence": 0.05320000000000004,
+        "overconfidence": -0.037800000000000056,
+        "latency_ms": {
+          "median": 1298.8001010007793,
+          "p90": 1590.7440699993458
+        },
+        "cost_usd": 0.98755,
+        "cost_per_1000_calls_usd": 9.8755,
+        "mean_prompt_tokens": 866.55,
+        "providers": [
+          "Anthropic API (direct)"
+        ],
+        "strict_json_reply_rate": 1.0,
+        "reasoning_tokens_total": 0,
+        "mean_output_tokens": 24.2
+      },
+      "banking77_clean_s250": {
+        "n": 250,
+        "n_missing": 0,
+        "invalid_output": 0,
+        "invalid_output_rate": 0.0,
+        "accuracy_invalid_counted_wrong": 0.84,
+        "accuracy_ci95": [
+          0.7894631610280652,
+          0.8802461951551467
+        ],
+        "n_with_confidence": 250,
+        "mean_stated_confidence": 0.85124,
+        "accuracy_on_those": 0.84,
+        "ece_stated_confidence": 0.03764000000000005,
+        "overconfidence": 0.011240000000000028,
+        "latency_ms": {
+          "median": 1458.8261104991034,
+          "p90": 2520.9802989993477
+        },
+        "cost_usd": 2.51221,
+        "cost_per_1000_calls_usd": 10.04884,
+        "mean_prompt_tokens": 869.184,
+        "providers": [
+          "Anthropic API (direct)"
+        ],
+        "strict_json_reply_rate": 1.0,
+        "reasoning_tokens_total": 0,
+        "mean_output_tokens": 27.14
+      },
+      "banking77_swap2_s250": {
+        "n": 250,
+        "n_missing": 0,
+        "invalid_output": 0,
+        "invalid_output_rate": 0.0,
+        "accuracy_invalid_counted_wrong": 0.84,
+        "accuracy_ci95": [
+          0.7894631610280652,
+          0.8802461951551467
+        ],
+        "n_with_confidence": 250,
+        "mean_stated_confidence": 0.84936,
+        "accuracy_on_those": 0.84,
+        "ece_stated_confidence": 0.046959999999999974,
+        "overconfidence": 0.009360000000000035,
+        "latency_ms": {
+          "median": 1509.9235450006745,
+          "p90": 2973.518194999997
+        },
+        "cost_usd": 2.5194199999999998,
+        "cost_per_1000_calls_usd": 10.077679999999999,
+        "mean_prompt_tokens": 871.968,
+        "providers": [
+          "Anthropic API (direct)"
+        ],
+        "strict_json_reply_rate": 1.0,
+        "reasoning_tokens_total": 0,
+        "mean_output_tokens": 27.16
+      },
+      "injection_banking_s250": {
+        "n": 250,
+        "n_missing": 0,
+        "invalid_output": 0,
+        "invalid_output_rate": 0.0,
+        "accuracy_invalid_counted_wrong": 0.82,
+        "accuracy_ci95": [
+          0.7676481201762065,
+          0.8626665679962281
+        ],
+        "n_with_confidence": 250,
+        "mean_stated_confidence": 0.86252,
+        "accuracy_on_those": 0.82,
+        "ece_stated_confidence": 0.07244000000000002,
+        "overconfidence": 0.04252,
+        "followed_injected_label": 0.004,
+        "latency_ms": {
+          "median": 1519.6713805007676,
+          "p90": 2869.2238469993754
+        },
+        "cost_usd": 2.57429,
+        "cost_per_1000_calls_usd": 10.29716,
+        "mean_prompt_tokens": 893.676,
+        "providers": [
+          "Anthropic API (direct)"
+        ],
+        "strict_json_reply_rate": 1.0,
+        "reasoning_tokens_total": 0,
+        "mean_output_tokens": 27.208
+      },
+      "injection_control_banking_s250": {
+        "n": 250,
+        "n_missing": 0,
+        "invalid_output": 0,
+        "invalid_output_rate": 0.0,
+        "accuracy_invalid_counted_wrong": 0.84,
+        "accuracy_ci95": [
+          0.7894631610280652,
+          0.8802461951551467
+        ],
+        "n_with_confidence": 250,
+        "mean_stated_confidence": 0.85156,
+        "accuracy_on_those": 0.84,
+        "ece_stated_confidence": 0.04075999999999993,
+        "overconfidence": 0.011560000000000015,
+        "latency_ms": {
+          "median": 1497.3226319998503,
+          "p90": 2812.0504550006444
+        },
+        "cost_usd": 2.56806,
+        "cost_per_1000_calls_usd": 10.27224,
+        "mean_prompt_tokens": 891.424,
+        "providers": [
+          "Anthropic API (direct)"
+        ],
+        "strict_json_reply_rate": 1.0,
+        "reasoning_tokens_total": 0,
+        "mean_output_tokens": 27.16
+      },
+      "injection_casual_banking_s250": {
+        "n": 250,
+        "n_missing": 0,
+        "invalid_output": 0,
+        "invalid_output_rate": 0.0,
+        "accuracy_invalid_counted_wrong": 0.828,
+        "accuracy_ci95": [
+          0.7763472794809159,
+          0.8697252758958296
+        ],
+        "n_with_confidence": 250,
+        "mean_stated_confidence": 0.81868,
+        "accuracy_on_those": 0.828,
+        "ece_stated_confidence": 0.023159999999999983,
+        "overconfidence": -0.009319999999999995,
+        "followed_injected_label": 0.028,
+        "latency_ms": {
+          "median": 1496.1965615002555,
+          "p90": 3276.393737000035
+        },
+        "cost_usd": 2.55209,
+        "cost_per_1000_calls_usd": 10.20836,
+        "mean_prompt_tokens": 884.676,
+        "providers": [
+          "Anthropic API (direct)"
+        ],
+        "strict_json_reply_rate": 1.0,
+        "reasoning_tokens_total": 0,
+        "mean_output_tokens": 27.232
+      },
+      "injection_casual_defended_banking_s250": {
+        "n": 250,
+        "n_missing": 0,
+        "invalid_output": 0,
+        "invalid_output_rate": 0.0,
+        "accuracy_invalid_counted_wrong": 0.828,
+        "accuracy_ci95": [
+          0.7763472794809159,
+          0.8697252758958296
+        ],
+        "n_with_confidence": 250,
+        "mean_stated_confidence": 0.8678400000000001,
+        "accuracy_on_those": 0.828,
+        "ece_stated_confidence": 0.07760000000000003,
+        "overconfidence": 0.0398400000000001,
+        "followed_injected_label": 0.008,
+        "latency_ms": {
+          "median": 1516.0589384995546,
+          "p90": 2732.4048959999345
+        },
+        "cost_usd": 2.64054,
+        "cost_per_1000_calls_usd": 10.56216,
+        "mean_prompt_tokens": 920.676,
+        "providers": [
+          "Anthropic API (direct)"
+        ],
+        "strict_json_reply_rate": 1.0,
+        "reasoning_tokens_total": 0,
+        "mean_output_tokens": 27.108
+      }
+    }
+  },
+  "total_cost_usd": 144.6548362600077,
+  "cost_by_provider_usd": {
+    "openrouter": 3.1147882599998598,
+    "anthropic": 141.54004800000178
+  }
+}
