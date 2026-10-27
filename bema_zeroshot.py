@@ -43,7 +43,10 @@ from transformers import AutoModel, AutoTokenizer
 import bench_jev as B
 import redteam_jev as R
 
-MODEL_ID = "sentence-transformers/all-MiniLM-L6-v2"
+MODEL_ID = os.environ.get("ZS_MODEL_ID", "sentence-transformers/all-MiniLM-L6-v2")
+OFFSHELF_NAME = os.environ.get("ZS_OFFSHELF_NAME", "zs_offshelf")
+ONLY_CLEAN = os.environ.get("ZS_ONLY_CLEAN") == "1"
+POOL = os.environ.get("ZS_POOL", "mean")   # bigger models: clean + one typo condition only
 SEED = 4321
 MAX_LEN = 64
 BATCH = 32
@@ -67,6 +70,9 @@ def embed(tok, model, texts, grad=False):
         for i in range(0, len(texts), 128):
             x = tok(texts[i:i + 128], padding=True, truncation=True, max_length=MAX_LEN, return_tensors="pt")
             h = model(**x).last_hidden_state
+            if POOL == "cls":   # BGE models are trained with [CLS] pooling
+                out.append(F.normalize(h[:, 0], dim=-1))
+                continue
             m = x["attention_mask"].unsqueeze(-1).float()
             out.append(F.normalize((h * m).sum(1) / m.sum(1).clamp(min=1), dim=-1))
     return torch.cat(out)
@@ -174,9 +180,10 @@ def temperature_on_source(tok, model, source):
 def predict():
     # (model path, target -> dataset whose VALIDATION split sets the temperature).
     # The temperature always comes from the other dataset, never the one being scored.
-    variants = {"zs_offshelf": (base_path(), {"banking": "clinc", "clinc": "banking"}),
-                "zs_from_clinc": ("zs_from_clinc", {"banking": "clinc"}),
-                "zs_from_banking": ("zs_from_banking", {"clinc": "banking"})}
+    variants = {OFFSHELF_NAME: (base_path(), {"banking": "clinc", "clinc": "banking"})}
+    if OFFSHELF_NAME == "zs_offshelf":
+        variants.update({"zs_from_clinc": ("zs_from_clinc", {"banking": "clinc"}),
+                         "zs_from_banking": ("zs_from_banking", {"clinc": "banking"})})
     summary = {}
     for name, (path, plan) in variants.items():
         if not os.path.isdir(path):
@@ -198,14 +205,14 @@ def predict():
         if "banking" in targets:
             keys, descs = banking_labels()
             cats = B.categories()
-            for cond in B.TASKS["banking77"]["conditions"]:
+            for cond in (["clean", "swap2"] if ONLY_CLEAN else B.TASKS["banking77"]["conditions"]):
                 rows = B.load_inputs("banking77", cond)
                 out = choose([r["text"] for r in rows], keys, descs, temps["banking"])
                 with open(f"runs/bema/{name}_banking77_{cond}.jsonl", "w") as f:
                     for r, (k, c) in zip(rows, out):
                         f.write(json.dumps({"idx": r["idx"], "text_sha256": r["text_sha256"],
                                             "pred": cats.index(k), "conf": c}) + "\n")
-            for test in sorted(os.listdir("runs/redteam/inputs")):
+            for test in ([] if ONLY_CLEAN else sorted(os.listdir("runs/redteam/inputs"))):
                 items = B.read_jsonl(f"runs/redteam/inputs/{test}")
                 if items[0]["qset"] not in ("banking", "banking_defended", "banking_shuffled"):
                     continue
@@ -217,7 +224,8 @@ def predict():
             print(f"{name}: BANKING77 predictions written")
         if "clinc" in targets:
             keys, descs = clinc_labels()
-            for test in ("clinc150_clean", "clinc150_swap2", "injection_oos_clinc"):
+            for test in (("clinc150_clean", "clinc150_swap2") if ONLY_CLEAN else
+                         ("clinc150_clean", "clinc150_swap2", "injection_oos_clinc")):
                 items = B.read_jsonl(f"runs/redteam/inputs/{test}.jsonl")
                 out = choose([it["state"] for it in items], keys, descs, temps["clinc"])
                 with open(f"runs/redteam/bema/{test}__{name}.jsonl", "w") as f:
@@ -225,7 +233,9 @@ def predict():
                         f.write(json.dumps({"key": it["key"], "state_sha256": it["state_sha256"],
                                             "pred": k, "conf": c}) + "\n")
             print(f"{name}: CLINC150 predictions written")
-    json.dump(summary, open("runs/bema/zeroshot_temperatures.json", "w"), indent=2)
+    tp = "runs/bema/zeroshot_temperatures.json"
+    old = json.load(open(tp)) if os.path.exists(tp) else {}
+    json.dump({**old, **summary}, open(tp, "w"), indent=2)
 
 
 if __name__ == "__main__":
