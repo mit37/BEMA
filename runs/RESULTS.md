@@ -1,6 +1,6 @@
 # Results summary (generated)
 
-Generated 2026-10-27T22:34:53.059422+00:00 by `python3 results_summary.py` from raw files.
+Generated 2026-10-27T22:48:41.512999+00:00 by `python3 results_summary.py` from raw files.
 
 ## banking77_typos
 
@@ -477,7 +477,8 @@ Generated 2026-10-27T22:34:53.059422+00:00 by `python3 results_summary.py` from 
     "ece": 0.0981
    }
   }
- }
+ },
+ "ece_definition": "expected calibration error over 10 equal-width confidence bins (bench_jev.ece_exact)"
 }
 ```
 
@@ -1567,7 +1568,10 @@ Generated 2026-10-27T22:34:53.059422+00:00 by `python3 results_summary.py` from 
  "clean_reference": {
   "jev": 80.0,
   "bema_baseline": 82.0,
-  "bema_v2": 81.3
+  "bema_v2": 81.3,
+  "bema_v2_full_gpu": 83.0,
+  "bema_v3": 92.8,
+  "zs3_from_clinc": 59.6
  }
 }
 ```

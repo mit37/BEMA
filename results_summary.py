@@ -115,6 +115,7 @@ for cond in B.TASKS["banking77"]["conditions"]:
         a, n = acc(d)
         row[m] = {"accuracy_pct": pct(a), "n": n, "ece": round(ece_of(d), 4) if ece_of(d) is not None else None}
     sec["rows"][cond] = row
+sec["ece_definition"] = "expected calibration error over 10 equal-width confidence bins (bench_jev.ece_exact)"
 OUT["sections"]["banking77_typos"] = sec
 
 # ---------------------------------------------------------------- 2. spam
@@ -253,7 +254,7 @@ sec["note"] = ("BEMA cannot read instructions, so its 'defended' rows are its un
                "clean accuracy on these 1,000 queries: see clean_reference.")
 sec["clean_reference"] = {m: pct(acc({k: v for k, v in (jev_core("banking77", "clean") if m == "jev" else bema_core(m, "banking77", "clean")).items()
                                       if k in {it["key"] for it in B.read_jsonl("runs/redteam/inputs/injection_banking.jsonl")}})[0])
-                          for m in ["jev", "bema_baseline", "bema_v2"]}
+                          for m in ["jev", "bema_baseline", "bema_v2", "bema_v2_full_gpu", "bema_v3", "zs3_from_clinc"]}
 OUT["sections"]["injection"] = sec
 
 # ---------------------------------------------------------------- 5. the rest of the red-team suite: copied from the

@@ -7,7 +7,7 @@ the larger BEMA models on the GPU, scores them on every input, and zips the
 prediction files into gpu_results.zip to send back.
 
 What it trains (training splits only; test splits are only scored):
-  bema_v2_full_gpu   all-MiniLM-L6-v2 (22.7M), every layer, 3 epochs   [cross-check of the cloud run]
+  bema_v2_full_gpu   all-MiniLM-L6-v2 (22.7M), every layer, 3 epochs   [the cloud run of this was stopped in epoch 3]
   bema_v3            BAAI/bge-base-en-v1.5 (110M), every layer, 4 epochs
   zs3_from_clinc / zs3_from_banking
                      bge-base zero-shot transfer: trained on one dataset's

@@ -1,6 +1,6 @@
 # Raw benchmark results
 
-`runs_raw.tar.xz` holds the whole `runs/` folder from the Jev benchmark (mock dry runs excluded):
+`runs_raw.tar.xz` holds the whole `runs/` folder from the Jev benchmark (mock dry runs excluded), including the laptop-GPU predictions and run log:
 frozen inputs with per-text SHA-256, every raw Jev and LLM API response, every BEMA prediction,
 the generated reports, and the independent audits (`runs/audit/`).
 

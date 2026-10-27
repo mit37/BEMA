@@ -18,7 +18,8 @@ Three variants, all evaluated on the identical frozen inputs Jev saw:
 Option descriptions are exactly the strings Jev was given (bench_jev.py /
 redteam_jev.py `criteria`), so both systems see the same label text.
 
-Compute: 2 CPU cores, so fine-tuning trains only the top 3 of 6 encoder layers
+Compute: on the 2-core cloud machine fine-tuning trained only the top ZS_FREEZE..6 layers (ZS_FREEZE=3);
+the GPU run (gpu_run.py) sets ZS_FREEZE=0, training every transformer layer (embeddings stay frozen),
 for at most ZS_MAX_STEPS steps of 32 examples (lr 6e-5).
 
 Fine-tuning uses the human labels of the SOURCE dataset only; the target
