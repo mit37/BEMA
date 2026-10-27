@@ -401,6 +401,9 @@ def cmd_bema(names):
     enc_multi = encoder("data/tokenizer_multitask.json", data["max_len"], data["pad_id"])
     models = {}
     for name, path in B.CHECKPOINTS.items():
+        if not os.path.exists(path):
+            print(f"{name}: {path} not found, skipped")
+            continue
         m = JevCloneEncoder(vocab_size=data["vocab_size"], max_len=data["max_len"],
                             num_choice_classes=data["num_choice_classes"], enable_score=True)
         m.load_state_dict(torch.load(path, map_location="cpu"))

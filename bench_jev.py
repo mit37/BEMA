@@ -75,7 +75,7 @@ CHECKPOINTS = {"bema_baseline": "jev_clone_multitask_calibrated.pt",
                "bema_typo_augmented": "jev_clone_multitask_augmented_calibrated.pt"}
 
 # BEMA v2 predictions come from bema_v2.py; zero-shot variants from bema_zeroshot.py
-REPORT_MODELS = [*CHECKPOINTS, "bema_v2", "zs_offshelf", "zs_from_clinc"]
+REPORT_MODELS = [*CHECKPOINTS, "bema_v2", "bema_v2_spell", "zs_offshelf", "zs_from_clinc"]
 MOCK = os.environ.get("JEV_MOCK") == "1"
 RUNS = "runs/mock" if MOCK else "runs"
 INPUTS = "runs/inputs"   # shared by real and mock runs: inputs never depend on Jev
@@ -407,6 +407,9 @@ def cmd_bema(args):
     os.makedirs("runs/bema", exist_ok=True)
     timing = json.load(open("runs/bema/timing.json")) if os.path.exists("runs/bema/timing.json") else {}
     for name, path in CHECKPOINTS.items():
+        if not os.path.exists(path):
+            print(f"{name}: {path} not found, skipped")
+            continue
         m = JevCloneEncoder(vocab_size=data["vocab_size"], max_len=max_len,
                             num_choice_classes=data["num_choice_classes"], enable_score=True)
         m.load_state_dict(torch.load(path, map_location="cpu"))
