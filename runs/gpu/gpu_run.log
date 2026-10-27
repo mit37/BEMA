@@ -1,0 +1,274 @@
+{"python": "3.12.0", "platform": "Windows-11-10.0.26200-SP0", "torch": "2.14.1+cu126", "cuda": true, "mps": false, "gpu": "NVIDIA GeForce RTX 4050 Laptop GPU", "gpu_memory_gb": 6.4}
+
+=== rebuild the dataset splits
+
+
+
+Noul (spam): train=3900 val=836 test=836
+Choice (banking77): train=8503 val=1500 test=3080 classes=77
+Score (Amazon Fine Food Reviews): train=7078 val=1517 test=1517
+Shared BPE vocab size: 8000
+Saved data/prepared_multitask.pkl and data/tokenizer_multitask.json
+    done in 3s (exit 0)
+
+=== rebuild the frozen test inputs
+runs/inputs/banking77_clean.jsonl: 3080 examples
+runs/inputs/banking77_swap2.jsonl: 3080 examples
+runs/inputs/banking77_swap4.jsonl: 3080 examples
+runs/inputs/banking77_keyboard2.jsonl: 3080 examples
+runs/inputs/banking77_delete2.jsonl: 3080 examples
+runs/inputs/banking77_insert2.jsonl: 3080 examples
+runs/inputs/banking77_mixed3.jsonl: 3080 examples
+runs/inputs/spam_clean.jsonl: 836 examples
+runs/inputs/spam_swap2.jsonl: 836 examples
+runs/inputs/spam_keyboard2.jsonl: 836 examples
+runs/inputs/spam_mixed3.jsonl: 836 examples
+    done in 0s (exit 0)
+
+=== rebuild the red-team inputs
+injection_banking 1000
+injection_spam 116
+evasion_spam 116
+ood_spam_on_banking 1000
+gibberish_banking 100
+order_shuffle_banking 1000
+repeat_banking 1000
+question_count 300
+score_amazon_clean 1517
+score_amazon_swap2 1517
+clinc150_clean 5500
+clinc150_swap2 5500
+injection_control_banking 1000
+injection_prefix_banking 1000
+injection_casual_banking 1000
+injection_defended_banking 1000
+injection_oos_clinc 1000
+injection_casual_defended_banking 1000
+repeat_banking_spread 1000
+latency_sequential_banking 100
+    done in 1s (exit 0)
+All 32 input files match the cloud run exactly.
+
+=== train BEMA v2 full (MiniLM, all layers, 3 epochs)
+Fetching 11 files:   0%|          | 0/11 [00:00<?, ?it/s]Fetching 11 files: 100%|██████████| 11/11 [00:00<00:00, 1744.59it/s]
+Loading weights:   0%|          | 0/103 [00:00<?, ?it/s]Loading weights: 100%|██████████| 103/103 [00:00<00:00, 3151.52it/s]
+device: cuda
+trainable params: 10.8M of 22.7M
+  epoch 1 step 0/266 loss 5.692 (0s)
+  epoch 1 step 50/266 loss 4.741 (7s)
+  epoch 1 step 100/266 loss 3.981 (14s)
+  epoch 1 step 150/266 loss 3.140 (21s)
+  epoch 1 step 200/266 loss 2.596 (29s)
+  epoch 1 step 250/266 loss 2.286 (36s)
+Epoch 1 loss=3.6379 noul_val_acc=0.9844 choice_val_acc=0.7240 score_val_mae=0.1483 (40s)
+  epoch 2 step 0/266 loss 1.926 (0s)
+  epoch 2 step 50/266 loss 1.945 (7s)
+  epoch 2 step 100/266 loss 1.792 (15s)
+  epoch 2 step 150/266 loss 1.529 (22s)
+  epoch 2 step 200/266 loss 1.594 (29s)
+  epoch 2 step 250/266 loss 1.875 (37s)
+Epoch 2 loss=1.6758 noul_val_acc=0.9844 choice_val_acc=0.8347 score_val_mae=0.1347 (41s)
+  epoch 3 step 0/266 loss 1.418 (0s)
+  epoch 3 step 50/266 loss 1.212 (8s)
+  epoch 3 step 100/266 loss 1.389 (15s)
+  epoch 3 step 150/266 loss 1.552 (22s)
+  epoch 3 step 200/266 loss 1.175 (30s)
+  epoch 3 step 250/266 loss 1.533 (37s)
+Epoch 3 loss=1.2936 noul_val_acc=0.9844 choice_val_acc=0.8447 score_val_mae=0.1336 (42s)
+C:\Users\mitan\Downloads\BEMA-claude-jev-benchmark\bema_v2.py:125: UserWarning: Converting a tensor with requires_grad=True to a scalar may lead to unexpected behavior.
+Consider using tensor.detach() first. (Triggered internally at C:\actions-runner\_work\pytorch\pytorch\torch\csrc\autograd\generated\python_variable_methods.cpp:821.)
+  return float(t.exp())
+Temperatures: noul 1.071, choice 0.516
+Saved bema_v2_full_gpu.pt
+    done in 134s (exit 0)
+
+=== score BEMA v2 full
+Fetching 11 files:   0%|          | 0/11 [00:00<?, ?it/s]Fetching 11 files: 100%|██████████| 11/11 [00:00<00:00, 1067.38it/s]
+Loading weights:   0%|          | 0/103 [00:00<?, ?it/s]Loading weights: 100%|██████████| 103/103 [00:00<00:00, 4146.52it/s]
+banking77/clean: done
+banking77/swap2: done
+banking77/swap4: done
+banking77/keyboard2: done
+banking77/delete2: done
+banking77/insert2: done
+banking77/mixed3: done
+spam/clean: done
+spam/swap2: done
+spam/keyboard2: done
+spam/mixed3: done
+redteam evasion_spam: done
+redteam gibberish_banking: done
+redteam injection_banking: done
+redteam injection_casual_banking: done
+redteam injection_casual_defended_banking: done
+redteam injection_control_banking: done
+redteam injection_defended_banking: done
+redteam injection_prefix_banking: done
+redteam injection_spam: done
+redteam latency_sequential_banking: done
+redteam ood_spam_on_banking: done
+redteam order_shuffle_banking: done
+redteam repeat_banking: done
+redteam repeat_banking_spread: done
+redteam score_amazon_clean: done
+redteam score_amazon_swap2: done
+timing: {'n': 300, 'median_ms': 6.909899995662272, 'p90_ms': 10.09850000264123, 'threads': 16, 'device': 'cuda', 'gpu': 'NVIDIA GeForce RTX 4050 Laptop GPU', 'note': 'encoder + 3 heads forward pass, batch size 1, cuda, excludes tokenization'}
+    done in 36s (exit 0)
+
+=== score BEMA v2 full + speller
+Fetching 11 files:   0%|          | 0/11 [00:00<?, ?it/s]Fetching 11 files: 100%|██████████| 11/11 [00:00<00:00, 1251.59it/s]
+Loading weights:   0%|          | 0/103 [00:00<?, ?it/s]Loading weights: 100%|██████████| 103/103 [00:00<00:00, 2927.32it/s]
+banking77/clean: 37/3080 texts changed by the speller
+banking77/swap2: 2986/3080 texts changed by the speller
+banking77/swap4: 3060/3080 texts changed by the speller
+banking77/keyboard2: 2989/3080 texts changed by the speller
+banking77/delete2: 2631/3080 texts changed by the speller
+banking77/insert2: 3041/3080 texts changed by the speller
+banking77/mixed3: 3021/3080 texts changed by the speller
+spam/clean: 214/836 texts changed by the speller
+spam/swap2: 775/836 texts changed by the speller
+spam/keyboard2: 805/836 texts changed by the speller
+spam/mixed3: 817/836 texts changed by the speller
+    done in 33s (exit 0)
+
+=== train BEMA v3 (bge-base 110M, all layers, 4 epochs)
+Fetching 10 files:   0%|          | 0/10 [00:00<?, ?it/s]Fetching 10 files: 100%|██████████| 10/10 [00:00<00:00, 1216.87it/s]
+Loading weights:   0%|          | 0/199 [00:00<?, ?it/s]Loading weights:  10%|█         | 20/199 [00:00<00:00, 194.60it/s]Loading weights:  20%|██        | 40/199 [00:00<00:00, 163.65it/s]Loading weights: 100%|██████████| 199/199 [00:00<00:00, 818.06it/s]
+device: cuda
+trainable params: 85.7M of 109.5M
+  epoch 1 step 0/266 loss 5.647 (1s)
+  epoch 1 step 50/266 loss 5.061 (48s)
+  epoch 1 step 100/266 loss 3.957 (95s)
+  epoch 1 step 150/266 loss 2.665 (142s)
+  epoch 1 step 200/266 loss 2.323 (189s)
+  epoch 1 step 250/266 loss 1.439 (236s)
+Epoch 1 loss=3.3459 noul_val_acc=0.9844 choice_val_acc=0.8400 score_val_mae=0.1093 (300s)
+  epoch 2 step 0/266 loss 1.299 (1s)
+  epoch 2 step 50/266 loss 1.208 (48s)
+  epoch 2 step 100/266 loss 0.984 (95s)
+  epoch 2 step 150/266 loss 0.853 (142s)
+  epoch 2 step 200/266 loss 0.690 (190s)
+  epoch 2 step 250/266 loss 1.084 (237s)
+Epoch 2 loss=0.9522 noul_val_acc=0.9868 choice_val_acc=0.9073 score_val_mae=0.0979 (309s)
+  epoch 3 step 0/266 loss 0.507 (1s)
+  epoch 3 step 50/266 loss 0.537 (48s)
+  epoch 3 step 100/266 loss 0.654 (96s)
+  epoch 3 step 150/266 loss 0.613 (145s)
+  epoch 3 step 200/266 loss 0.511 (193s)
+  epoch 3 step 250/266 loss 0.639 (241s)
+Epoch 3 loss=0.5688 noul_val_acc=0.9868 choice_val_acc=0.9240 score_val_mae=0.0942 (308s)
+  epoch 4 step 0/266 loss 0.343 (1s)
+  epoch 4 step 50/266 loss 0.524 (50s)
+  epoch 4 step 100/266 loss 0.266 (98s)
+  epoch 4 step 150/266 loss 0.400 (146s)
+  epoch 4 step 200/266 loss 0.336 (194s)
+  epoch 4 step 250/266 loss 0.438 (242s)
+Epoch 4 loss=0.4688 noul_val_acc=0.9868 choice_val_acc=0.9273 score_val_mae=0.0922 (314s)
+C:\Users\mitan\Downloads\BEMA-claude-jev-benchmark\bema_v2.py:125: UserWarning: Converting a tensor with requires_grad=True to a scalar may lead to unexpected behavior.
+Consider using tensor.detach() first. (Triggered internally at C:\actions-runner\_work\pytorch\pytorch\torch\csrc\autograd\generated\python_variable_methods.cpp:821.)
+  return float(t.exp())
+Temperatures: noul 1.307, choice 0.742
+Saved bema_v3.pt
+    done in 1276s (exit 0)
+
+=== score BEMA v3
+Fetching 10 files:   0%|          | 0/10 [00:00<?, ?it/s]Fetching 10 files: 100%|██████████| 10/10 [00:00<00:00, 1230.51it/s]
+Loading weights:   0%|          | 0/199 [00:00<?, ?it/s]Loading weights:  21%|██        | 42/199 [00:00<00:00, 403.95it/s]Loading weights:  42%|████▏     | 83/199 [00:00<00:00, 340.30it/s]Loading weights: 100%|██████████| 199/199 [00:00<00:00, 825.43it/s]
+banking77/clean: done
+banking77/swap2: done
+banking77/swap4: done
+banking77/keyboard2: done
+banking77/delete2: done
+banking77/insert2: done
+banking77/mixed3: done
+spam/clean: done
+spam/swap2: done
+spam/keyboard2: done
+spam/mixed3: done
+redteam evasion_spam: done
+redteam gibberish_banking: done
+redteam injection_banking: done
+redteam injection_casual_banking: done
+redteam injection_casual_defended_banking: done
+redteam injection_control_banking: done
+redteam injection_defended_banking: done
+redteam injection_prefix_banking: done
+redteam injection_spam: done
+redteam latency_sequential_banking: done
+redteam ood_spam_on_banking: done
+redteam order_shuffle_banking: done
+redteam repeat_banking: done
+redteam repeat_banking_spread: done
+redteam score_amazon_clean: done
+redteam score_amazon_swap2: done
+timing: {'n': 300, 'median_ms': 7.710600009886548, 'p90_ms': 14.025999989826232, 'threads': 16, 'device': 'cuda', 'gpu': 'NVIDIA GeForce RTX 4050 Laptop GPU', 'note': 'encoder + 3 heads forward pass, batch size 1, cuda, excludes tokenization'}
+    done in 128s (exit 0)
+
+=== score BEMA v3 + speller
+Fetching 10 files:   0%|          | 0/10 [00:00<?, ?it/s]Fetching 10 files: 100%|██████████| 10/10 [00:00<00:00, 1417.95it/s]
+Loading weights:   0%|          | 0/199 [00:00<?, ?it/s]Loading weights:  17%|█▋        | 33/199 [00:00<00:00, 260.15it/s]Loading weights: 100%|██████████| 199/199 [00:00<00:00, 928.05it/s]
+banking77/clean: 37/3080 texts changed by the speller
+banking77/swap2: 2986/3080 texts changed by the speller
+banking77/swap4: 3060/3080 texts changed by the speller
+banking77/keyboard2: 2989/3080 texts changed by the speller
+banking77/delete2: 2631/3080 texts changed by the speller
+banking77/insert2: 3041/3080 texts changed by the speller
+banking77/mixed3: 3021/3080 texts changed by the speller
+spam/clean: 214/836 texts changed by the speller
+spam/swap2: 775/836 texts changed by the speller
+spam/keyboard2: 805/836 texts changed by the speller
+spam/mixed3: 817/836 texts changed by the speller
+    done in 84s (exit 0)
+
+=== train zero-shot transfer (bge-base, 2 epochs each way)
+Fetching 10 files:   0%|          | 0/10 [00:00<?, ?it/s]Fetching 10 files: 100%|██████████| 10/10 [00:00<00:00, 1155.17it/s]
+Loading weights:   0%|          | 0/199 [00:00<?, ?it/s]Loading weights:  18%|█▊        | 35/199 [00:00<00:00, 344.99it/s]Loading weights:  35%|███▌      | 70/199 [00:00<00:00, 286.18it/s]Loading weights: 100%|██████████| 199/199 [00:00<00:00, 824.53it/s]
+  zs3_from_clinc epoch 1 step 0/471 loss 1.319 (1s)
+  zs3_from_clinc epoch 1 step 50/471 loss 0.432 (15s)
+  zs3_from_clinc epoch 1 step 100/471 loss 0.122 (30s)
+  zs3_from_clinc epoch 1 step 150/471 loss 0.140 (44s)
+  zs3_from_clinc epoch 1 step 200/471 loss 0.122 (59s)
+  zs3_from_clinc epoch 1 step 250/471 loss 0.186 (73s)
+  zs3_from_clinc epoch 1 step 300/471 loss 0.413 (87s)
+  zs3_from_clinc epoch 1 step 350/471 loss 0.145 (102s)
+  zs3_from_clinc epoch 1 step 400/471 loss 0.178 (117s)
+  zs3_from_clinc epoch 1 step 450/471 loss 0.016 (132s)
+  zs3_from_clinc epoch 2 step 0/471 loss 0.003 (0s)
+  zs3_from_clinc epoch 2 step 50/471 loss 0.013 (15s)
+  zs3_from_clinc epoch 2 step 100/471 loss 0.003 (29s)
+  zs3_from_clinc epoch 2 step 150/471 loss 0.062 (43s)
+  zs3_from_clinc epoch 2 step 200/471 loss 0.143 (58s)
+  zs3_from_clinc epoch 2 step 250/471 loss 0.010 (73s)
+  zs3_from_clinc epoch 2 step 300/471 loss 0.065 (88s)
+  zs3_from_clinc epoch 2 step 350/471 loss 0.003 (103s)
+  zs3_from_clinc epoch 2 step 400/471 loss 0.008 (118s)
+  zs3_from_clinc epoch 2 step 450/471 loss 0.036 (131s)
+Writing model shards:   0%|          | 0/1 [00:00<?, ?it/s]Writing model shards: 100%|██████████| 1/1 [00:00<00:00,  2.77it/s]Writing model shards: 100%|██████████| 1/1 [00:00<00:00,  2.77it/s]
+saved zs3_from_clinc/
+Fetching 10 files:   0%|          | 0/10 [00:00<?, ?it/s]Fetching 10 files: 100%|██████████| 10/10 [00:00<00:00, 1483.19it/s]
+Loading weights:   0%|          | 0/199 [00:00<?, ?it/s]Loading weights:  14%|█▍        | 28/199 [00:00<00:00, 269.32it/s]Loading weights:  29%|██▊       | 57/199 [00:00<00:00, 278.17it/s]Loading weights:  43%|████▎     | 85/199 [00:00<00:00, 269.88it/s]Loading weights: 100%|██████████| 199/199 [00:00<00:00, 624.30it/s]
+  zs3_from_banking epoch 1 step 0/265 loss 1.715 (0s)
+  zs3_from_banking epoch 1 step 50/265 loss 0.501 (21s)
+  zs3_from_banking epoch 1 step 100/265 loss 0.815 (42s)
+  zs3_from_banking epoch 1 step 150/265 loss 0.544 (62s)
+  zs3_from_banking epoch 1 step 200/265 loss 0.428 (83s)
+  zs3_from_banking epoch 1 step 250/265 loss 0.088 (103s)
+  zs3_from_banking epoch 2 step 0/265 loss 0.256 (1s)
+  zs3_from_banking epoch 2 step 50/265 loss 0.245 (21s)
+  zs3_from_banking epoch 2 step 100/265 loss 0.120 (41s)
+  zs3_from_banking epoch 2 step 150/265 loss 0.250 (62s)
+  zs3_from_banking epoch 2 step 200/265 loss 0.392 (82s)
+  zs3_from_banking epoch 2 step 250/265 loss 0.156 (103s)
+Writing model shards:   0%|          | 0/1 [00:00<?, ?it/s]Writing model shards: 100%|██████████| 1/1 [00:00<00:00,  3.90it/s]Writing model shards: 100%|██████████| 1/1 [00:00<00:00,  3.88it/s]
+saved zs3_from_banking/
+    done in 504s (exit 0)
+
+=== score zero-shot transfer
+Fetching 10 files:   0%|          | 0/10 [00:00<?, ?it/s]Fetching 10 files: 100%|██████████| 10/10 [00:00<00:00, 1574.97it/s]
+Loading weights:   0%|          | 0/199 [00:00<?, ?it/s]Loading weights:  15%|█▌        | 30/199 [00:00<00:00, 264.09it/s]Loading weights:  29%|██▊       | 57/199 [00:00<00:00, 222.30it/s]Loading weights: 100%|██████████| 199/199 [00:00<00:00, 785.24it/s]
+zs3_from_clinc: {'banking': {'temperature': 14.917569160461426, 'fit_on': 'clinc validation split'}}
+zs3_from_clinc: BANKING77 predictions written
+Loading weights:   0%|          | 0/199 [00:00<?, ?it/s]Loading weights:  11%|█         | 21/199 [00:00<00:00, 195.20it/s]Loading weights:  26%|██▌       | 51/199 [00:00<00:00, 246.73it/s]Loading weights: 100%|██████████| 199/199 [00:00<00:00, 813.21it/s]
+zs3_from_banking: {'clinc': {'temperature': 16.035144805908203, 'fit_on': 'banking validation split'}}
+zs3_from_banking: CLINC150 predictions written
+    done in 125s (exit 0)

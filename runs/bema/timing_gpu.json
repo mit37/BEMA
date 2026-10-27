@@ -1,0 +1,20 @@
+{
+  "bema_v2_full_gpu": {
+    "n": 300,
+    "median_ms": 6.909899995662272,
+    "p90_ms": 10.09850000264123,
+    "threads": 16,
+    "device": "cuda",
+    "gpu": "NVIDIA GeForce RTX 4050 Laptop GPU",
+    "note": "encoder + 3 heads forward pass, batch size 1, cuda, excludes tokenization"
+  },
+  "bema_v3": {
+    "n": 300,
+    "median_ms": 7.710600009886548,
+    "p90_ms": 14.025999989826232,
+    "threads": 16,
+    "device": "cuda",
+    "gpu": "NVIDIA GeForce RTX 4050 Laptop GPU",
+    "note": "encoder + 3 heads forward pass, batch size 1, cuda, excludes tokenization"
+  }
+}

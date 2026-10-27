@@ -1,6 +1,6 @@
 # Results summary (generated)
 
-Generated 2026-10-27T21:52:38.601829+00:00 by `python3 results_summary.py` from raw files.
+Generated 2026-10-27T22:34:53.059422+00:00 by `python3 results_summary.py` from raw files.
 
 ## banking77_typos
 
@@ -29,6 +29,26 @@ Generated 2026-10-27T21:52:38.601829+00:00 by `python3 results_summary.py` from 
     "n": 3080,
     "ece": 0.0245
    },
+   "bema_v2_full_gpu": {
+    "accuracy_pct": 82.9,
+    "n": 3080,
+    "ece": 0.0125
+   },
+   "bema_v2_full_gpu_spell": {
+    "accuracy_pct": 82.9,
+    "n": 3080,
+    "ece": 0.0141
+   },
+   "bema_v3": {
+    "accuracy_pct": 93.1,
+    "n": 3080,
+    "ece": 0.0138
+   },
+   "bema_v3_spell": {
+    "accuracy_pct": 93.1,
+    "n": 3080,
+    "ece": 0.0136
+   },
    "zs_offshelf": {
     "accuracy_pct": 62.2,
     "n": 3080,
@@ -43,6 +63,11 @@ Generated 2026-10-27T21:52:38.601829+00:00 by `python3 results_summary.py` from 
     "accuracy_pct": 69.5,
     "n": 3080,
     "ece": 0.0254
+   },
+   "zs3_from_clinc": {
+    "accuracy_pct": 60.1,
+    "n": 3080,
+    "ece": 0.0207
    },
    "claude-haiku-5.5": {
     "accuracy_pct": 76.8,
@@ -86,6 +111,26 @@ Generated 2026-10-27T21:52:38.601829+00:00 by `python3 results_summary.py` from 
     "n": 3080,
     "ece": 0.0283
    },
+   "bema_v2_full_gpu": {
+    "accuracy_pct": 69.2,
+    "n": 3080,
+    "ece": 0.0553
+   },
+   "bema_v2_full_gpu_spell": {
+    "accuracy_pct": 79.7,
+    "n": 3080,
+    "ece": 0.0171
+   },
+   "bema_v3": {
+    "accuracy_pct": 84.6,
+    "n": 3080,
+    "ece": 0.0189
+   },
+   "bema_v3_spell": {
+    "accuracy_pct": 90.5,
+    "n": 3080,
+    "ece": 0.0201
+   },
    "zs_offshelf": {
     "accuracy_pct": 47.3,
     "n": 3080,
@@ -100,6 +145,11 @@ Generated 2026-10-27T21:52:38.601829+00:00 by `python3 results_summary.py` from 
     "accuracy_pct": 54.4,
     "n": 3080,
     "ece": 0.021
+   },
+   "zs3_from_clinc": {
+    "accuracy_pct": 44.2,
+    "n": 3080,
+    "ece": 0.0408
    },
    "claude-haiku-5.5": {
     "accuracy_pct": 74.7,
@@ -143,6 +193,26 @@ Generated 2026-10-27T21:52:38.601829+00:00 by `python3 results_summary.py` from 
     "n": 3080,
     "ece": 0.0463
    },
+   "bema_v2_full_gpu": {
+    "accuracy_pct": 56.4,
+    "n": 3080,
+    "ece": 0.1004
+   },
+   "bema_v2_full_gpu_spell": {
+    "accuracy_pct": 74.7,
+    "n": 3080,
+    "ece": 0.0398
+   },
+   "bema_v3": {
+    "accuracy_pct": 74.7,
+    "n": 3080,
+    "ece": 0.0484
+   },
+   "bema_v3_spell": {
+    "accuracy_pct": 85.7,
+    "n": 3080,
+    "ece": 0.0314
+   },
    "zs_offshelf": {
     "accuracy_pct": 36.4,
     "n": 3080,
@@ -152,6 +222,11 @@ Generated 2026-10-27T21:52:38.601829+00:00 by `python3 results_summary.py` from 
     "accuracy_pct": 35.4,
     "n": 3080,
     "ece": 0.1434
+   },
+   "zs3_from_clinc": {
+    "accuracy_pct": 33.5,
+    "n": 3080,
+    "ece": 0.064
    }
   },
   "keyboard2": {
@@ -175,6 +250,26 @@ Generated 2026-10-27T21:52:38.601829+00:00 by `python3 results_summary.py` from 
     "n": 3080,
     "ece": 0.0297
    },
+   "bema_v2_full_gpu": {
+    "accuracy_pct": 69.4,
+    "n": 3080,
+    "ece": 0.0545
+   },
+   "bema_v2_full_gpu_spell": {
+    "accuracy_pct": 80.6,
+    "n": 3080,
+    "ece": 0.0213
+   },
+   "bema_v3": {
+    "accuracy_pct": 84.1,
+    "n": 3080,
+    "ece": 0.0225
+   },
+   "bema_v3_spell": {
+    "accuracy_pct": 91.0,
+    "n": 3080,
+    "ece": 0.0143
+   },
    "zs_offshelf": {
     "accuracy_pct": 48.7,
     "n": 3080,
@@ -184,6 +279,11 @@ Generated 2026-10-27T21:52:38.601829+00:00 by `python3 results_summary.py` from 
     "accuracy_pct": 47.0,
     "n": 3080,
     "ece": 0.1278
+   },
+   "zs3_from_clinc": {
+    "accuracy_pct": 45.7,
+    "n": 3080,
+    "ece": 0.0285
    }
   },
   "delete2": {
@@ -207,6 +307,26 @@ Generated 2026-10-27T21:52:38.601829+00:00 by `python3 results_summary.py` from 
     "n": 3080,
     "ece": 0.0444
    },
+   "bema_v2_full_gpu": {
+    "accuracy_pct": 71.0,
+    "n": 3080,
+    "ece": 0.0495
+   },
+   "bema_v2_full_gpu_spell": {
+    "accuracy_pct": 77.2,
+    "n": 3080,
+    "ece": 0.0338
+   },
+   "bema_v3": {
+    "accuracy_pct": 84.9,
+    "n": 3080,
+    "ece": 0.0268
+   },
+   "bema_v3_spell": {
+    "accuracy_pct": 88.4,
+    "n": 3080,
+    "ece": 0.0226
+   },
    "zs_offshelf": {
     "accuracy_pct": 49.3,
     "n": 3080,
@@ -216,6 +336,11 @@ Generated 2026-10-27T21:52:38.601829+00:00 by `python3 results_summary.py` from 
     "accuracy_pct": 49.1,
     "n": 3080,
     "ece": 0.1209
+   },
+   "zs3_from_clinc": {
+    "accuracy_pct": 46.4,
+    "n": 3080,
+    "ece": 0.024
    }
   },
   "insert2": {
@@ -239,6 +364,26 @@ Generated 2026-10-27T21:52:38.601829+00:00 by `python3 results_summary.py` from 
     "n": 3080,
     "ece": 0.0248
    },
+   "bema_v2_full_gpu": {
+    "accuracy_pct": 73.2,
+    "n": 3080,
+    "ece": 0.0413
+   },
+   "bema_v2_full_gpu_spell": {
+    "accuracy_pct": 82.6,
+    "n": 3080,
+    "ece": 0.0155
+   },
+   "bema_v3": {
+    "accuracy_pct": 87.3,
+    "n": 3080,
+    "ece": 0.0138
+   },
+   "bema_v3_spell": {
+    "accuracy_pct": 92.9,
+    "n": 3080,
+    "ece": 0.0141
+   },
    "zs_offshelf": {
     "accuracy_pct": 53.1,
     "n": 3080,
@@ -248,6 +393,11 @@ Generated 2026-10-27T21:52:38.601829+00:00 by `python3 results_summary.py` from 
     "accuracy_pct": 51.9,
     "n": 3080,
     "ece": 0.1079
+   },
+   "zs3_from_clinc": {
+    "accuracy_pct": 49.0,
+    "n": 3080,
+    "ece": 0.0332
    }
   },
   "mixed3": {
@@ -271,6 +421,26 @@ Generated 2026-10-27T21:52:38.601829+00:00 by `python3 results_summary.py` from 
     "n": 3080,
     "ece": 0.0295
    },
+   "bema_v2_full_gpu": {
+    "accuracy_pct": 65.2,
+    "n": 3080,
+    "ece": 0.0722
+   },
+   "bema_v2_full_gpu_spell": {
+    "accuracy_pct": 78.8,
+    "n": 3080,
+    "ece": 0.0215
+   },
+   "bema_v3": {
+    "accuracy_pct": 80.9,
+    "n": 3080,
+    "ece": 0.0257
+   },
+   "bema_v3_spell": {
+    "accuracy_pct": 89.1,
+    "n": 3080,
+    "ece": 0.0207
+   },
    "zs_offshelf": {
     "accuracy_pct": 43.7,
     "n": 3080,
@@ -280,6 +450,11 @@ Generated 2026-10-27T21:52:38.601829+00:00 by `python3 results_summary.py` from 
     "accuracy_pct": 44.2,
     "n": 3080,
     "ece": 0.1234
+   },
+   "zs3_from_clinc": {
+    "accuracy_pct": 42.6,
+    "n": 3080,
+    "ece": 0.0325
    },
    "claude-haiku-5.5": {
     "accuracy_pct": 72.6,
@@ -333,6 +508,26 @@ Generated 2026-10-27T21:52:38.601829+00:00 by `python3 results_summary.py` from 
     "n": 836,
     "ece": 0.0071
    },
+   "bema_v2_full_gpu": {
+    "accuracy_pct": 98.8,
+    "n": 836,
+    "ece": 0.0043
+   },
+   "bema_v2_full_gpu_spell": {
+    "accuracy_pct": 98.8,
+    "n": 836,
+    "ece": 0.0043
+   },
+   "bema_v3": {
+    "accuracy_pct": 99.4,
+    "n": 836,
+    "ece": 0.0049
+   },
+   "bema_v3_spell": {
+    "accuracy_pct": 99.4,
+    "n": 836,
+    "ece": 0.0068
+   },
    "claude-haiku-5.5": {
     "accuracy_pct": 94.0,
     "n": 836,
@@ -375,6 +570,26 @@ Generated 2026-10-27T21:52:38.601829+00:00 by `python3 results_summary.py` from 
     "n": 836,
     "ece": 0.0068
    },
+   "bema_v2_full_gpu": {
+    "accuracy_pct": 98.8,
+    "n": 836,
+    "ece": 0.0028
+   },
+   "bema_v2_full_gpu_spell": {
+    "accuracy_pct": 98.8,
+    "n": 836,
+    "ece": 0.0054
+   },
+   "bema_v3": {
+    "accuracy_pct": 99.2,
+    "n": 836,
+    "ece": 0.0068
+   },
+   "bema_v3_spell": {
+    "accuracy_pct": 99.3,
+    "n": 836,
+    "ece": 0.0038
+   },
    "claude-haiku-5.5": {
     "accuracy_pct": 91.7,
     "n": 836,
@@ -416,6 +631,26 @@ Generated 2026-10-27T21:52:38.601829+00:00 by `python3 results_summary.py` from 
     "accuracy_pct": 98.6,
     "n": 836,
     "ece": 0.0054
+   },
+   "bema_v2_full_gpu": {
+    "accuracy_pct": 98.7,
+    "n": 836,
+    "ece": 0.0046
+   },
+   "bema_v2_full_gpu_spell": {
+    "accuracy_pct": 98.7,
+    "n": 836,
+    "ece": 0.0044
+   },
+   "bema_v3": {
+    "accuracy_pct": 99.3,
+    "n": 836,
+    "ece": 0.0065
+   },
+   "bema_v3_spell": {
+    "accuracy_pct": 99.4,
+    "n": 836,
+    "ece": 0.0044
    }
   },
   "mixed3": {
@@ -438,6 +673,26 @@ Generated 2026-10-27T21:52:38.601829+00:00 by `python3 results_summary.py` from 
     "accuracy_pct": 98.7,
     "n": 836,
     "ece": 0.006
+   },
+   "bema_v2_full_gpu": {
+    "accuracy_pct": 98.7,
+    "n": 836,
+    "ece": 0.0054
+   },
+   "bema_v2_full_gpu_spell": {
+    "accuracy_pct": 98.9,
+    "n": 836,
+    "ece": 0.0036
+   },
+   "bema_v3": {
+    "accuracy_pct": 98.9,
+    "n": 836,
+    "ece": 0.0091
+   },
+   "bema_v3_spell": {
+    "accuracy_pct": 99.4,
+    "n": 836,
+    "ece": 0.0074
    }
   }
  },
@@ -455,6 +710,14 @@ Generated 2026-10-27T21:52:38.601829+00:00 by `python3 results_summary.py` from 
   },
   "bema_v2": {
    "accuracy_pct": 98.5,
+   "n": 753
+  },
+  "bema_v2_full_gpu": {
+   "accuracy_pct": 98.7,
+   "n": 753
+  },
+  "bema_v3": {
+   "accuracy_pct": 99.3,
    "n": 753
   },
   "claude-haiku-5.5": {
@@ -507,6 +770,38 @@ Generated 2026-10-27T21:52:38.601829+00:00 by `python3 results_summary.py` from 
    ],
    "n": 3080
   },
+  "bema_v2_full_gpu": {
+   "minus_jev_points": 2.3,
+   "ci95_points": [
+    0.8,
+    3.9
+   ],
+   "n": 3080
+  },
+  "bema_v2_full_gpu_spell": {
+   "minus_jev_points": 2.3,
+   "ci95_points": [
+    0.8,
+    3.9
+   ],
+   "n": 3080
+  },
+  "bema_v3": {
+   "minus_jev_points": 12.5,
+   "ci95_points": [
+    11.2,
+    13.9
+   ],
+   "n": 3080
+  },
+  "bema_v3_spell": {
+   "minus_jev_points": 12.6,
+   "ci95_points": [
+    11.2,
+    13.9
+   ],
+   "n": 3080
+  },
   "zs_offshelf": {
    "minus_jev_points": -18.4,
    "ci95_points": [
@@ -528,6 +823,14 @@ Generated 2026-10-27T21:52:38.601829+00:00 by `python3 results_summary.py` from 
    "ci95_points": [
     -12.6,
     -9.5
+   ],
+   "n": 3080
+  },
+  "zs3_from_clinc": {
+   "minus_jev_points": -20.5,
+   "ci95_points": [
+    -22.2,
+    -18.9
    ],
    "n": 3080
   },
@@ -587,6 +890,26 @@ Generated 2026-10-27T21:52:38.601829+00:00 by `python3 results_summary.py` from 
     "accuracy_pct": 80.0,
     "n": 250
    },
+   "bema_v2_full_gpu": {
+    "accuracy_pct": 80.0,
+    "n": 250
+   },
+   "bema_v2_full_gpu_spell": {
+    "accuracy_pct": 80.0,
+    "n": 250
+   },
+   "bema_v3": {
+    "accuracy_pct": 93.2,
+    "n": 250
+   },
+   "bema_v3_spell": {
+    "accuracy_pct": 93.2,
+    "n": 250
+   },
+   "zs3_from_clinc": {
+    "accuracy_pct": 58.8,
+    "n": 250
+   },
    "claude-haiku-5.5": {
     "accuracy_pct": 72.0,
     "n": 250
@@ -629,6 +952,26 @@ Generated 2026-10-27T21:52:38.601829+00:00 by `python3 results_summary.py` from 
     "accuracy_pct": 76.0,
     "n": 250
    },
+   "bema_v2_full_gpu": {
+    "accuracy_pct": 67.6,
+    "n": 250
+   },
+   "bema_v2_full_gpu_spell": {
+    "accuracy_pct": 76.4,
+    "n": 250
+   },
+   "bema_v3": {
+    "accuracy_pct": 86.4,
+    "n": 250
+   },
+   "bema_v3_spell": {
+    "accuracy_pct": 90.0,
+    "n": 250
+   },
+   "zs3_from_clinc": {
+    "accuracy_pct": 42.0,
+    "n": 250
+   },
    "claude-haiku-5.5": {
     "accuracy_pct": 69.2,
     "n": 250
@@ -668,6 +1011,21 @@ Generated 2026-10-27T21:52:38.601829+00:00 by `python3 results_summary.py` from 
     "accuracy_pct": 42.8,
     "n": 250,
     "followed_injection_pct": 25.6
+   },
+   "bema_v2_full_gpu": {
+    "accuracy_pct": 52.8,
+    "n": 250,
+    "followed_injection_pct": 18.8
+   },
+   "bema_v3": {
+    "accuracy_pct": 60.4,
+    "n": 250,
+    "followed_injection_pct": 26.4
+   },
+   "zs3_from_clinc": {
+    "accuracy_pct": 44.8,
+    "n": 250,
+    "followed_injection_pct": 16.8
    },
    "claude-haiku-5.5": {
     "accuracy_pct": 56.4,
@@ -714,6 +1072,18 @@ Generated 2026-10-27T21:52:38.601829+00:00 by `python3 results_summary.py` from 
     "accuracy_pct": 66.4,
     "n": 250
    },
+   "bema_v2_full_gpu": {
+    "accuracy_pct": 69.2,
+    "n": 250
+   },
+   "bema_v3": {
+    "accuracy_pct": 81.6,
+    "n": 250
+   },
+   "zs3_from_clinc": {
+    "accuracy_pct": 58.8,
+    "n": 250
+   },
    "claude-haiku-5.5": {
     "accuracy_pct": 72.8,
     "n": 250
@@ -753,6 +1123,21 @@ Generated 2026-10-27T21:52:38.601829+00:00 by `python3 results_summary.py` from 
     "accuracy_pct": 45.2,
     "n": 250,
     "followed_injection_pct": 28.8
+   },
+   "bema_v2_full_gpu": {
+    "accuracy_pct": 45.6,
+    "n": 250,
+    "followed_injection_pct": 28.8
+   },
+   "bema_v3": {
+    "accuracy_pct": 60.4,
+    "n": 250,
+    "followed_injection_pct": 27.2
+   },
+   "zs3_from_clinc": {
+    "accuracy_pct": 44.0,
+    "n": 250,
+    "followed_injection_pct": 17.2
    },
    "claude-haiku-5.5": {
     "accuracy_pct": 61.6,
@@ -800,6 +1185,21 @@ Generated 2026-10-27T21:52:38.601829+00:00 by `python3 results_summary.py` from 
     "accuracy_pct": 45.2,
     "n": 250,
     "followed_injection_pct": 28.8
+   },
+   "bema_v2_full_gpu": {
+    "accuracy_pct": 45.6,
+    "n": 250,
+    "followed_injection_pct": 28.8
+   },
+   "bema_v3": {
+    "accuracy_pct": 60.4,
+    "n": 250,
+    "followed_injection_pct": 27.2
+   },
+   "zs3_from_clinc": {
+    "accuracy_pct": 44.0,
+    "n": 250,
+    "followed_injection_pct": 17.2
    },
    "claude-haiku-5.5": {
     "accuracy_pct": 68.0,
@@ -867,6 +1267,24 @@ Generated 2026-10-27T21:52:38.601829+00:00 by `python3 results_summary.py` from 
     "mean_confidence": 0.688,
     "followed_injection_pct": 23.7
    },
+   "bema_v2_full_gpu": {
+    "accuracy_pct": 56.5,
+    "n": 1000,
+    "mean_confidence": 0.691,
+    "followed_injection_pct": 17.2
+   },
+   "bema_v3": {
+    "accuracy_pct": 60.5,
+    "n": 1000,
+    "mean_confidence": 0.784,
+    "followed_injection_pct": 27.1
+   },
+   "zs3_from_clinc": {
+    "accuracy_pct": 45.6,
+    "n": 1000,
+    "mean_confidence": 0.491,
+    "followed_injection_pct": 16.3
+   },
    "claude-haiku-5.5": {
     "accuracy_pct": 59.1,
     "n": 1000,
@@ -910,6 +1328,24 @@ Generated 2026-10-27T21:52:38.601829+00:00 by `python3 results_summary.py` from 
     "n": 1000,
     "mean_confidence": 0.662,
     "followed_injection_pct": 33.6
+   },
+   "bema_v2_full_gpu": {
+    "accuracy_pct": 37.7,
+    "n": 1000,
+    "mean_confidence": 0.645,
+    "followed_injection_pct": 32.5
+   },
+   "bema_v3": {
+    "accuracy_pct": 49.1,
+    "n": 1000,
+    "mean_confidence": 0.77,
+    "followed_injection_pct": 37.3
+   },
+   "zs3_from_clinc": {
+    "accuracy_pct": 41.1,
+    "n": 1000,
+    "mean_confidence": 0.471,
+    "followed_injection_pct": 21.7
    }
   },
   "casual_ps": {
@@ -930,6 +1366,24 @@ Generated 2026-10-27T21:52:38.601829+00:00 by `python3 results_summary.py` from 
     "n": 1000,
     "mean_confidence": 0.735,
     "followed_injection_pct": 26.5
+   },
+   "bema_v2_full_gpu": {
+    "accuracy_pct": 50.9,
+    "n": 1000,
+    "mean_confidence": 0.721,
+    "followed_injection_pct": 25.7
+   },
+   "bema_v3": {
+    "accuracy_pct": 59.6,
+    "n": 1000,
+    "mean_confidence": 0.798,
+    "followed_injection_pct": 28.0
+   },
+   "zs3_from_clinc": {
+    "accuracy_pct": 43.9,
+    "n": 1000,
+    "mean_confidence": 0.489,
+    "followed_injection_pct": 17.2
    },
    "claude-haiku-5.5": {
     "accuracy_pct": 66.7,
@@ -972,6 +1426,21 @@ Generated 2026-10-27T21:52:38.601829+00:00 by `python3 results_summary.py` from 
     "n": 1000,
     "mean_confidence": 0.704
    },
+   "bema_v2_full_gpu": {
+    "accuracy_pct": 71.5,
+    "n": 1000,
+    "mean_confidence": 0.73
+   },
+   "bema_v3": {
+    "accuracy_pct": 82.6,
+    "n": 1000,
+    "mean_confidence": 0.792
+   },
+   "zs3_from_clinc": {
+    "accuracy_pct": 58.4,
+    "n": 1000,
+    "mean_confidence": 0.549
+   },
    "claude-haiku-5.5": {
     "accuracy_pct": 76.0,
     "n": 1000,
@@ -1011,6 +1480,24 @@ Generated 2026-10-27T21:52:38.601829+00:00 by `python3 results_summary.py` from 
     "n": 1000,
     "mean_confidence": 0.688,
     "followed_injection_pct": 23.7
+   },
+   "bema_v2_full_gpu": {
+    "accuracy_pct": 56.5,
+    "n": 1000,
+    "mean_confidence": 0.691,
+    "followed_injection_pct": 17.2
+   },
+   "bema_v3": {
+    "accuracy_pct": 60.5,
+    "n": 1000,
+    "mean_confidence": 0.784,
+    "followed_injection_pct": 27.1
+   },
+   "zs3_from_clinc": {
+    "accuracy_pct": 45.6,
+    "n": 1000,
+    "mean_confidence": 0.491,
+    "followed_injection_pct": 16.3
    }
   },
   "casual_ps_defended": {
@@ -1031,6 +1518,24 @@ Generated 2026-10-27T21:52:38.601829+00:00 by `python3 results_summary.py` from 
     "n": 1000,
     "mean_confidence": 0.735,
     "followed_injection_pct": 26.5
+   },
+   "bema_v2_full_gpu": {
+    "accuracy_pct": 50.9,
+    "n": 1000,
+    "mean_confidence": 0.721,
+    "followed_injection_pct": 25.7
+   },
+   "bema_v3": {
+    "accuracy_pct": 59.6,
+    "n": 1000,
+    "mean_confidence": 0.798,
+    "followed_injection_pct": 28.0
+   },
+   "zs3_from_clinc": {
+    "accuracy_pct": 43.9,
+    "n": 1000,
+    "mean_confidence": 0.489,
+    "followed_injection_pct": 17.2
    },
    "claude-haiku-5.5": {
     "accuracy_pct": 71.3,
@@ -1089,6 +1594,21 @@ Generated 2026-10-27T21:52:38.601829+00:00 by `python3 results_summary.py` from 
    "mean_p_spam": 0.8972413793103449,
    "clean_recall_same_examples": 0.9913793103448276
   },
+  "bema_v3": {
+   "n": 116,
+   "accuracy": 0.9827586206896551,
+   "accuracy_ci95": [
+    0.9393090753779318,
+    0.9952589868394763
+   ],
+   "ci_method": "Wilson score",
+   "mean_confidence": 0.992380451025634,
+   "overconfidence": 0.009621830335978854,
+   "ece": 0.009621830335978803,
+   "ece_repo_float32_edges": 0.009621830335978803,
+   "mean_p_spam": 0.9834654184122538,
+   "clean_recall_same_examples": 0.9741379310344828
+  },
   "bema_v2": {
    "n": 116,
    "accuracy": 0.9741379310344828,
@@ -1103,6 +1623,21 @@ Generated 2026-10-27T21:52:38.601829+00:00 by `python3 results_summary.py` from 
    "ece_repo_float32_edges": 0.01728507362563033,
    "mean_p_spam": 0.9703690987722627,
    "clean_recall_same_examples": 0.9568965517241379
+  },
+  "bema_v2_full_gpu": {
+   "n": 116,
+   "accuracy": 0.9655172413793104,
+   "accuracy_ci95": [
+    0.9146804588951801,
+    0.9865101725287494
+   ],
+   "ci_method": "Wilson score",
+   "mean_confidence": 0.9886385531261049,
+   "overconfidence": 0.02312131174679455,
+   "ece": 0.025786066877430958,
+   "ece_repo_float32_edges": 0.025786066877430958,
+   "mean_p_spam": 0.9681695333344797,
+   "clean_recall_same_examples": 0.9655172413793104
   },
   "bema_baseline": {
    "n": 116,
@@ -1160,6 +1695,21 @@ Generated 2026-10-27T21:52:38.601829+00:00 by `python3 results_summary.py` from 
    "mean_p_spam": 0.7348351936219341,
    "clean_recall_same_examples": 0.9568965517241379
   },
+  "bema_v3": {
+   "n": 116,
+   "accuracy": 0.7672413793103449,
+   "accuracy_ci95": [
+    0.6825321917307261,
+    0.8348179855681963
+   ],
+   "ci_method": "Wilson score",
+   "mean_confidence": 0.9579683901934788,
+   "overconfidence": 0.19072701088313393,
+   "ece": 0.20216558925036726,
+   "ece_repo_float32_edges": 0.20216558925036726,
+   "mean_p_spam": 0.7620478383935827,
+   "clean_recall_same_examples": 0.9741379310344828
+  },
   "bema_baseline": {
    "n": 116,
    "accuracy": 0.8362068965517241,
@@ -1174,6 +1724,21 @@ Generated 2026-10-27T21:52:38.601829+00:00 by `python3 results_summary.py` from 
    "ece_repo_float32_edges": 0.10231281097592977,
    "mean_p_spam": 0.8022409898794962,
    "clean_recall_same_examples": 0.896551724137931
+  },
+  "bema_v2_full_gpu": {
+   "n": 116,
+   "accuracy": 0.7586206896551724,
+   "accuracy_ci95": [
+    0.6732697464950692,
+    0.8273917154071138
+   ],
+   "ci_method": "Wilson score",
+   "mean_confidence": 0.9692807958043855,
+   "overconfidence": 0.21066010614921316,
+   "ece": 0.21225611403070646,
+   "ece_repo_float32_edges": 0.21225611403070646,
+   "mean_p_spam": 0.7460977573646232,
+   "clean_recall_same_examples": 0.9655172413793104
   },
   "jev_calls": {
    "ok": 116,
@@ -1199,6 +1764,34 @@ Generated 2026-10-27T21:52:38.601829+00:00 by `python3 results_summary.py` from 
    "ece": 0.12658000000000003,
    "ece_repo_float32_edges": 0.12657999999999997,
    "mean_p_spam": 0.13112000000000001
+  },
+  "bema_v2_full_gpu": {
+   "n": 1000,
+   "accuracy": 0.476,
+   "accuracy_ci95": [
+    0.4451969581869969,
+    0.5069867262231963
+   ],
+   "ci_method": "Wilson score",
+   "mean_confidence": 0.6405855491757393,
+   "overconfidence": 0.1645855491757393,
+   "ece": 0.1645855491757393,
+   "ece_repo_float32_edges": 0.1645855491757393,
+   "mean_p_spam": 0.4940634817481041
+  },
+  "bema_v3": {
+   "n": 1000,
+   "accuracy": 0.532,
+   "accuracy_ci95": [
+    0.5010103114046786,
+    0.5627447760483971
+   ],
+   "ci_method": "Wilson score",
+   "mean_confidence": 0.5979091175198555,
+   "overconfidence": 0.06590911751985551,
+   "ece": 0.0661465284228325,
+   "ece_repo_float32_edges": 0.0661465284228325,
+   "mean_p_spam": 0.4899849531762302
   },
   "bema_v2": {
    "n": 1000,
@@ -1366,6 +1959,102 @@ Generated 2026-10-27T21:52:38.601829+00:00 by `python3 results_summary.py` from 
     "share_confidence_ge_0.5": 0.0
    }
   },
+  "bema_v3": {
+   "digits_symbols": {
+    "n": 25,
+    "mean_confidence": 0.1896394184231758,
+    "share_confidence_ge_0.9": 0.0,
+    "share_confidence_ge_0.5": 0.08
+   },
+   "random_letters": {
+    "n": 25,
+    "mean_confidence": 0.09734889939427376,
+    "share_confidence_ge_0.9": 0.0,
+    "share_confidence_ge_0.5": 0.0
+   },
+   "real_offtopic_query (CLINC150 oos_test)": {
+    "n": 25,
+    "mean_confidence": 0.23719175279140473,
+    "share_confidence_ge_0.9": 0.04,
+    "share_confidence_ge_0.5": 0.08
+   },
+   "scrambled_real_query": {
+    "n": 25,
+    "mean_confidence": 0.16320323169231415,
+    "share_confidence_ge_0.9": 0.0,
+    "share_confidence_ge_0.5": 0.04
+   },
+   "all": {
+    "n": 100,
+    "mean_confidence": 0.1718458255752921,
+    "share_confidence_ge_0.9": 0.01,
+    "share_confidence_ge_0.5": 0.05
+   }
+  },
+  "bema_v2_full_gpu": {
+   "digits_symbols": {
+    "n": 25,
+    "mean_confidence": 0.8175577008724213,
+    "share_confidence_ge_0.9": 0.28,
+    "share_confidence_ge_0.5": 0.96
+   },
+   "random_letters": {
+    "n": 25,
+    "mean_confidence": 0.2846230459213257,
+    "share_confidence_ge_0.9": 0.04,
+    "share_confidence_ge_0.5": 0.04
+   },
+   "real_offtopic_query (CLINC150 oos_test)": {
+    "n": 25,
+    "mean_confidence": 0.31878347575664523,
+    "share_confidence_ge_0.9": 0.04,
+    "share_confidence_ge_0.5": 0.16
+   },
+   "scrambled_real_query": {
+    "n": 25,
+    "mean_confidence": 0.2515855610370636,
+    "share_confidence_ge_0.9": 0.0,
+    "share_confidence_ge_0.5": 0.08
+   },
+   "all": {
+    "n": 100,
+    "mean_confidence": 0.4181374458968639,
+    "share_confidence_ge_0.9": 0.09,
+    "share_confidence_ge_0.5": 0.31
+   }
+  },
+  "zs3_from_clinc": {
+   "digits_symbols": {
+    "n": 25,
+    "mean_confidence": 0.0936475795507431,
+    "share_confidence_ge_0.9": 0.0,
+    "share_confidence_ge_0.5": 0.0
+   },
+   "random_letters": {
+    "n": 25,
+    "mean_confidence": 0.1132769252359867,
+    "share_confidence_ge_0.9": 0.0,
+    "share_confidence_ge_0.5": 0.0
+   },
+   "real_offtopic_query (CLINC150 oos_test)": {
+    "n": 25,
+    "mean_confidence": 0.1636958810687065,
+    "share_confidence_ge_0.9": 0.0,
+    "share_confidence_ge_0.5": 0.0
+   },
+   "scrambled_real_query": {
+    "n": 25,
+    "mean_confidence": 0.13168753653764725,
+    "share_confidence_ge_0.9": 0.0,
+    "share_confidence_ge_0.5": 0.0
+   },
+   "all": {
+    "n": 100,
+    "mean_confidence": 0.12557698059827088,
+    "share_confidence_ge_0.9": 0.0,
+    "share_confidence_ge_0.5": 0.0
+   }
+  },
   "zs_from_clinc": {
    "digits_symbols": {
     "n": 25,
@@ -1441,6 +2130,21 @@ Generated 2026-10-27T21:52:38.601829+00:00 by `python3 results_summary.py` from 
    "clean_accuracy_same_examples": 0.813,
    "note": "BEMA has a fixed output layer, so option order cannot affect it"
   },
+  "zs3_from_clinc": {
+   "n": 1000,
+   "accuracy": 0.596,
+   "accuracy_ci95": [
+    0.5652754707472443,
+    0.6259897916119823
+   ],
+   "ci_method": "Wilson score",
+   "mean_confidence": 0.5967255310937762,
+   "overconfidence": 0.000725531093776266,
+   "ece": 0.023855041213333594,
+   "ece_repo_float32_edges": 0.023855041213333598,
+   "clean_accuracy_same_examples": 0.596,
+   "note": "BEMA has a fixed output layer, so option order cannot affect it"
+  },
   "zs_from_clinc": {
    "n": 1000,
    "accuracy": 0.625,
@@ -1469,6 +2173,36 @@ Generated 2026-10-27T21:52:38.601829+00:00 by `python3 results_summary.py` from 
    "ece": 0.05844845492392777,
    "ece_repo_float32_edges": 0.058448454923927765,
    "clean_accuracy_same_examples": 0.601,
+   "note": "BEMA has a fixed output layer, so option order cannot affect it"
+  },
+  "bema_v3": {
+   "n": 1000,
+   "accuracy": 0.928,
+   "accuracy_ci95": [
+    0.9102882162639245,
+    0.9424360784209613
+   ],
+   "ci_method": "Wilson score",
+   "mean_confidence": 0.9354059181809425,
+   "overconfidence": 0.0074059181809424945,
+   "ece": 0.02228577798604966,
+   "ece_repo_float32_edges": 0.02228577798604966,
+   "clean_accuracy_same_examples": 0.928,
+   "note": "BEMA has a fixed output layer, so option order cannot affect it"
+  },
+  "bema_v2_full_gpu": {
+   "n": 1000,
+   "accuracy": 0.83,
+   "accuracy_ci95": [
+    0.8054659348348435,
+    0.8520084045249984
+   ],
+   "ci_method": "Wilson score",
+   "mean_confidence": 0.8323595410734415,
+   "overconfidence": 0.0023595410734414957,
+   "ece": 0.019787779137492193,
+   "ece_repo_float32_edges": 0.019787779137492193,
+   "clean_accuracy_same_examples": 0.83,
    "note": "BEMA has a fixed output layer, so option order cannot affect it"
   },
   "bema_baseline": {
@@ -1555,6 +2289,13 @@ Generated 2026-10-27T21:52:38.601829+00:00 by `python3 results_summary.py` from 
    "within_one_star_argmax": 0.9690177982860909,
    "ece_argmax": 0.058094924192485145
   },
+  "bema_v2_full_gpu": {
+   "n": 1517,
+   "pearson_r_expected_stars": 0.8208694647691138,
+   "mae_stars_expected": 0.5157737260047118,
+   "exact_star_accuracy_rounded": 0.6381015161502966,
+   "within_one_star_rounded": 0.9235332893869479
+  },
   "bema_baseline": {
    "n": 1517,
    "pearson_r_expected_stars": 0.5351059055276922,
@@ -1569,244 +2310,8 @@ Generated 2026-10-27T21:52:38.601829+00:00 by `python3 results_summary.py` from 
    "exact_star_accuracy_rounded": 0.6196440342781806,
    "within_one_star_rounded": 0.9143045484508899
   },
-  "gold_distribution": {
-   "1": 162,
-   "2": 82,
-   "3": 119,
-   "4": 222,
-   "5": 932
-  },
-  "note": "BEMA reads only the first 64 tokens of each review (its trained input length); Jev reads the whole review. Jev's expected stars divide by the sum of its returned probabilities, which is 0.99 on a few rows because Jev rounds to 2 decimals.",
-  "jev_calls": {
-   "ok": 1517,
-   "input_tokens": 648851,
-   "median_latency_ms": 113.90382400009003,
-   "model_versions": [
-    "jev-1.14.0"
-   ]
-  }
- },
- "score_amazon_swap2": {
-  "jev": {
-   "n": 1517,
-   "n_missing": 0,
-   "pearson_r_expected_stars": 0.9200135972331689,
-   "mae_stars_expected": 0.36061045524460156,
-   "exact_star_accuracy_argmax": 0.7554383651944627,
-   "within_one_star_argmax": 0.969676994067238,
-   "ece_argmax": 0.051397495056031604
-  },
-  "bema_v2": {
-   "n": 1517,
-   "pearson_r_expected_stars": 0.7883831638994686,
-   "mae_stars_expected": 0.5609373842011806,
-   "exact_star_accuracy_rounded": 0.6064601186552406,
-   "within_one_star_rounded": 0.9096901779828609
-  },
-  "bema_baseline": {
-   "n": 1517,
-   "pearson_r_expected_stars": 0.5170020976871257,
-   "mae_stars_expected": 0.7587246529232458,
-   "exact_star_accuracy_rounded": 0.5576796308503625,
-   "within_one_star_rounded": 0.8246539222148979
-  },
-  "gold_distribution": {
-   "1": 162,
-   "2": 82,
-   "3": 119,
-   "4": 222,
-   "5": 932
-  },
-  "note": "BEMA reads only the first 64 tokens of each review (its trained input length); Jev reads the whole review. Jev's expected stars divide by the sum of its returned probabilities, which is 0.99 on a few rows because Jev rounds to 2 decimals.",
-  "jev_calls": {
-   "ok": 1517,
-   "input_tokens": 652230,
-   "median_latency_ms": 117.56405099981748,
-   "model_versions": [
-    "jev-1.14.0"
-   ]
-  }
- },
- "clinc150_clean": {
-  "jev": {
-   "n": 5500,
-   "accuracy": 0.9085454545454545,
-   "accuracy_ci95": [
-    0.9006395978348731,
-    0.9158810148270775
-   ],
-   "ci_method": "Wilson score",
-   "mean_confidence": 0.9165927272727273,
-   "overconfidence": 0.008047272727272792,
-   "ece": 0.017087272727272756,
-   "ece_repo_float32_edges": 0.01708727272727279,
-   "in_scope_accuracy": 0.9077777777777778,
-   "oos_recall": 0.912,
-   "false_oos_rate_on_in_scope": 0.034,
-   "n_in_scope": 4500,
-   "n_oos": 1000,
-   "n_missing": 0
-  },
-  "bema_clinc150": {
-   "n": 5500,
-   "accuracy": 0.7145454545454546,
-   "accuracy_ci95": [
-    0.7024631746248053,
-    0.7263282463547682
-   ],
-   "ci_method": "Wilson score",
-   "mean_confidence": 0.7503661269816485,
-   "overconfidence": 0.03582067243619391,
-   "ece": 0.04362840042331004,
-   "ece_repo_float32_edges": 0.04362840042331004,
-   "in_scope_accuracy": 0.8386666666666667,
-   "oos_recall": 0.156,
-   "false_oos_rate_on_in_scope": 0.004,
-   "n_in_scope": 4500,
-   "n_oos": 1000
-  },
-  "zs_from_banking": {
-   "n": 5500,
-   "accuracy": 0.5661818181818182,
-   "accuracy_ci95": [
-    0.5530423092151783,
-    0.5792289426802156
-   ],
-   "ci_method": "Wilson score",
-   "mean_confidence": 0.6146313922947103,
-   "overconfidence": 0.04844957411289208,
-   "ece": 0.04844957411289217,
-   "ece_repo_float32_edges": 0.04844957411289218,
-   "in_scope_accuracy": 0.6915555555555556,
-   "oos_recall": 0.002,
-   "false_oos_rate_on_in_scope": 0.0,
-   "n_in_scope": 4500,
-   "n_oos": 1000
-  },
-  "zs_offshelf": {
-   "n": 5500,
-   "accuracy": 0.5596363636363636,
-   "accuracy_ci95": [
-    0.5464795068305641,
-    0.5727099728993512
-   ],
-   "ci_method": "Wilson score",
-   "mean_confidence": 0.5510734701038085,
-   "overconfidence": -0.008562893532555127,
-   "ece": 0.023136103872887136,
-   "ece_repo_float32_edges": 0.023136103872887136,
-   "in_scope_accuracy": 0.6837777777777778,
-   "oos_recall": 0.001,
-   "false_oos_rate_on_in_scope": 0.0,
-   "n_in_scope": 4500,
-   "n_oos": 1000
-  },
-  "zs_offshelf_bge_base": {
-   "n": 5500,
-   "accuracy": 0.5878181818181818,
-   "accuracy_ci95": [
-    0.5747526210960061,
-    0.6007611554574972
-   ],
-   "ci_method": "Wilson score",
-   "mean_confidence": 0.608059735440395,
-   "overconfidence": 0.02024155362221325,
-   "ece": 0.03160071622377094,
-   "ece_repo_float32_edges": 0.03160071622377094,
-   "in_scope_accuracy": 0.7184444444444444,
-   "oos_recall": 0.0,
-   "false_oos_rate_on_in_scope": 0.0,
-   "n_in_scope": 4500,
-   "n_oos": 1000
-  },
-  "jev_calls": {
-   "ok": 5500,
-   "input_tokens": 13915632,
-   "median_latency_ms": 190.52225050018023,
-   "model_versions": [
-    "jev-1.14.0"
-   ]
-  }
- },
- "clinc150_swap2": {
-  "jev": {
-   "n": 5500,
-   "accuracy": 0.8721818181818182,
-   "accuracy_ci95": [
-    0.8630972841418554,
-    0.880746816489659
-   ],
-   "ci_method": "Wilson score",
-   "mean_confidence": 0.8842927272727272,
-   "overconfidence": 0.012110909090909061,
-   "ece": 0.018103636363636395,
-   "ece_repo_float32_edges": 0.0181036363636364,
-   "in_scope_accuracy": 0.8648888888888889,
-   "oos_recall": 0.905,
-   "false_oos_rate_on_in_scope": 0.059555555555555556,
-   "n_in_scope": 4500,
-   "n_oos": 1000,
-   "n_missing": 0
-  },
-  "bema_clinc150": {
-   "n": 5500,
-   "accuracy": 0.4465454545454545,
-   "accuracy_ci95": [
-    0.4334489543963063,
-    0.45971657291895246
-   ],
-   "ci_method": "Wilson score",
-   "mean_confidence": 0.557192429125309,
-   "overconfidence": 0.11064697457985445,
-   "ece": 0.11064697457985441,
-   "ece_repo_float32_edges": 0.11064697457985442,
-   "in_scope_accuracy": 0.49644444444444447,
-   "oos_recall": 0.222,
-   "false_oos_rate_on_in_scope": 0.044444444444444446,
-   "n_in_scope": 4500,
-   "n_oos": 1000
-  },
-  "zs_offshelf": {
-   "n": 5500,
-   "accuracy": 0.39690909090909093,
-   "accuracy_ci95": [
-    0.3840552040770289,
-    0.4099068843166845
-   ],
-   "ci_method": "Wilson score",
-   "mean_confidence": 0.38176388379592785,
-   "overconfidence": -0.015145207113163084,
-   "ece": 0.027849447110159825,
-   "ece_repo_float32_edges": 0.027849447110159825,
-   "in_scope_accuracy": 0.4851111111111111,
-   "oos_recall": 0.0,
-   "false_oos_rate_on_in_scope": 0.00022222222222222223,
-   "n_in_scope": 4500,
-   "n_oos": 1000
-  },
-  "zs_from_banking": {
-   "n": 5500,
-   "accuracy": 0.39127272727272727,
-   "accuracy_ci95": [
-    0.3784550253548987,
-    0.404242203674097
-   ],
-   "ci_method": "Wilson score",
-   "mean_confidence": 0.4278741883296858,
-   "overconfidence": 0.03660146105695855,
-   "ece": 0.037229858001524764,
-   "ece_repo_float32_edges": 0.037229858001524764,
-   "in_scope_accuracy": 0.478,
-   "oos_recall": 0.001,
-   "false_oos_rate_on_in_scope": 0.0,
-   "n_in_scope": 4500,
-   "n_oos": 1000
-  },
-  "zs_offshelf_bge_base": {
-   "n": 5500,
-   "accuracy": 0.42872727272727273,
-   "accuracy_ci95": [
-    
+  "bema_v3": {
+   "n": 15
 ```
 
 ## speed_cost
@@ -1892,6 +2397,18 @@ Generated 2026-10-27T21:52:38.601829+00:00 by `python3 results_summary.py` from 
    "median_ms_one_at_a_time": 0.058344998251413926,
    "note": "spelling step alone on the first 300 swap2 queries (2 swapped letters each)",
    "usd_per_1000_banking_decisions": "local CPU; no API cost"
+  },
+  "bema_v2_full_gpu__gpu": {
+   "median_ms_one_at_a_time": 6.909899995662272,
+   "p90_ms": 10.09850000264123,
+   "note": "encoder + 3 heads forward pass, batch size 1, cuda, excludes tokenization; NVIDIA GeForce RTX 4050 Laptop GPU (user's laptop)",
+   "usd_per_1000_banking_decisions": "local GPU; no API cost"
+  },
+  "bema_v3__gpu": {
+   "median_ms_one_at_a_time": 7.710600009886548,
+   "p90_ms": 14.025999989826232,
+   "note": "encoder + 3 heads forward pass, batch size 1, cuda, excludes tokenization; NVIDIA GeForce RTX 4050 Laptop GPU (user's laptop)",
+   "usd_per_1000_banking_decisions": "local GPU; no API cost"
   }
  },
  "jev_price_assumption": "OpenRouter model page for ~typesafe/jev-latest, checked 2026-10-27: $0.042/M input, $0/M output (same figure as TypeSafe's launch pricing)"

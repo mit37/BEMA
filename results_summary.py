@@ -144,7 +144,8 @@ dup = {str(r["idx"]) for r in B.load_inputs("spam", "clean") if r["text"] in tra
 sec["test_messages_also_in_training"] = len(dup)
 sec["duplicate_rule"] = "exact text match with a training message (88 if case and whitespace are normalised)"
 sec["clean_excluding_duplicates"] = {}
-for m in ["jev", "bema_baseline", "bema_v2", "claude-haiku-5.5", "qwen3.8-flash", "claude-sonnet-5.5", "claude-opus-5.5"]:
+for m in ["jev", "bema_baseline", "bema_v2", "bema_v2_full_gpu", "bema_v3", "claude-haiku-5.5", "qwen3.8-flash",
+          "claude-sonnet-5.5", "claude-opus-5.5"]:
     d = jev_core("spam", "clean") if m == "jev" else (llm_test(m, "spam_clean") if m in L.MODELS else bema_core(m, "spam", "clean"))
     a, n = acc({k: v for k, v in d.items() if k not in dup})
     sec["clean_excluding_duplicates"][m] = {"accuracy_pct": pct(a), "n": n}
@@ -153,8 +154,11 @@ OUT["sections"]["spam"] = sec
 # paired accuracy differences vs Jev on the full clean BANKING77 set (same 3,080 queries)
 jc = jev_core("banking77", "clean")
 paired = {}
-for m in ["bema_baseline", "bema_v2", "bema_v2_spell", "zs_offshelf", "zs_from_clinc", "zs_offshelf_bge_base",
+for m in ["bema_baseline", "bema_v2", "bema_v2_spell", "bema_v2_full_gpu", "bema_v2_full_gpu_spell", "bema_v3",
+          "bema_v3_spell", "zs_offshelf", "zs_from_clinc", "zs_offshelf_bge_base", "zs3_from_clinc",
           "claude-haiku-5.5", "qwen3.8-flash", "claude-sonnet-5.5", "claude-opus-5.5"]:
+    if m not in L.MODELS and not os.path.exists(f"runs/bema/{m}_banking77_clean.jsonl"):
+        continue
     d = llm_test(m, "banking77_clean") if m in L.MODELS else bema_core(m, "banking77", "clean")
     if not d:
         continue
@@ -174,7 +178,8 @@ tests = {"clean": ("banking77", "clean"), "swap2": ("banking77", "swap2"), "inje
          "injection_casual_defended": "injection_casual_defended_banking"}
 for label, t in tests.items():
     row = {}
-    for m in ["jev", "bema_v2", "bema_v2_spell", "bema_v2_full", "bema_v2_full_spell", "bema_v3", "bema_v3_spell",
+    for m in ["jev", "bema_v2", "bema_v2_spell", "bema_v2_full", "bema_v2_full_spell", "bema_v2_full_gpu",
+              "bema_v2_full_gpu_spell", "bema_v3", "bema_v3_spell", "zs3_from_clinc",
               "claude-haiku-5.5", "qwen3.8-flash", "gpt-6-luna", "gpt-6.1-terra",
               "claude-sonnet-5.5", "claude-opus-5.5", "claude-fable-5.1"]:
         if isinstance(t, tuple):
@@ -222,7 +227,8 @@ for label, t in [("explicit_note_end", "injection_banking"), ("explicit_note_sta
     items = {it["key"]: it for it in B.read_jsonl(f"runs/redteam/inputs/{t}.jsonl")}
     has_target = bool(next(iter(items.values()))["meta"].get("target"))
     row = {}
-    for m in ["jev", "bema_baseline", "bema_v2", "bema_v2_full", "bema_v3", "claude-haiku-5.5", "qwen3.8-flash",
+    for m in ["jev", "bema_baseline", "bema_v2", "bema_v2_full", "bema_v2_full_gpu", "bema_v3", "zs3_from_clinc",
+              "claude-haiku-5.5", "qwen3.8-flash",
               "claude-sonnet-5.5", "claude-opus-5.5"]:
         if m == "jev":
             d, _ = redteam_jev(t)
@@ -290,6 +296,11 @@ if os.path.exists("runs/bema/timing_quiet.json"):
                     "usd_per_1000_banking_decisions": "local CPU; no API cost"}
         if m in run1:
             speed[m]["median_ms_earlier_quiet_run"] = run1[m].get("median_ms")
+if os.path.exists("runs/bema/timing_gpu.json"):
+    for m, v in json.load(open("runs/bema/timing_gpu.json")).items():
+        speed[f"{m}__gpu"] = {"median_ms_one_at_a_time": v["median_ms"], "p90_ms": v.get("p90_ms"),
+                              "note": f"{v.get('note')}; {v.get('gpu')} (user's laptop)",
+                              "usd_per_1000_banking_decisions": "local GPU; no API cost"}
 OUT["sections"]["speed_cost"] = {"source": "Jev/LLM latency is client-side wall clock from the same cloud machine, "
                                            "including the network round trip; BEMA latency is local CPU forward pass",
                                  "rows": speed, "jev_price_assumption": B.PRICE_SOURCE}
