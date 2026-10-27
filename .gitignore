@@ -44,3 +44,4 @@ data/universal/*.jsonl
 bu_*_model/
 universal_results*.zip
 gpu_run_universal.log
+data/universal/claude_raw/injection.jsonl
