@@ -74,6 +74,8 @@ TASKS = {
 CHECKPOINTS = {"bema_baseline": "jev_clone_multitask_calibrated.pt",
                "bema_typo_augmented": "jev_clone_multitask_augmented_calibrated.pt"}
 
+# BEMA v2 predictions come from bema_v2.py; zero-shot variants from bema_zeroshot.py
+REPORT_MODELS = [*CHECKPOINTS, "bema_v2", "zs_offshelf", "zs_from_clinc"]
 MOCK = os.environ.get("JEV_MOCK") == "1"
 RUNS = "runs/mock" if MOCK else "runs"
 INPUTS = "runs/inputs"   # shared by real and mock runs: inputs never depend on Jev
@@ -403,7 +405,7 @@ def cmd_bema(args):
         return torch.tensor(ids), torch.tensor(masks)
 
     os.makedirs("runs/bema", exist_ok=True)
-    timing = {}
+    timing = json.load(open("runs/bema/timing.json")) if os.path.exists("runs/bema/timing.json") else {}
     for name, path in CHECKPOINTS.items():
         m = JevCloneEncoder(vocab_size=data["vocab_size"], max_len=max_len,
                             num_choice_classes=data["num_choice_classes"], enable_score=True)
@@ -512,7 +514,7 @@ def cmd_report(args):
                 if all(x is not None for x in own):
                     res["jev"]["ece_using_jev_confidence_field"] = ece(own, c)
                 jev_correct = dict(zip(sorted(jev), c))
-            for name in CHECKPOINTS:
+            for name in REPORT_MODELS:
                 rows = read_jsonl(f"runs/bema/{name}_{task}_{cond}.jsonl")
                 if not rows:
                     continue
@@ -537,7 +539,7 @@ def cmd_report(args):
         for cond, res in conds.items():
             if cond == "clean":
                 continue
-            for model in ("jev", *CHECKPOINTS):
+            for model in ("jev", *REPORT_MODELS):
                 if model in res and model in clean:
                     res[model]["accuracy_drop_from_clean"] = clean[model]["accuracy"] - res[model]["accuracy"]
                     res[model]["confidence_drop_from_clean"] = clean[model]["mean_confidence"] - res[model]["mean_confidence"]
@@ -585,7 +587,7 @@ def write_markdown(rep):
               "| condition | model | n | accuracy (95% CI) | mean conf | overconf | ECE | acc drop | conf drop |",
               "|---|---|---|---|---|---|---|---|---|"]
         for cond, res in conds.items():
-            for model in ("jev", *CHECKPOINTS):
+            for model in ("jev", *REPORT_MODELS):
                 if model not in res:
                     continue
                 r = res[model]

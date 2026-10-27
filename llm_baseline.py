@@ -64,6 +64,15 @@ def redteam_items(name):
              "gold": r["gold"], "meta": r["meta"]} for r in rows]
 
 
+def subsample(items, n=250):
+    """OpenAI models via OpenRouter are capped at 20 requests/min for new accounts, so they
+    run on the first n queries of the fixed 1,000-query sample the red-team tests use
+    (random.Random(7)); Jev and the other models can be compared on exactly these keys."""
+    import redteam_jev
+    keep = {str(i) for i in redteam_jev.sample_idx()[:n]}
+    return [it for it in items if it["key"] in keep]
+
+
 TESTS = {
     "banking77_clean": lambda: core_items("banking77", "clean"),
     "banking77_swap2": lambda: core_items("banking77", "swap2"),
@@ -76,6 +85,12 @@ TESTS = {
     "injection_casual_defended_banking": lambda: redteam_items("injection_casual_defended_banking"),
     "latency_sequential": lambda: core_items("banking77", "clean")[:100],
 }
+for _t in ["banking77_clean", "banking77_swap2", "injection_banking", "injection_control_banking",
+           "injection_casual_banking", "injection_casual_defended_banking"]:
+    TESTS[f"{_t}_s250"] = (lambda t: lambda: subsample(TESTS[t]()))(_t)
+RATE_LIMITED = {"gpt-6-luna", "gpt-6.1-terra"}
+RATE_LIMITED_TESTS = [t for t in TESTS if t.endswith("_s250")] + ["latency_sequential"]
+RPM = float(os.environ.get("LLM_RPM", "18"))
 
 
 def prompt(item):
@@ -180,7 +195,8 @@ def avg_cost(model, kind):
     return {"gpt-6.1-terra": 0.0006}.get(model, 0.00011) * (0.3 if kind == "spam" else 1)
 
 
-RESERVED = {"usd": 0.0}   # projected cost of tests other models are running right now
+RESERVED = {"usd": 0.0}
+PACE, NEXT = {}, {}   # projected cost of tests other models are running right now
 
 
 async def run_model(c, model, tests):
@@ -201,11 +217,17 @@ async def run_model(c, model, tests):
             print(f"STOP {model}/{name}: would exceed ${BUDGET:.2f} cap; skipped", flush=True)
             continue
         RESERVED["usd"] += proj
-        conc = 1 if name == "latency_sequential" else int(os.environ.get("LLM_CONCURRENCY", "12"))
+        conc = 1 if (name == "latency_sequential" or model in RATE_LIMITED) else int(os.environ.get("LLM_CONCURRENCY", "12"))
         sem, lock, n = asyncio.Semaphore(conc), asyncio.Lock(), {"n": 0, "err": 0}
 
         async def one(it, f):
             async with sem:
+                if model in RATE_LIMITED:
+                    async with PACE.setdefault(model, asyncio.Lock()):
+                        wait = NEXT.get(model, 0) - time.monotonic()
+                        if wait > 0:
+                            await asyncio.sleep(wait)
+                        NEXT[model] = time.monotonic() + 60.0 / RPM
                 rec = await call(c, body(model, it))
             rec.update({"key": it["key"], "model": MODELS[model], "state_sha256": B.sha(it["state"]),
                         "ts_utc": datetime.now(timezone.utc).isoformat()})
@@ -223,7 +245,8 @@ async def run_model(c, model, tests):
 
 async def cmd_run(models, tests):
     async with client() as c:
-        await asyncio.gather(*(run_model(c, m, tests) for m in models))
+        await asyncio.gather(*(run_model(c, m, [t for t in tests if (t in RATE_LIMITED_TESTS) == (m in RATE_LIMITED)
+                                               or (t == "latency_sequential")]) for m in models))
 
 
 # ----------------------------------------------------------------------------
