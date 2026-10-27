@@ -38,3 +38,9 @@ runs/
 # Zero-shot fine-tuned encoders (large, reproducible from bema_zeroshot.py)
 zs_from_clinc/
 zs_from_banking/
+
+# BEMA-U: big training files ship as .xz; model folders are local only
+data/universal/*.jsonl
+bu_*_model/
+universal_results*.zip
+gpu_run_universal.log

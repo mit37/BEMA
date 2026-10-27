@@ -1,0 +1,86 @@
+{
+ "hwu64": {
+  "train_rows": 8858,
+  "val_rows": 300,
+  "labels": 64,
+  "removed_as_heldout_overlap": 94
+ },
+ "massive": {
+  "train_rows": 7441,
+  "val_rows": 300,
+  "labels": 58,
+  "removed_as_heldout_overlap": 151
+ },
+ "snips": {
+  "train_rows": 12884,
+  "val_rows": 300,
+  "labels": 7,
+  "removed_as_heldout_overlap": 0
+ },
+ "atis": {
+  "train_rows": 4634,
+  "val_rows": 300,
+  "labels": 24,
+  "removed_as_heldout_overlap": 0
+ },
+ "bitext_support": {
+  "train_rows": 20000,
+  "val_rows": 0,
+  "labels": 27,
+  "removed_as_heldout_overlap": 3
+ },
+ "ag_news": {
+  "train_rows": 20000,
+  "val_rows": 300,
+  "labels": 4,
+  "removed_as_heldout_overlap": 0
+ },
+ "dbpedia": {
+  "train_rows": 20000,
+  "val_rows": 300,
+  "labels": 14,
+  "removed_as_heldout_overlap": 0
+ },
+ "yahoo": {
+  "train_rows": 20000,
+  "val_rows": 300,
+  "labels": 10,
+  "removed_as_heldout_overlap": 3
+ },
+ "emotion": {
+  "train_rows": 15969,
+  "val_rows": 300,
+  "labels": 6,
+  "removed_as_heldout_overlap": 0
+ },
+ "trec": {
+  "train_rows": 5375,
+  "val_rows": 300,
+  "labels": 50,
+  "removed_as_heldout_overlap": 0
+ },
+ "twitter_fin_sentiment": {
+  "train_rows": 9535,
+  "val_rows": 300,
+  "labels": 3,
+  "removed_as_heldout_overlap": 2
+ },
+ "enron_spam": {
+  "train_rows": 20000,
+  "val_rows": 300,
+  "labels": 2,
+  "removed_as_heldout_overlap": 52
+ },
+ "toxic": {
+  "train_rows": 20000,
+  "val_rows": 300,
+  "labels": 2,
+  "removed_as_heldout_overlap": 14
+ },
+ "sst5": {
+  "train_rows": 8533,
+  "val_rows": 300,
+  "labels": 5,
+  "removed_as_heldout_overlap": 0
+ }
+}
