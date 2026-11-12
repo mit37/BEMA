@@ -41,13 +41,18 @@ one forward pass — no token generation.
 - **Results** (`python3 prepare_data.py && python3 train.py && python3 calibrate.py`,
   seed fixed at 42, tuned encoder + BPE tokenizer + stabilized training
   recipe): **97.85% test accuracy**; Expected Calibration Error (ECE)
-  dropped from **0.0154 (raw) to 0.0039 (calibrated)** — a 74.7% reduction.
+  dropped from **0.0154 (raw) to 0.0048 (calibrated, T=1.34)** — a 68.8%
+  reduction. (Re-run on 2026-11-12 with the corrected temperature fitter;
+  the first version, fitted with code that did not converge, reported
+  0.0039, a 74.7% reduction. Accuracy and raw ECE reproduced exactly;
+  FINDINGS.md §10.)
   This beats the original single-task baseline reported earlier in this
   repo's history (97.13% acc / 0.0231→0.0131 ECE, from before the encoder/
   tokenizer upgrade). Re-verified with a full fresh-clone-style re-run
   (all generated artifacts deleted and regenerated) on 2026-09-21: this
-  exact command sequence with this exact code reproduces these exact
-  numbers bit-for-bit — an earlier claim in this repo's history that
+  exact command sequence with the code of that date reproduced its
+  numbers bit-for-bit, and the 2026-11-12 re-run on a different machine
+  and torch version reproduced the accuracy and raw ECE exactly — an earlier claim in this repo's history that
   results were "not bit-reproducible even with a fixed seed" was based on
   comparing runs across DIFFERENT versions of this code (before vs. after
   the encoder/tokenizer changes), not genuine nondeterminism; that claim
@@ -55,10 +60,23 @@ one forward pass — no token generation.
   separately measures genuine cross-seed variance (different data splits
   and model inits, not just re-running the same seed) — see the Phase 4
   section below for that real uncertainty range.
+- **Correction, 2026-11-12 (FINDINGS.md §10):** every temperature in this
+  repo had been fitted with code that did not converge; all scripts now
+  use a fixed fitter. Re-run with it so far: the single-task Noul result
+  above, §9's linear / n-gram / ensemble models, the from-scratch
+  transformer's Choice calibration (3 seeds), and CLINC150. Accuracies,
+  Score metrics and Noul's conformal sets do not depend on the
+  temperature. Still old-fit values in this README: the Phase 3 / Phase 4
+  temperature rows (corrected values are noted there), the confidences in
+  Phases 5 and 5b, the augmentation calibration figures, and the Choice
+  conformal coverage and set sizes. Where re-measured, the fix made the
+  multitask Noul ECE worse (0.0046 → 0.0090) and the transformer's typo
+  overconfidence slightly larger (mixed typos, 3-seed mean: +0.1395 →
+  +0.1507).
 - **A real, current error worth knowing about**: this same calibrated model
   misclassifies "Free entry in 2 a wkly comp to win FA Cup final tkts, text
   FA to 87121" — a textbook spam message, verbatim from this dataset — as
-  ham, with 97.75% confidence. High aggregate accuracy and good aggregate
+  ham, with 97.87% confidence (97.75% with the old temperature fit). High aggregate accuracy and good aggregate
   calibration do not mean individual high-confidence predictions are always
   right; see `python3 serve.py --demo`.
 

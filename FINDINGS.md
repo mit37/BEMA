@@ -250,8 +250,11 @@ rather than hidden:**
   run as if both were seed=42 on the same code). A subsequent fresh-clone
   sanity check disproved this: the early number was from an OLDER version
   of the code (before the encoder/tokenizer upgrade in a later commit),
-  and the later number is what the CURRENT code reproduces bit-for-bit,
-  every time, seed=42, verified by two independent full re-runs. There is
+  and the later number is what the code of that date reproduced
+  bit-for-bit, every time, seed=42, verified by two independent full
+  re-runs. (A 2026-11-12 re-run with the corrected temperature fitter,
+  §10, reproduced the accuracy and raw ECE exactly; the calibrated ECE is
+  now 0.0048, not 0.0039.) There is
   no PyTorch/CPU nondeterminism here — the earlier claim conflated a code
   change with run-to-run noise, and has been corrected in the README.
   What IS real and worth reporting is genuine cross-SEED variance:
