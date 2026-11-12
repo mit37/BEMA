@@ -146,8 +146,10 @@ Pearson r=0.53 on a genuinely held-out test split, with training MAE
 improving steadily across all 12 epochs (0.262→0.177) rather than
 plateauing immediately the way the STS-B run did. r=0.53 is still short
 of a strong sentiment/rating model (competent models on similar review-
-rating tasks often reach 0.7+), but it's a real, working, generalizing
-Score head — `serve_multitask.py --demo`'s third example ("Terrible.
+rating tasks often reach 0.7+; on this same test split, n=1517, the
+TF-IDF baseline and the tuned n-gram BEMA in FINDINGS.md §9 reach
+r=0.78), but it's a real, working, generalizing Score head —
+`serve_multitask.py --demo`'s third example ("Terrible.
 Stale, tasteless, and arrived broken.") scores 0.15, correctly low,
 despite that exact phrasing never appearing in the training reviews.
 
@@ -161,10 +163,12 @@ the Phase 4 sweep below, where it recovers a lower ECE (0.0113) than both
 raw and temperature scaling for Choice. This is reported because it's a
 real result from this exact run, not smoothed into "worked as expected."
 
-Noul and Choice calibrate well and accuracy is solid (82% over 77 real
-classes is a strong real result, not a toy number). See FINDINGS.md for
-how the Score task performed on this dataset and what that does and
-doesn't tell us, including the now-inapplicable history of a prior
+Noul and Choice calibrate well. Choice's 82% over 77 real classes is a
+real result, not a toy number, but it is not strong: a TF-IDF linear
+baseline reaches 91.1% on the same n=3080 test split, and the ensembles
+in FINDINGS.md §9 are the most accurate configuration in this repo. See
+FINDINGS.md for how the Score task performed on this dataset and what
+that does and doesn't tell us, including the now-inapplicable history of a prior
 diagnosis/fix effort that was specific to the STS-B sentence-pair
 architecture this repo no longer uses.
 
@@ -278,14 +282,18 @@ very likely fragment this kind of typo less, since near-miss spellings
 are far more likely to already exist as recognized subword pieces.
 **Two separate claims, not one**: the CALIBRATION GAP (confidence not
 tracking the accuracy drop) is treated as the tokenizer-independent
-finding and is this repo's headline result; the exact MAGNITUDE of the
+finding and is this repo's headline result (for this BPE + transformer
+model: with a hashed n-gram trunk and the same heads and data, the large
+overconfidence under typos does not appear; see FINDINGS.md §9, which
+does not separate tokenizer from transformer); the exact MAGNITUDE of the
 81.9%→51.2% collapse is NOT claimed to reproduce on a production-grade
 subword-tokenized encoder — that specific comparison experiment could
 not be run in this sandbox (no pretrained-weights access; see
 FINDINGS.md for why it was skipped rather than approximated).
 
 **This, not the cross-domain OOD result above, is the sharpest finding in
-this repo.** A tiny amount of completely realistic noise — the kind every
+this repo** for the transformer model (see the third follow-up result
+below). A tiny amount of completely realistic noise — the kind every
 real customer-service deployment sees constantly, not an adversarial
 attack — nearly halves accuracy while confidence drops by less than a
 third. The model isn't just "confidently wrong on inputs outside its
@@ -299,7 +307,7 @@ of model for real deployment should demand a typo/noise robustness number
 specifically, not just clean-test-set calibration metrics — this repo's
 own numbers would have looked strong without this test, and were not.
 
-**Two follow-up results change how this finding should be read, without
+**Three follow-up results change how this finding should be read, without
 walking it back.** First, it generalizes: CLINC150 (`CLINC150.md`, a
 second, structurally different 151-class task with its own dedicated
 tokenizer) shows the same pattern at a similar relative magnitude
@@ -311,9 +319,16 @@ calibration mismatch similarly, at no cost to clean-test accuracy, and
 `heldout_noise_test.py` shows the gain carries over to typo types it
 never trained on (keyboard-neighbor substitutions, deletions,
 insertions: +11 to +15 points accuracy, ECE roughly halved). It still
-did not close either gap. Read together: this is a real,
-generalizing failure mode, and a real, meaningful, but incomplete fix
-exists for it.
+did not close either gap. Third, it is specific to this small
+from-scratch transformer, not to the typed-head design. A TF-IDF linear
+baseline and BEMA with a hashed n-gram trunk were both trained on clean
+text only. Under the keyboard-neighbor and mixed typos of
+`heldout_noise_test.py` (n=3080), they lose about 6-10 points of Choice
+accuracy, against 31-38 for the transformer, and they do not show its
+large overconfidence (+0.14 under mixed typos; FINDINGS.md §9 has their
+figures). Read together: this is a real failure mode of this
+transformer that generalizes across datasets. Augmentation partly fixes
+it, and a different input representation largely avoids it.
 
 ### Conformal prediction (`conformal.py`, `CONFORMAL.md`)
 
@@ -472,11 +487,17 @@ python3 benchmark_speed.py
   production-grade pretrained backbone — genuinely blocked by this sandbox's
   network policy (confirmed by direct connection tests), not a shortcut
   taken by choice.
-- The Score head reaches Pearson r=0.53 (Amazon Fine Food Reviews star
-  ratings) — real, generalizing signal, but short of what a competent
-  sentiment/rating model would reach (0.7+ is common). Encoder capacity
-  and the lack of pretrained weights (see above) are the most plausible
-  remaining bottleneck.
+- The transformer Score head reaches Pearson r=0.53 (Amazon Fine Food
+  Reviews star ratings, test n=1517; 3-seed mean 0.5605 ± 0.0234) —
+  real, generalizing signal, but short of what a competent
+  sentiment/rating model would reach (0.7+ is common). Closing that gap
+  did not need pretrained weights: on the same split, with no pretrained
+  weights, the TF-IDF Ridge baseline (0.7821) and the tuned
+  n-gram-trunk BEMA (0.7818, 3-seed mean) both reach
+  r=0.78 (FINDINGS.md §9). Self-pretraining the transformer added only
+  +0.0286 (FINDINGS.md §8). The small from-scratch transformer trunk was
+  the main limit. Whether a production pretrained encoder would do better
+  than 0.78 is untested here.
 - No single real dataset in this repo has all three label types on the same
   text, so "one state, many typed questions" is demonstrated
   architecturally (one `encode()` call feeds all heads) rather than proven

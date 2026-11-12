@@ -189,7 +189,9 @@ Reviews Score task, not STS-B.
   is measured on clean test text and would completely miss this. **Two
   separate claims here, not one** -- see the tokenizer-audit caveat in
   §5: the calibration GAP (confidence not tracking the accuracy drop)
-  is treated as the tokenizer-independent finding; the exact MAGNITUDE
+  is treated as the tokenizer-independent finding (for this BPE +
+  transformer trunk; with §9's n-gram trunk the large overconfidence
+  under typos does not appear); the exact MAGNITUDE
   of the 81.9%->51.2% collapse is not, since it runs partly through a
   small, from-scratch BPE vocabulary's specific fragmentation behavior
   on this input. **Status as of Workstream D: confirmed to generalize**
@@ -201,11 +203,17 @@ Reviews Score task, not STS-B.
   similarly, with no clean-accuracy cost, but did not close either gap.
   The improvement also carries over to typo types the model never
   trained on (keyboard-neighbor substitutions, deletions, insertions;
-  +11 to +15 points accuracy, n=3080; see §5).
+  +11 to +15 points accuracy, n=3080; see §5). **Status as of §9:
+  specific to the from-scratch transformer.** A TF-IDF linear model and
+  the n-gram-trunk BEMA, trained on the same clean data, lose about 6-10
+  points of Choice accuracy under keyboard and mixed typos (vs 31-38 for
+  the transformer, n=3080), and they do not show the transformer's large
+  overconfidence under mixed typos (+0.14); see §9 for their figures.
   See §5 for the full discussion, including why this finding (its
   existence, generalization, and partial-mitigation result together),
-  not the OOD result above, is this repo's sharpest finding as of the
-  most recent work.
+  not the OOD result above, is this repo's sharpest finding about the
+  transformer BEMA (§9 shows it largely does not carry over to the
+  linear or n-gram models).
 
 ## 3. Where the calibration numbers are trustworthy vs. not
 
@@ -291,7 +299,7 @@ much this toy reproduction actually demonstrates:
 |---|---|---|
 | Non-autoregressive, single forward pass | **Yes, fully.** Architecturally real: one `encode()` call, typed heads read from it. | High |
 | Fixed-schema output ("cannot emit malformed output") | **Yes, fully.** Structural, not learned — heads are fixed-shape linear projections. | High |
-| Calibrated confidence that tracks real accuracy | **On clean test data, mostly yes for Noul specifically** (calibrated ECE 0.0039-0.0070 across 3 seeds, §3). **On realistic noisy input, no by default** — Phase 5b found ordinary typos collapse Choice accuracy 81.9%→51.2% while confidence drops only 0.791→0.612, a real miscalibration inside the model's own domain, not just at OOD edges (see §5). Clean-test-set ECE and noisy-input calibration are demonstrably different properties here. **Workstream B found this is substantially, not fully, fixable**: training on 50%-typo-augmented data narrowed the accuracy-collapse gap by roughly half (31.4pp→16.0pp drop) and the calibration mismatch similarly, with no clean-accuracy tradeoff, and the gain carries over to typo types never seen in training (+11-15 points accuracy, ECE roughly halved). But the gap did not close: accuracy under noise stays 13-24 points below clean (see §5). | Medium for clean input, Low-Medium once realistic noise is introduced (partially mitigable with targeted augmentation) |
+| Calibrated confidence that tracks real accuracy | **On clean test data, mostly yes for Noul specifically** (calibrated ECE 0.0039-0.0070 across 3 seeds, §3). **On realistic noisy input, no by default for the from-scratch transformer** — Phase 5b found ordinary typos collapse Choice accuracy 81.9%→51.2% while confidence drops only 0.791→0.612, a real miscalibration inside the model's own domain, not just at OOD edges (see §5). Clean-test-set ECE and noisy-input calibration are demonstrably different properties here. **Workstream B found this is substantially, not fully, fixable**: training on 50%-typo-augmented data narrowed the accuracy-collapse gap by roughly half (31.4pp→16.0pp drop) and the calibration mismatch similarly, with no clean-accuracy tradeoff, and the gain carries over to typo types never seen in training (+11-15 points accuracy, ECE roughly halved). But the gap did not close: accuracy under noise stays 13-24 points below clean (see §5). **§9: the typo collapse is tied to the from-scratch transformer/BPE trunk, not the typed heads.** The same typed heads on a hashed n-gram trunk, trained on clean data only, lose 6.5-9.8 points of Choice accuracy under keyboard and mixed typos (transformer: 31-38; 3-seed means, n=3080), and they do not show the transformer's large overconfidence under mixed typos (+0.14); see §9 for their figures. | Medium for clean input; Low-Medium for the transformer under realistic noise (partly fixed by augmentation); Medium with the n-gram trunk (§9) |
 | Multiple typed decision shapes (Noul/Choice/Score) | **All three now show real, working signal.** Score (Amazon Fine Food Reviews, r=0.53) is weaker than Noul/Choice but genuinely learns and generalizes, unlike the STS-B attempt it replaced (r=0.29, flat training curve). None reach a "production-grade" bar, but none is a dead task either. | Low-Medium |
 | Speed/cost advantage over LLMs (40-200x claimed) | **Not independently verified — confirmed unreachable, not just untried** (see `LLM_BENCHMARK.md`). This repo's own model is fast (~1.4ms/example measured), but a real LLM benchmark requires an LLM API and no usable one exists in this sandbox: `api.anthropic.com` is network-reachable but no API credentials are present (`ANTHROPIC_API_KEY`/`CLAUDE_CODE_OAUTH_TOKEN`/`ANTHROPIC_AUTH_TOKEN` all unset), no local LLM server is running, and no LLM SDK is installed. The comparison still uses a documented industry reference figure for LLM latency, not a live measurement. The *shape* of the claim (a small non-autoregressive forward pass beats an LLM API round-trip) is directionally very plausible, but "40-200x" specifically remains Jev's number, not something this repo measured against a real LLM. | Low (weakest-evidenced claim in this repo) |
 | Domain breadth / general-purpose typed questions over arbitrary schemas | **No, still the weakest part of this reproduction, though now tested on one more task.** Four narrow, single-purpose tasks total (spam/ham, 77 banking intents, food-review star ratings, and now CLINC150's 151-way intent+oos, `CLINC150.md`), each needing its own dataset, its own tokenizer/encoder in CLINC150's case, and largely its own calibration. Jev's actual product claim is schema generality across arbitrary domains WITHOUT per-domain retraining — nothing here demonstrates that; each new task in this repo required a full retrain, not zero-shot or few-shot adaptation of an existing model. | Very Low |
@@ -308,9 +316,16 @@ scale, and a verified speed/cost advantage over actual LLM APIs.
 more time"):**
 - **No pretrained encoder access.** Confirmed via direct network tests
   (not assumed): `huggingface.co` and `download.pytorch.org` are both
-  blocked by this sandbox's network policy. This is the single biggest
-  ceiling on quality — every number in this repo comes from a
-  from-scratch encoder trained on a few thousand examples per task. A
+  blocked by this sandbox's network policy. What real pretrained weights
+  would add is untested here (§6, §8). What was measured: in-house
+  masked-token pretraining added +0.0087 Choice accuracy and +0.0286
+  Score r (§8). Replacing the from-scratch transformer with a hashed
+  n-gram trunk, still with no pretrained weights, added +0.0771 Choice
+  accuracy (0.8195 to 0.8966 tuned; +0.0703 untuned) and +0.221 Score r
+  (0.5605 to 0.7818) (§9; 3-seed means, Choice n=3080, Score n=1517). So
+  the largest measured gain came from replacing the transformer, not
+  from pretraining it. Every model here (transformer, n-gram and TF-IDF
+  linear) is trained from scratch on this repo's training splits. A
   real Jev competitor would almost certainly start from pretrained
   weights.
 - **CPU-only, single environment.** All training ran on CPU; the
@@ -322,10 +337,16 @@ more time"):**
   sentence pair.** The STS-B-era finding that a naive concat+meanpool
   architecture actively hurts a sentence-pair task (§2, historical) no
   longer applies now that the Score task is single-text star-rating
-  regression -- there's no pair to mishandle. The remaining gap between
-  r=0.53 and a "strong" sentiment-regression result is most plausibly
-  the same encoder-capacity/no-pretrained-weights bottleneck named
-  above, not a new architecture problem specific to this dataset.
+  regression -- there's no pair to mishandle. §9 has since shown where
+  most of the gap between r=0.53 and a "strong" sentiment-regression
+  result came from. On the same split, with no pretrained weights, the
+  same Score-head design on a hashed n-gram trunk reaches r=0.78
+  (0.7818 ± 0.0022, 3 seeds, n=1517), and a TF-IDF Ridge model reaches
+  0.7821. In-house pretraining of the transformer (§8) added only
+  +0.0286. So the r=0.53-0.58 was mainly a limit of the small
+  from-scratch transformer trunk: reaching 0.78 did not need pretrained
+  weights. Whether a real pretrained encoder would do better than 0.78
+  is untested.
 - **Small held-out test sets (836-3,080 examples per task).** Bootstrap
   intervals (§3) show accuracies are pinned to about ±1-2 points, but
   ECE values are only good to within roughly a factor of 2-3.
@@ -438,6 +459,14 @@ of a single cherry-picked example.
    this perturbation, a well-calibrated model's confidence should track
    however much its accuracy actually degrades. It didn't. This is this
    repo's headline finding and is not walked back by the tokenizer audit.
+   (Qualified by §9: when the BPE + transformer trunk is replaced by
+   hashed word/character n-grams, with the same head design and the same
+   clean training data, the large gap does not appear: those models lose
+   6.5-9.8 points under keyboard and mixed typos (3-seed means, n=3080)
+   and do not show the transformer's large overconfidence (+0.14 under
+   mixed typos); §9 has their figures. So the large gap holds for this
+   BPE + transformer trunk, not across input representations. §9 changes
+   tokenizer and encoder together, so it does not separate the two.)
 2. **The exact magnitude of the accuracy collapse** is NOT claimed to
    generalize to a production-grade subword-tokenized encoder. This
    repo's tokenizer is small (8,000 tokens) and trained on a narrow,
@@ -471,7 +500,11 @@ cannot: whether the calibration gap survives with a production-grade
 tokenizer even if the accuracy-collapse magnitude shrinks, which is the
 single result that would tell us whether this is a real property of
 System-One-style architectures or an artifact of this toy
-implementation's tokenizer.
+implementation's tokenizer. (§9 has since shown it is not a property of
+System-One-style typed heads as such: BEMA with the same heads on a
+hashed n-gram trunk does not show the transformer's large overconfidence
+under typos. Whether a pretrained subword transformer would show it is
+still open.)
 
 **Does adversarial data augmentation fix the typo-collapse finding?
 Mostly yes, on this toy task — a genuinely encouraging, fully-measured
@@ -569,9 +602,16 @@ pattern, at a similar relative magnitude, as BANKING77's 81.9%→51.2%
 accuracy collapse against a 0.791→0.612 confidence drop. Two different
 datasets, different vocabularies, different domains, different class
 counts, same result: this meaningfully strengthens the claim that the
-typo-miscalibration gap is a real property worth checking for in any
-System-One-style architecture, not a quirk of one dataset's tokenizer or
-domain.
+typo-miscalibration gap is a real property of this from-scratch
+transformer encoder, not a quirk of one dataset's tokenizer or domain.
+Both runs use the same `JevCloneEncoder` architecture, so this is
+generalization across datasets, not across architectures. §9 shows that
+on BANKING77 the same typed heads on a hashed n-gram trunk, and a TF-IDF
+linear model, do not show the transformer's large overconfidence under
+mixed typos (+0.14); see §9 for their figures. The gap is still worth
+checking for in any System-One-style model, but it is not a property of
+those models in general. (No n-gram or linear results on CLINC150 are
+reported yet; `clinc150_classical.py` repeats those models there.)
 
 CLINC150 also tested something BANKING77's schema couldn't: an explicit,
 human-labeled out-of-scope class, the "learned 'none of the above'
@@ -645,12 +685,17 @@ accuracy slightly but leaves the typo collapse unchanged.
 
 It is not evidence
 either for or against the calibration gap being a general
-System-One-architecture property; it is an open question this
-environment cannot answer. Anyone with HuggingFace Hub access can run
-this experiment directly against this repo's `adversarial_stress_test.py`
-and `train_multitask.py` by swapping in a pretrained encoder for the
-Choice head -- that is the specific, well-defined next step this
-reconnaissance effort could not complete.
+System-One-architecture property. §9 later answered that general
+question in this environment: BEMA with the same typed heads on a hashed
+n-gram trunk, trained on the same clean data, loses 6.5-9.8 points
+under keyboard and mixed typos (transformer: 31-38; 3-seed means,
+n=3080) and does not show the transformer's large overconfidence. What
+stays open is the narrower question of whether a pretrained subword
+transformer would show the gap. Anyone with HuggingFace Hub access can
+run this experiment directly against this repo's
+`adversarial_stress_test.py` and `train_multitask.py` by swapping in a
+pretrained encoder for the Choice head -- that is the specific,
+well-defined next step this reconnaissance effort could not complete.
 
 ## 7. Workstream E: attention pooling vs. mean pooling
 
@@ -726,9 +771,15 @@ typos and the overconfidence that comes with it are the same as training
 from scratch, to within seed noise, for every corruption tested. For
 comparison, training on typo-augmented data (§5) cut the same collapse
 by 11-17 points. On this evidence, the typo miscalibration is not caused
-by a lack of general language knowledge that pretraining supplies; it
-comes from never seeing corrupted text, and the direct fix works where
-pretraining does not.
+by a lack of general language knowledge that pretraining supplies.
+Training on corrupted text partly fixes it (§5), and pretraining does
+not. Never seeing corrupted text is not enough on its own to cause it,
+though: §9's TF-IDF linear model and n-gram-trunk BEMA, trained on the
+same clean text, lose only about 6-10 points under the same keyboard and
+mixed typos (31-38 here), and they do not show this model's large
+overconfidence (+0.14 under mixed typos); §9 has their figures. So the
+problem is tied to the from-scratch transformer/BPE trunk, not to clean
+training data alone. Augmentation narrows it but does not remove it.
 
 **What this does not settle.** 1.1M tokens of clean, in-domain text is
 orders of magnitude less than a production pretrained encoder sees, and a

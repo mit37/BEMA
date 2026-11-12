@@ -200,7 +200,10 @@ encoder), not in the calibration layer.
 ## Conformal sets under typo noise (and Workstream B)
 
 This repo's sharpest finding (FINDINGS.md §5) is that ordinary typos
-collapse Choice accuracy while the point confidence barely drops.
+collapse the transformer BEMA's Choice accuracy while its point
+confidence barely drops; the n-gram and linear Choice models in
+FINDINGS.md §9 lose only about 6-10 points under keyboard and mixed
+typos (n=3080) and do not show that large overconfidence.
 `conformal_typo.py` asks the same question of the conformal sets. Split
 conformal's guarantee assumes calibration and test data are exchangeable,
 which calibrating on clean text and serving typo'd text breaks. Same
