@@ -549,15 +549,16 @@ identical fixed-seed typo perturbations to both models:
 | Metric | Baseline | Augmented | Delta |
 |---|---|---|---|
 | Clean-test accuracy (Choice, n=3,080) | 0.8188 | 0.8347 | **+0.0159** |
-| Clean-test mean confidence | 0.7906 | 0.8133 | +0.0228 |
+| Clean-test mean confidence | 0.8001 | 0.8169 | +0.0169 |
 | Typo-test accuracy | 0.5052 | 0.6744 | **+0.1692** |
-| Typo-test mean confidence | 0.6122 | 0.7046 | +0.0925 |
+| Typo-test mean confidence | 0.6243 | 0.7091 | +0.0848 |
 | Accuracy drop under typos | 0.3136 (−31.4pp) | 0.1604 (−16.0pp) | **gap narrowed by ~half** |
-| Confidence drop under typos | 0.1784 | 0.1087 | gap narrowed by ~39% |
+| Confidence drop under typos | 0.1758 | 0.1078 | gap narrowed by ~39% |
 
-(The confidences in this table were fitted with the old, non-convergent
-temperature code, §10; `augment_and_retrain.py` was not re-run. The
-accuracies do not depend on the temperature.)
+(Re-run 2026-11-12 with the fixed temperature fit, §10; the accuracies
+reproduced exactly. With the old, non-convergent fit the confidences were
+0.7906 / 0.8133 clean and 0.6122 / 0.7046 with typos, and the confidence
+drops 0.1784 / 0.1087.)
 
 Both halves of the original finding improve substantially:
 1. **The accuracy-collapse gap narrowed by roughly half** — typo-test
@@ -571,7 +572,7 @@ Both halves of the original finding improve substantially:
    present, but meaningfully closer to tracking.
 3. **No clean-accuracy tradeoff was observed — if anything, the
    augmented model is slightly better on clean, unperturbed test data
-   too** (+1.6 points accuracy, +2.3 points confidence). This is not the
+   too** (+1.6 points accuracy, +1.7 points confidence). This is not the
    classic robustness/accuracy tradeoff pattern; augmentation with a
    fixed typo mechanism at 50% duplication rate looks like a
    close-to-free improvement on this toy task, possibly because the
