@@ -75,8 +75,9 @@ tokenizer:
   relative drop).
 
 This is the same qualitative pattern found on BANKING77 (81.9%→51.2%
-accuracy collapse vs 0.791→0.612 confidence drop, a ~37% relative
-accuracy drop against a ~23% relative confidence drop) — the magnitudes
+accuracy collapse vs 0.800→0.624 confidence drop, a ~37% relative
+accuracy drop against a ~22% relative confidence drop; 0.791→0.612 and
+~23% with the old temperature fit, FINDINGS.md §10) — the magnitudes
 are close, not just the direction. **This is the strongest evidence yet
 that the typo-miscalibration finding is not an artifact of BANKING77's
 tokenizer or domain specifically**: two different datasets, different

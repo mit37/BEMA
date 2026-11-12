@@ -64,12 +64,13 @@ one forward pass — no token generation.
   repo had been fitted with code that did not converge; all scripts now
   use a fixed fitter. Re-run with it so far: the single-task Noul result
   above, §9's linear / n-gram / ensemble models, the from-scratch
-  transformer's Choice calibration (3 seeds), and CLINC150. Accuracies,
+  transformer's Choice calibration (3 seeds), Phases 5 and 5b, and
+  CLINC150. Accuracies,
   Score metrics and Noul's conformal sets do not depend on the
   temperature. Still old-fit values in this README: the Phase 3 / Phase 4
-  temperature rows (corrected values are noted there), the confidences in
-  Phases 5 and 5b, the augmentation calibration figures, and the Choice
-  conformal coverage and set sizes. Where re-measured, the fix made the
+  temperature rows (corrected values are noted there), the augmentation
+  calibration figures, and the Choice conformal coverage and set sizes.
+  Phases 5 and 5b were re-run and show both values. Where re-measured, the fix made the
   multitask Noul ECE worse (0.0046 → 0.0090) and the transformer's typo
   overconfidence slightly larger (mixed typos, 3-seed mean: +0.1395 →
   +0.1507).
@@ -248,14 +249,16 @@ Real data only — no synthetic or LLM-generated labels. Two tests:
    populations, not a clean apples-to-apples before/after (the OOD
    script's own output honestly labels this `accuracy(=1-false_spam_rate)`
    rather than plain "accuracy"). What IS a clean, comparable measurement
-   is confidence: mean confidence drops from 0.9780 (in-distribution) to
-   0.9036 on this real non-spam OOD text — a same-metric, appropriately-
+   is confidence: mean confidence drops from 0.9728 (in-distribution) to
+   0.8907 on this real non-spam OOD text (0.9780 to 0.9036 with the old
+   temperature fit; re-run 2026-11-12, FINDINGS.md §10) — a same-metric, appropriately-
    calibrated-looking degradation under domain shift.
 2. **Choice (banking77) on real SMS text** (no correct banking77 answer
    exists for spam/ham messages — this measures confident-wrongness, not
-   accuracy): mean confidence drops from 0.7906 (in-distribution, measured
+   accuracy): mean confidence drops from 0.8001 (in-distribution, measured
    on the Choice head's held-out test split, not the split its own
-   temperature was fit on) to 0.4097 on out-of-scope input. That's a real,
+   temperature was fit on) to 0.4234 on out-of-scope input (0.7906 to
+   0.4097 with the old temperature fit). That's a real,
    meaningful drop — but still far
    above the 1/77≈0.013 a maximally-uncertain model would show. This is a
    real limit on the "cannot hallucinate" claim: the fixed-schema output
@@ -284,14 +287,16 @@ synthetic labels):
    correctly-classified spam (character spacing, leetspeak
    substitution, case noise — the kind of thing real spammers actually
    do to evade filters): accuracy drops only slightly (89.7%→88.8%)
-   with confidence dropping proportionally (0.972→0.926) — reasonably
+   with confidence dropping proportionally (0.968→0.918; 0.972→0.926 with
+   the old temperature fit) — reasonably
    graceful degradation.
 3. **Typo robustness on real banking77 queries** (**n=3080** — the full
    BANKING77 test split, not a small sample; 2 adjacent-character swaps
    per query, an ordinary fast-typing typo, verified by hand: "How do I
    locate my card?" → "Howd o I locate my crad?", fully readable to a
    human): **accuracy collapses from 81.9% to 51.2% — a 30.7-point drop
-   — while confidence only drops from 0.791 to 0.612.**
+   — while confidence only drops from 0.800 to 0.624** (0.791 to 0.612
+   with the old temperature fit; re-run 2026-11-12, FINDINGS.md §10).
 
 **A tokenizer caveat on #3, specifically** (see `adversarial_stress_test.py`'s
 own printed tokenizer audit for the full evidence): this model's Choice

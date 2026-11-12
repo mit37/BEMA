@@ -188,8 +188,8 @@ Reviews Score task, not STS-B.
   correctly-classified banking77 test queries -- still squarely inside
   the model's intended domain, same schema, same task. **n=3080** (the
   full BANKING77 test split, not a small sample). Accuracy collapsed
-  from 81.9% to 51.2% while mean confidence dropped only from 0.791 to
-  0.612. Every other calibration number in this repo (Phase 3, Phase 4)
+  from 81.9% to 51.2% while mean confidence dropped only from 0.800 to
+  0.624 (0.791 to 0.612 with the old temperature fit, §10). Every other calibration number in this repo (Phase 3, Phase 4)
   is measured on clean test text and would completely miss this. **Two
   separate claims here, not one** -- see the tokenizer-audit caveat in
   §5: the calibration GAP (confidence not tracking the accuracy drop)
@@ -313,7 +313,7 @@ much this toy reproduction actually demonstrates:
 |---|---|---|
 | Non-autoregressive, single forward pass | **Yes, fully.** Architecturally real: one `encode()` call, typed heads read from it. | High |
 | Fixed-schema output ("cannot emit malformed output") | **Yes, fully.** Structural, not learned — heads are fixed-shape linear projections. | High |
-| Calibrated confidence that tracks real accuracy | **On clean test data, mostly yes for Noul specifically** (calibrated ECE 0.0039-0.0070 across 3 seeds, §3). **On realistic noisy input, no by default for the from-scratch transformer** — Phase 5b found ordinary typos collapse Choice accuracy 81.9%→51.2% while confidence drops only 0.791→0.612, a real miscalibration inside the model's own domain, not just at OOD edges (see §5). Clean-test-set ECE and noisy-input calibration are demonstrably different properties here. **Workstream B found this is substantially, not fully, fixable**: training on 50%-typo-augmented data narrowed the accuracy-collapse gap by roughly half (31.4pp→16.0pp drop) and the calibration mismatch similarly, with no clean-accuracy tradeoff, and the gain carries over to typo types never seen in training (+11-15 points accuracy, ECE roughly halved). But the gap did not close: accuracy under noise stays 13-24 points below clean (see §5). **§9: the typo collapse is tied to the from-scratch transformer/BPE trunk, not the typed heads.** The same typed heads on a hashed n-gram trunk, trained on clean data only, lose 6.5-9.8 points of Choice accuracy under keyboard and mixed typos (transformer: 31-38; 3-seed means, n=3080), and they do not show the transformer's large overconfidence under mixed typos (+0.14); see §9 for their figures. | Medium for clean input; Low-Medium for the transformer under realistic noise (partly fixed by augmentation); Medium with the n-gram trunk (§9) |
+| Calibrated confidence that tracks real accuracy | **On clean test data, mostly yes for Noul specifically** (calibrated ECE 0.0039-0.0070 across 3 seeds, §3). **On realistic noisy input, no by default for the from-scratch transformer** — Phase 5b found ordinary typos collapse Choice accuracy 81.9%→51.2% while confidence drops only 0.800→0.624 (0.791→0.612 with the old temperature fit, §10), a real miscalibration inside the model's own domain, not just at OOD edges (see §5). Clean-test-set ECE and noisy-input calibration are demonstrably different properties here. **Workstream B found this is substantially, not fully, fixable**: training on 50%-typo-augmented data narrowed the accuracy-collapse gap by roughly half (31.4pp→16.0pp drop) and the calibration mismatch similarly, with no clean-accuracy tradeoff, and the gain carries over to typo types never seen in training (+11-15 points accuracy, ECE roughly halved). But the gap did not close: accuracy under noise stays 13-24 points below clean (see §5). **§9: the typo collapse is tied to the from-scratch transformer/BPE trunk, not the typed heads.** The same typed heads on a hashed n-gram trunk, trained on clean data only, lose 6.5-9.8 points of Choice accuracy under keyboard and mixed typos (transformer: 31-38; 3-seed means, n=3080), and they do not show the transformer's large overconfidence under mixed typos (+0.14); see §9 for their figures. | Medium for clean input; Low-Medium for the transformer under realistic noise (partly fixed by augmentation); Medium with the n-gram trunk (§9) |
 | Multiple typed decision shapes (Noul/Choice/Score) | **All three now show real, working signal.** Score (Amazon Fine Food Reviews, r=0.53) is weaker than Noul/Choice but genuinely learns and generalizes, unlike the STS-B attempt it replaced (r=0.29, flat training curve). None reach a "production-grade" bar, but none is a dead task either. | Low-Medium |
 | Speed/cost advantage over LLMs (40-200x claimed) | **Not independently verified — confirmed unreachable, not just untried** (see `LLM_BENCHMARK.md`). This repo's own model is fast (~1.4ms/example measured), but a real LLM benchmark requires an LLM API and no usable one exists in this sandbox: `api.anthropic.com` is network-reachable but no API credentials are present (`ANTHROPIC_API_KEY`/`CLAUDE_CODE_OAUTH_TOKEN`/`ANTHROPIC_AUTH_TOKEN` all unset), no local LLM server is running, and no LLM SDK is installed. The comparison still uses a documented industry reference figure for LLM latency, not a live measurement. The *shape* of the claim (a small non-autoregressive forward pass beats an LLM API round-trip) is directionally very plausible, but "40-200x" specifically remains Jev's number, not something this repo measured against a real LLM. | Low (weakest-evidenced claim in this repo) |
 | Domain breadth / general-purpose typed questions over arbitrary schemas | **No, still the weakest part of this reproduction, though now tested on one more task.** Four narrow, single-purpose tasks total (spam/ham, 77 banking intents, food-review star ratings, and now CLINC150's 151-way intent+oos, `CLINC150.md`), each needing its own dataset, its own tokenizer/encoder in CLINC150's case, and largely its own calibration. Jev's actual product claim is schema generality across arbitrary domains WITHOUT per-domain retraining — nothing here demonstrates that; each new task in this repo required a full retrain, not zero-shot or few-shot adaptation of an existing model. | Very Low |
@@ -428,7 +428,8 @@ adjacent-character swaps -- an ordinary fast-typing typo, not an
 adversarial attack, verified by hand to be fully readable ("How do I
 locate my card?" -> "Howd o I locate my crad?"). Accuracy collapsed from
 81.9% to 51.2% -- nearly halved -- while mean confidence dropped only
-from 0.791 to 0.612. That gap (confidence down ~23%, accuracy down ~37
+from 0.800 to 0.624 (0.791 to 0.612 with the old temperature fit, §10).
+That gap (confidence down ~22%, accuracy down ~37
 relative percentage points) is a real, quantified miscalibration, and it
 happens on input that is squarely INSIDE the model's intended domain,
 using the exact same schema, on the exact kind of noise every real text
@@ -475,8 +476,8 @@ confirming this is a real but not universal mechanism, not an artifact
 of a single cherry-picked example.
 
 *Two claims, and only one of them is the tokenizer-independent finding:*
-1. **The calibration gap** -- confidence (0.791→0.612, a ~23% relative
-   drop) not tracking the accuracy collapse (81.9%→51.2%, a ~37% relative
+1. **The calibration gap** -- confidence (0.800→0.624, a ~22% relative
+   drop; 0.791→0.612 with the old temperature fit) not tracking the accuracy collapse (81.9%→51.2%, a ~37% relative
    drop) -- is treated as real and likely tokenizer-independent. Whatever
    specific mechanism corrupts the model's internal representation under
    this perturbation, a well-calibrated model's confidence should track
@@ -552,6 +553,10 @@ identical fixed-seed typo perturbations to both models:
 | Accuracy drop under typos | 0.3136 (−31.4pp) | 0.1604 (−16.0pp) | **gap narrowed by ~half** |
 | Confidence drop under typos | 0.1784 | 0.1087 | gap narrowed by ~39% |
 
+(The confidences in this table were fitted with the old, non-convergent
+temperature code, §10; `augment_and_retrain.py` was not re-run. The
+accuracies do not depend on the temperature.)
+
 Both halves of the original finding improve substantially:
 1. **The accuracy-collapse gap narrowed by roughly half** — typo-test
    accuracy rose from 50.5% to 67.4%, cutting the accuracy drop under
@@ -623,7 +628,7 @@ accuracy 71.80%→45.04% (a ~37% relative collapse) while confidence only
 dropped 0.7489→0.5583 (a ~25% relative drop; 0.7514→0.5615 with the old
 temperature fit, §10) — the same qualitative
 pattern, at a similar relative magnitude, as BANKING77's 81.9%→51.2%
-accuracy collapse against a 0.791→0.612 confidence drop. Two different
+accuracy collapse against a 0.800→0.624 confidence drop. Two different
 datasets, different vocabularies, different domains, different class
 counts, same result: this meaningfully strengthens the claim that the
 typo-miscalibration gap is a real property of this from-scratch
@@ -974,7 +979,7 @@ everywhere: Noul (`calibrate.py`, `calibrate_multitask.py`,
 `seed_variation_sweep.py`, `conformal.py`), Choice
 (`calibrate_multitask.py`, `multiseed_sweep.py`, `self_pretrain.py`,
 `conformal.py`, `conformal_typo.py`, `augment_and_retrain.py`), Phase 4
-(`calibration_sweep.py`), CLINC150 (`clinc150_pipeline.py`) and §9; `augment_and_retrain.py` fits Noul too. Numbers computed from the temperatures these scripts store in the calibrated checkpoints inherit the old fit as well: `ood_stress_test.py` (Phase 5), `adversarial_stress_test.py` (Phase 5b), `heldout_noise_test.py`, `bootstrap_ci.py` and `clinc150_oos_threshold.py`.
+(`calibration_sweep.py`), CLINC150 (`clinc150_pipeline.py`) and §9; `augment_and_retrain.py` fits Noul too. Numbers computed from the temperatures these scripts store in the calibrated checkpoints inherit the old fit as well: `ood_stress_test.py` (Phase 5), `adversarial_stress_test.py` (Phase 5b), `heldout_noise_test.py`, `bootstrap_ci.py` and `clinc150_oos_threshold.py`. Of these, Phases 5 and 5b and `clinc150_oos_threshold.py` were re-run with the fixed fit (below); `heldout_noise_test.py` and `bootstrap_ci.py` were not.
 Accuracy, Score and argmax predictions do not depend on the temperature, except inside §9's ensembles, which average calibrated probabilities, and in CLINC150's out-of-scope rule (`clinc150_oos_threshold.py`), which thresholds the temperature-scaled top probability. That rule, and `clinc150_pipeline.py`, were re-run with the fixed fit (CLINC150.md, §5 and §11 now show the re-run); only §3's bootstrap interval for the rule's in-scope cost (−9.7 [−10.5, −8.9]; the point estimate is now −9.8) was not recomputed.
 Split-conformal coverage is guaranteed on exchangeable data for any score function fixed before calibration, and `conformal.py` fits the temperature on val_a and the conformal quantile on val_b, so the clean-test guarantee (at least 90%) holds with either fitter. The measured Choice figures in CONFORMAL.md (APS coverage 98.83%, the set sizes, and all coverage under typos, where exchangeability fails and no guarantee applies) depend on the temperature and were not recomputed. Noul's threshold sets are unaffected (the temperature rescales a single logit, a monotone change to the score), and the Score head has no temperature.
 
@@ -1029,6 +1034,15 @@ What changes in the conclusions:
   calibration moved more. Means over 3 seeds, Choice test n=3080: mixed-typo
   overconfidence went from +0.0039 to +0.0106, and clean ECE from 0.0158 to
   0.0141 (§9).
+- **Phases 5 and 5b were re-run** with the fixed fit
+  (`calibrate_multitask.py`, which reproduced this audit's fixed
+  temperatures and ECEs exactly, then `ood_stress_test.py` and
+  `adversarial_stress_test.py`). Accuracies are unchanged. The headline
+  typo result becomes: accuracy 81.9% → 51.2% while confidence drops
+  only 0.800 → 0.624 (old fit 0.791 → 0.612), i.e. confidence down 22%
+  against accuracy down 37% (n=3080). Phase 5's in-distribution →
+  out-of-domain confidences are 0.9728 → 0.8907 for Noul (old 0.9780 →
+  0.9036) and 0.8001 → 0.4234 for Choice (old 0.7906 → 0.4097).
 - **CLINC150's transformer was re-run** with the fixed fit
   (`clinc150_pipeline.py`, `clinc150_oos_threshold.py`; test n=5,500).
   Accuracy reproduced exactly (0.7180). The temperature moved 1.5739 →
