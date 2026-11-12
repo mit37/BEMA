@@ -37,10 +37,17 @@ nonconformity scores and quantiles on val_b only — fully disjoint from
 both the temperature fit and the final test set. (The Score head has no
 such calibration-layer parameter, so this split matters less there, but
 the same val_a/val_b split is used for consistency.) The temperature
-values from this refit (T=2.46 for Noul, T=1.19 for Choice) are close to
-but not identical to `calibrate_multitask.py`'s full-val fit (T=2.36,
-T=1.18) — expected, since they're fit on half the data with a different
-(fixed) seed; both are legitimate estimates of the same quantity.
+values from this refit (T=2.76 for Noul, T=1.16 for Choice) are close to
+`calibrate_multitask.py`'s full-val fit (T=2.61, T=1.14).
+
+(Correction, 2026-11-12: the first version of this file used a
+temperature fitter that did not converge (FINDINGS.md §10), which gave
+T=2.46 / 1.19 here and 2.36 / 1.18 on the full validation set.
+`conformal.py` was re-run with the fixed fitter and the results below
+are the re-run's: Noul and Score are unchanged (Noul's threshold sets do
+not depend on the temperature, and Score has none); Choice coverage is
+unchanged at 98.83%, its average set size moved from 7.07 to 7.00 and its
+median from 6 to 5.)
 
 ## Results
 
@@ -49,7 +56,7 @@ Target coverage: 90% (alpha=0.10) for all three heads.
 | Task | n (calib / test) | Method | Target | Measured coverage | Set size / interval width |
 |---|---|---|---|---|---|
 | Noul | 418 / 836 | Threshold (LAC) conformal | 90% | **90.91%** | avg 0.92 of 2 classes (see note below) |
-| Choice | 750 / 3080 | APS (non-randomized) | 90% | **98.83%** | avg 7.07 of 77 classes (median 6) |
+| Choice | 750 / 3080 | APS (non-randomized) | 90% | **98.83%** | avg 7.00 of 77 classes (median 5) |
 | Score | 759 / 1517 | Absolute-residual conformal | 90% | **89.85%** | raw width 1.066; mean 0.656 after clipping to the [0,1] label range |
 | Score | 759 / 1517 | CQR (`score_cqr.py`) | 90% | **90.11%** | mean 0.608, median 0.570, clipped to [0,1] |
 
@@ -95,15 +102,15 @@ non-randomized APS method used here is known to be conservative by
 construction (it rounds up to the next class boundary rather than
 interpolating exactly to the target quantile, which the randomized
 variant of APS would do). The guarantee (coverage >= 90%) held with room
-to spare, at a real cost: average set size 7.07 out of 77 classes. That
+to spare, at a real cost: average set size 7.00 out of 77 classes. That
 is genuinely informative — a random-guess baseline would need a set of
 size ~70 to hit 90% coverage with a poorly-discriminating model, and
-7.07 shows the model's probability estimates carry real signal — but it
-is also not "tight": half of test examples need a set of 6 or more
-categories to reach the guarantee, and the largest set seen was 35 of
+7.00 shows the model's probability estimates carry real signal — but it
+is also not "tight": about half of test examples (49.7%) need a set of 6
+or more categories to reach the guarantee, and the largest set seen was 35 of
 77 categories. A caller expecting a short, actionable shortlist most of
-the time would find this useful roughly half the time (49.4% of
-examples get a set of 5 or fewer) and unwieldy the rest.
+the time would find this useful roughly half the time (50.3% of
+examples get a set of 5 or fewer; 49.4% with the old fit) and unwieldy the rest.
 
 ### Score: valid, wide, and uneven across rating levels
 
@@ -200,22 +207,28 @@ encoder), not in the calibration layer.
 ## Conformal sets under typo noise (and Workstream B)
 
 This repo's sharpest finding (FINDINGS.md §5) is that ordinary typos
-collapse Choice accuracy while the point confidence barely drops.
+collapse the transformer BEMA's Choice accuracy while its point
+confidence barely drops; the n-gram and linear Choice models in
+FINDINGS.md §9 lose only about 6-10 points under keyboard and mixed
+typos (n=3080) and do not show that large overconfidence.
 `conformal_typo.py` asks the same question of the conformal sets. Split
 conformal's guarantee assumes calibration and test data are exchangeable,
 which calibrating on clean text and serving typo'd text breaks. Same
 protocol as above (temperature on val_a, APS on val_b, test n=3080);
-the baseline row on clean text reproduces the 98.83% / 7.07 result.
+the baseline row on clean text matches the 98.83% / 7.00 result above.
+(Re-run 2026-11-12 with the fixed temperature fit, FINDINGS.md §10; with
+the old fit every coverage below moved by at most 0.1 point and every set
+size by at most 0.07 classes, and the conclusions are the same.)
 
 | Model | Calibrated on | Test text | Coverage | Avg set size |
 |---|---|---|---|---|
-| baseline | clean | clean | 0.9883 | 7.07 |
-| baseline | clean | 2 swaps | 0.9172 | 13.34 |
-| baseline | clean | 2 keyboard typos | 0.9247 | 12.95 |
-| baseline | clean | mixed (sub+del+ins) | **0.8903** | 14.51 |
-| baseline | matching typos | mixed | 0.9094 | 16.55 |
-| augmented | clean | clean | 0.9906 | 7.30 |
-| augmented | clean | mixed | 0.9682 | 12.90 |
+| baseline | clean | clean | 0.9883 | 7.00 |
+| baseline | clean | 2 swaps | 0.9169 | 13.28 |
+| baseline | clean | 2 keyboard typos | 0.9244 | 12.89 |
+| baseline | clean | mixed (sub+del+ins) | **0.8909** | 14.45 |
+| baseline | matching typos | mixed | 0.9104 | 16.60 |
+| augmented | clean | clean | 0.9906 | 7.32 |
+| augmented | clean | mixed | 0.9682 | 12.96 |
 | augmented | matching typos | mixed | 0.9614 | 11.24 |
 
 (Full grid, including the swap and keyboard rows for every setting, is
@@ -226,11 +239,11 @@ printed by the script.)
   set sees that the model is less sure.
 - **The guarantee is not formally kept, but nearly.** Non-randomized
   APS over-covers clean text, and that slack absorbs most of the shift:
-  coverage stays at 91.7-92.5% on swap and keyboard typos and dips to
-  89.0% only on the mixed corruption (about 1.8 standard errors below
+  coverage stays at 91.7-92.4% on swap and keyboard typos and dips to
+  89.1% only on the mixed corruption (about 1.7 standard errors below
   90% at n=3080). Calibrating on typo'd validation text, i.e. on data
-  that looks like deployment, restores coverage above 90% (90.9% on
+  that looks like deployment, restores coverage above 90% (91.0% on
   mixed), as exchangeability predicts.
 - **Typo augmentation helps here too.** The augmented model keeps 96-98%
   coverage under every corruption, with smaller sets than the baseline
-  (9.5-11 classes when calibrated on matching noise, vs 12-17).
+  (9.4-11 classes when calibrated on matching noise, vs 12-17).

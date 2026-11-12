@@ -41,13 +41,18 @@ one forward pass — no token generation.
 - **Results** (`python3 prepare_data.py && python3 train.py && python3 calibrate.py`,
   seed fixed at 42, tuned encoder + BPE tokenizer + stabilized training
   recipe): **97.85% test accuracy**; Expected Calibration Error (ECE)
-  dropped from **0.0154 (raw) to 0.0039 (calibrated)** — a 74.7% reduction.
+  dropped from **0.0154 (raw) to 0.0048 (calibrated, T=1.34)** — a 68.8%
+  reduction. (Re-run on 2026-11-12 with the corrected temperature fitter;
+  the first version, fitted with code that did not converge, reported
+  0.0039, a 74.7% reduction. Accuracy and raw ECE reproduced exactly;
+  FINDINGS.md §10.)
   This beats the original single-task baseline reported earlier in this
   repo's history (97.13% acc / 0.0231→0.0131 ECE, from before the encoder/
   tokenizer upgrade). Re-verified with a full fresh-clone-style re-run
   (all generated artifacts deleted and regenerated) on 2026-09-21: this
-  exact command sequence with this exact code reproduces these exact
-  numbers bit-for-bit — an earlier claim in this repo's history that
+  exact command sequence with the code of that date reproduced its
+  numbers bit-for-bit, and the 2026-11-12 re-run on a different machine
+  and torch version reproduced the accuracy and raw ECE exactly — an earlier claim in this repo's history that
   results were "not bit-reproducible even with a fixed seed" was based on
   comparing runs across DIFFERENT versions of this code (before vs. after
   the encoder/tokenizer changes), not genuine nondeterminism; that claim
@@ -55,10 +60,22 @@ one forward pass — no token generation.
   separately measures genuine cross-seed variance (different data splits
   and model inits, not just re-running the same seed) — see the Phase 4
   section below for that real uncertainty range.
+- **Correction, 2026-11-12 (FINDINGS.md §10):** every temperature in this
+  repo had been fitted with code that did not converge; all scripts now
+  use a fixed fitter. Everything temperature-dependent was then re-run
+  except the self-pretraining comparison (FINDINGS.md §8), and this
+  README shows the re-run values with the old ones noted. Every
+  single-model accuracy and Score metric reproduced exactly (only the §9
+  ensembles' accuracies, which average calibrated probabilities, and
+  CLINC150's out-of-scope threshold rule, which thresholds the calibrated
+  top probability, moved slightly). Two changes matter here: the multitask Noul ECE got worse
+  (0.0046 → 0.0090), and the transformer's typo overconfidence got
+  slightly larger (mixed typos, 3-seed mean:
+  +0.1395 → +0.1507).
 - **A real, current error worth knowing about**: this same calibrated model
   misclassifies "Free entry in 2 a wkly comp to win FA Cup final tkts, text
   FA to 87121" — a textbook spam message, verbatim from this dataset — as
-  ham, with 97.75% confidence. High aggregate accuracy and good aggregate
+  ham, with 97.87% confidence (97.75% with the old temperature fit). High aggregate accuracy and good aggregate
   calibration do not mean individual high-confidence predictions are always
   right; see `python3 serve.py --demo`.
 
@@ -131,28 +148,39 @@ NOT change or override the separate licenses on the bundled third-party
 datasets described in the table above, each of which keeps its own
 terms regardless of this repo's code license.
 
-**Results** (clean run, 2026-09-21, held-out test splits the calibration
+**Results** (clean run, 2026-09-21; calibrated column from the 2026-11-12 re-run of `calibrate_multitask.py` with the fixed temperature fitter, see the note below; held-out test splits the calibration
+step never touched, Score dataset = Amazon Fine Food Reviews as described
+above):
 step never touched, Score dataset = Amazon Fine Food Reviews as described
 above):
 
 | Task   | Metric          | Raw            | Calibrated      |
 |--------|-----------------|-----------------|------------------|
-| Noul   | acc / ECE       | 0.9785 / 0.0159 | 0.9785 / 0.0046 (temp. scaling) |
-| Choice | acc / ECE       | 0.8188 / 0.0210 | 0.8188 / 0.0371 (temp. scaling — see note below) |
+| Noul   | acc / ECE       | 0.9785 / 0.0159 | 0.9785 / 0.0090 (temp. scaling) |
+| Choice | acc / ECE       | 0.8188 / 0.0210 | 0.8188 / 0.0303 (temp. scaling — see note below) |
 | Score  | MAE / Pearson r | 0.1872 / 0.5340 | — (regression, not calibrated the same way) |
+
+(Correction, 2026-11-12: the first version of this table used a
+temperature fitter that did not converge, giving Noul T=2.36 / ECE 0.0046
+and Choice T=1.18 / ECE 0.0371. The values above are
+`calibrate_multitask.py` re-run with the fixed fitter (Noul T=2.61, Choice
+T=1.14); accuracy and raw ECE reproduced exactly. FINDINGS.md §10.)
 
 **Score works reasonably well here**, unlike the STS-B task it replaced:
 Pearson r=0.53 on a genuinely held-out test split, with training MAE
 improving steadily across all 12 epochs (0.262→0.177) rather than
 plateauing immediately the way the STS-B run did. r=0.53 is still short
 of a strong sentiment/rating model (competent models on similar review-
-rating tasks often reach 0.7+), but it's a real, working, generalizing
-Score head — `serve_multitask.py --demo`'s third example ("Terrible.
+rating tasks often reach 0.7+; on this same test split, n=1517, the
+TF-IDF baseline and the tuned n-gram BEMA in FINDINGS.md §9 reach
+r=0.78), but it's a real, working, generalizing Score head —
+`serve_multitask.py --demo`'s third example ("Terrible.
 Stale, tasteless, and arrived broken.") scores 0.15, correctly low,
 despite that exact phrasing never appearing in the training reviews.
 
 **A genuine, honest surprise: temperature scaling made Choice's ECE
-*worse*, not better** (0.0210 raw → 0.0371 after temp. scaling). This can
+*worse*, not better** (0.0210 raw → 0.0303 after temp. scaling; 0.0371
+with the old, non-convergent fitter, FINDINGS.md §10). This can
 legitimately happen — a global temperature is fit on validation data and
 doesn't guarantee improvement on a different held-out test split,
 especially when the raw model happens to already be well-calibrated on
@@ -161,10 +189,12 @@ the Phase 4 sweep below, where it recovers a lower ECE (0.0113) than both
 raw and temperature scaling for Choice. This is reported because it's a
 real result from this exact run, not smoothed into "worked as expected."
 
-Noul and Choice calibrate well and accuracy is solid (82% over 77 real
-classes is a strong real result, not a toy number). See FINDINGS.md for
-how the Score task performed on this dataset and what that does and
-doesn't tell us, including the now-inapplicable history of a prior
+Noul and Choice calibrate well. Choice's 82% over 77 real classes is a
+real result, not a toy number, but it is not strong: a TF-IDF linear
+baseline reaches 91.1% on the same n=3080 test split, and the ensembles
+in FINDINGS.md §9 are the most accurate configuration in this repo. See
+FINDINGS.md for how the Score task performed on this dataset and what
+that does and doesn't tell us, including the now-inapplicable history of a prior
 diagnosis/fix effort that was specific to the STS-B sentence-pair
 architecture this repo no longer uses.
 
@@ -177,12 +207,19 @@ measured on held-out test), appending every run to `results_log.csv`:
 | Task   | Method               | Accuracy | ECE    |
 |--------|----------------------|----------|--------|
 | Noul   | raw                  | 0.9785   | 0.0159 |
-| Noul   | temperature (T=2.36) | 0.9785   | 0.0046 |
+| Noul   | temperature (T=2.61) | 0.9785   | 0.0090 |
 | Noul   | **platt**            | 0.9797   | **0.0030** |
 | Noul   | isotonic             | 0.9773   | 0.0049 |
 | Choice | raw                  | 0.8188   | 0.0210 |
-| Choice | temperature (T=1.18) | 0.8188   | 0.0371 (worse than raw — see note above) |
+| Choice | temperature (T=1.14) | 0.8188   | 0.0303 (worse than raw — see note above) |
 | Choice | **isotonic (max-conf)** | 0.8188 | **0.0113** |
+
+(Re-run 2026-11-12 with the fixed temperature fitter. The first version's
+temperature rows, T=2.36 / ECE 0.0046 for Noul and T=1.18 / ECE 0.0371
+for Choice, came from a fitter that did not converge; the raw, Platt and
+isotonic rows do not use it and reproduced exactly. Platt still wins for
+Noul, but isotonic now also beats temperature there; for Choice,
+temperature is still worse than raw. FINDINGS.md §10.)
 
 No single method wins everywhere: Platt scaling beats temperature scaling
 for Noul; for Choice, temperature scaling actually made ECE worse than
@@ -215,14 +252,16 @@ Real data only — no synthetic or LLM-generated labels. Two tests:
    populations, not a clean apples-to-apples before/after (the OOD
    script's own output honestly labels this `accuracy(=1-false_spam_rate)`
    rather than plain "accuracy"). What IS a clean, comparable measurement
-   is confidence: mean confidence drops from 0.9780 (in-distribution) to
-   0.9036 on this real non-spam OOD text — a same-metric, appropriately-
+   is confidence: mean confidence drops from 0.9728 (in-distribution) to
+   0.8907 on this real non-spam OOD text (0.9780 to 0.9036 with the old
+   temperature fit; re-run 2026-11-12, FINDINGS.md §10) — a same-metric, appropriately-
    calibrated-looking degradation under domain shift.
 2. **Choice (banking77) on real SMS text** (no correct banking77 answer
    exists for spam/ham messages — this measures confident-wrongness, not
-   accuracy): mean confidence drops from 0.7906 (in-distribution, measured
+   accuracy): mean confidence drops from 0.8001 (in-distribution, measured
    on the Choice head's held-out test split, not the split its own
-   temperature was fit on) to 0.4097 on out-of-scope input. That's a real,
+   temperature was fit on) to 0.4234 on out-of-scope input (0.7906 to
+   0.4097 with the old temperature fit). That's a real,
    meaningful drop — but still far
    above the 1/77≈0.013 a maximally-uncertain model would show. This is a
    real limit on the "cannot hallucinate" claim: the fixed-schema output
@@ -251,14 +290,16 @@ synthetic labels):
    correctly-classified spam (character spacing, leetspeak
    substitution, case noise — the kind of thing real spammers actually
    do to evade filters): accuracy drops only slightly (89.7%→88.8%)
-   with confidence dropping proportionally (0.972→0.926) — reasonably
+   with confidence dropping more than accuracy (0.968→0.918; 0.972→0.926 with
+   the old temperature fit) — reasonably
    graceful degradation.
 3. **Typo robustness on real banking77 queries** (**n=3080** — the full
    BANKING77 test split, not a small sample; 2 adjacent-character swaps
    per query, an ordinary fast-typing typo, verified by hand: "How do I
    locate my card?" → "Howd o I locate my crad?", fully readable to a
    human): **accuracy collapses from 81.9% to 51.2% — a 30.7-point drop
-   — while confidence only drops from 0.791 to 0.612.**
+   — while confidence only drops from 0.800 to 0.624** (0.791 to 0.612
+   with the old temperature fit; re-run 2026-11-12, FINDINGS.md §10).
 
 **A tokenizer caveat on #3, specifically** (see `adversarial_stress_test.py`'s
 own printed tokenizer audit for the full evidence): this model's Choice
@@ -278,14 +319,18 @@ very likely fragment this kind of typo less, since near-miss spellings
 are far more likely to already exist as recognized subword pieces.
 **Two separate claims, not one**: the CALIBRATION GAP (confidence not
 tracking the accuracy drop) is treated as the tokenizer-independent
-finding and is this repo's headline result; the exact MAGNITUDE of the
+finding and is this repo's headline result (for this BPE + transformer
+model: with a hashed n-gram trunk and the same heads and data, the large
+overconfidence under typos does not appear; see FINDINGS.md §9, which
+does not separate tokenizer from transformer); the exact MAGNITUDE of the
 81.9%→51.2% collapse is NOT claimed to reproduce on a production-grade
 subword-tokenized encoder — that specific comparison experiment could
 not be run in this sandbox (no pretrained-weights access; see
 FINDINGS.md for why it was skipped rather than approximated).
 
 **This, not the cross-domain OOD result above, is the sharpest finding in
-this repo.** A tiny amount of completely realistic noise — the kind every
+this repo** for the transformer model (see the third follow-up result
+below). A tiny amount of completely realistic noise — the kind every
 real customer-service deployment sees constantly, not an adversarial
 attack — nearly halves accuracy while confidence drops by less than a
 third. The model isn't just "confidently wrong on inputs outside its
@@ -299,11 +344,12 @@ of model for real deployment should demand a typo/noise robustness number
 specifically, not just clean-test-set calibration metrics — this repo's
 own numbers would have looked strong without this test, and were not.
 
-**Two follow-up results change how this finding should be read, without
+**Three follow-up results change how this finding should be read, without
 walking it back.** First, it generalizes: CLINC150 (`CLINC150.md`, a
 second, structurally different 151-class task with its own dedicated
 tokenizer) shows the same pattern at a similar relative magnitude
-(accuracy 71.80%→45.04%, confidence only 0.7514→0.5615) — this is not a
+(accuracy 71.80%→45.04%, confidence only 0.7489→0.5583; 0.7514→0.5615
+with the old temperature fit) — this is not a
 BANKING77-specific artifact. Second, it's partially fixable: training on
 typo-augmented data (`augment_and_retrain.py`, FINDINGS.md §5) narrowed
 BANKING77's accuracy-collapse gap by roughly half (31.4pp→16.0pp) and the
@@ -311,9 +357,17 @@ calibration mismatch similarly, at no cost to clean-test accuracy, and
 `heldout_noise_test.py` shows the gain carries over to typo types it
 never trained on (keyboard-neighbor substitutions, deletions,
 insertions: +11 to +15 points accuracy, ECE roughly halved). It still
-did not close either gap. Read together: this is a real,
-generalizing failure mode, and a real, meaningful, but incomplete fix
-exists for it.
+did not close either gap. Third, it is specific to this small
+from-scratch transformer, not to the typed-head design. A TF-IDF linear
+baseline and BEMA with a hashed n-gram trunk were both trained on clean
+text only. Under the keyboard-neighbor and mixed typos of
+`heldout_noise_test.py` (n=3080), they lose about 6-10 points of Choice
+accuracy, against 31-38 for the transformer, and they do not show its
+large overconfidence (+0.15 under mixed typos, 3-seed mean with the
+corrected temperature fit, +0.14 with the old one; FINDINGS.md §9 has
+their figures, §10 the fit correction). Read together: this is a real failure mode of this
+transformer that generalizes across datasets. Augmentation partly fixes
+it, and a different input representation largely avoids it.
 
 ### Conformal prediction (`conformal.py`, `CONFORMAL.md`)
 
@@ -341,7 +395,8 @@ crowdsourced intents across many domains, plus a genuine out-of-scope
 class (CC-BY 3.0, verified in `DATA_LICENSES.md`) — run specifically to
 test whether the typo-miscalibration finding above generalizes past
 BANKING77. It does: accuracy collapsed 71.80%→45.04% under the same
-ordinary-typo perturbation while confidence dropped only 0.7514→0.5615,
+ordinary-typo perturbation while confidence dropped only 0.7489→0.5583
+(0.7514→0.5615 with the old temperature fit),
 the same pattern at a similar relative magnitude on a structurally
 different dataset (different tokenizer, different domain mix, 151 vs 77
 classes). It also tested out-of-scope detection: used as one more
@@ -350,7 +405,7 @@ out-of-scope queries (vs 84.2% in-scope accuracy), even though training
 data is balanced (100 examples per class, oos included). The confidence
 score does most of the work instead: rejecting answers whose top
 probability is below a validation-tuned threshold
-(`clinc150_oos_threshold.py`) raises oos recall to 85.7%, at a cost of
+(`clinc150_oos_threshold.py`) raises oos recall to 86.1% (85.7% with the old temperature fit), at a cost of
 about 10 points of in-scope accuracy. Full writeup, including the
 conformal and calibration numbers for this task, in `CLINC150.md`.
 
@@ -386,6 +441,31 @@ conformal and calibration numbers for this task, in `CLINC150.md`.
   masked-token prediction on training-split text (no download needed),
   fine-tunes it, and compares with training from scratch across 3 seeds;
   results in FINDINGS.md §8.
+- `linear_baseline.py` — TF-IDF (word + character n-grams) linear models
+  for all three tasks on the same splits; the classical baseline in
+  FINDINGS.md §9.
+- `ngram_model.py` / `train_ngram.py` — BEMA with a hashed n-gram trunk
+  in place of the transformer (same heads, splits and checkpoint rule).
+  `--val-only` trains one configuration on seed 42 and prints its best
+  combined validation score without touching test; the 8-setting search
+  in FINDINGS.md §9 ran it once per setting with `--epochs 8`. A full run
+  reuses `bema_ngram{tag}_seed*.pt` only if they were trained with the
+  same settings, and stops otherwise; use a new `--tag` to change them.
+- `ensemble.py` — the 3-seed n-gram ensemble and its mix with the linear
+  baseline (mixing weight chosen on Choice validation), with paired
+  bootstrap intervals against the linear model. The mix has the best
+  Choice accuracy in this repo, but worse Score MAE than any n-gram model
+  without the mix (FINDINGS.md §9).
+- `clinc150_classical.py` — repeats the §9 comparison (linear, n-gram
+  BEMA, ensembles) on CLINC150, with `clinc150_pipeline.py`'s splits and
+  typo perturbation; the n-gram configuration is the BANKING77-tuned one,
+  not re-tuned (FINDINGS.md §11).
+- `temperature_audit.py` — fits the old (non-convergent) and the fixed
+  temperature on the same validation logits and reports how much test ECE
+  and overconfidence move (FINDINGS.md §10).
+- `truncation_control.py` — refits the linear baseline on the first 64
+  BPE tokens the transformer sees, to size the input-length confound in
+  FINDINGS.md §9.
 - `multiseed_sweep.py` — Workstream E: mean vs attention pooling across
   three training seeds, also giving seed variance for Choice and Score;
   results in FINDINGS.md.
@@ -437,10 +517,18 @@ python3 augment_and_retrain.py      # Typo-augmentation retrain (Workstream B)
 python3 heldout_noise_test.py       # ...and its test on unseen typo types
 python3 multiseed_sweep.py          # Mean vs attention pooling, 3 seeds (Workstream E, slow)
 python3 self_pretrain.py            # Self-supervised pretraining + fine-tune, 3 seeds (~2.5 h on 4 CPUs)
+python3 linear_baseline.py          # TF-IDF linear baseline
+python3 train_ngram.py              # n-gram BEMA, untuned default, 3 seeds
+python3 train_ngram.py --val-only --d-model 256 --dropout 0.4 --sparse-lr 3e-3 --epochs 8  # one search setting
+python3 train_ngram.py --d-model 256 --dropout 0.4 --sparse-lr 3e-3 --epochs 8 --tag _tuned  # tuned, 3 seeds
+python3 ensemble.py                 # Seed ensemble + linear mix (needs the _tuned checkpoints)
+python3 truncation_control.py       # Linear baseline on the transformer's 64-token view
+python3 temperature_audit.py        # Old vs fixed temperature fit (needs _tuned and multitask checkpoints)
 
 # Workstream D: second independent domain-breadth task (see CLINC150.md)
 python3 clinc150_pipeline.py
 python3 clinc150_oos_threshold.py
+python3 clinc150_classical.py       # Linear / n-gram BEMA / ensembles on CLINC150
 
 # Bootstrap confidence intervals (needs the checkpoints above)
 python3 bootstrap_ci.py
@@ -460,11 +548,19 @@ python3 benchmark_speed.py
   production-grade pretrained backbone — genuinely blocked by this sandbox's
   network policy (confirmed by direct connection tests), not a shortcut
   taken by choice.
-- The Score head reaches Pearson r=0.53 (Amazon Fine Food Reviews star
-  ratings) — real, generalizing signal, but short of what a competent
-  sentiment/rating model would reach (0.7+ is common). Encoder capacity
-  and the lack of pretrained weights (see above) are the most plausible
-  remaining bottleneck.
+- The transformer Score head reaches Pearson r=0.53 (Amazon Fine Food
+  Reviews star ratings, test n=1517; 3-seed mean 0.5605 ± 0.0234) —
+  real, generalizing signal, but short of what a competent
+  sentiment/rating model would reach (0.7+ is common). Closing that gap
+  did not need pretrained weights: on the same split, with no pretrained
+  weights, the TF-IDF Ridge baseline (0.7821) and the tuned
+  n-gram-trunk BEMA (0.7818, 3-seed mean) both reach
+  r=0.78 (FINDINGS.md §9). Under a third of that gap is input length (0.067 of the 0.222 in r between the transformer's 3-seed mean, 0.5605, and the TF-IDF model's 0.7821):
+  the transformer reads only a review's first 64 tokens, and the TF-IDF
+  model cut to the same view reaches 0.7148. Self-pretraining the
+  transformer added only +0.0286 (FINDINGS.md §8). The small
+  from-scratch transformer trunk was the main limit. Whether a production pretrained encoder would do better
+  than 0.78 is untested here.
 - No single real dataset in this repo has all three label types on the same
   text, so "one state, many typed questions" is demonstrated
   architecturally (one `encode()` call feeds all heads) rather than proven

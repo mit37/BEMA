@@ -21,7 +21,7 @@ from torch.utils.data import Dataset, DataLoader
 from tokenizers import ByteLevelBPETokenizer
 
 from model import JevCloneEncoder
-from calib_utils import ece as ece_score
+from calib_utils import ece as ece_score, fit_temperature_binary
 
 RESULTS_PATH = "results_log.csv"
 SEEDS = [42, 123, 2024]
@@ -142,17 +142,7 @@ def run_seed(seed):
             val_labels.append(label)
     val_logits, val_labels = torch.cat(val_logits), torch.cat(val_labels)
 
-    T = nn.Parameter(torch.ones(1) * 1.5)
-    opt = torch.optim.LBFGS([T], lr=0.01, max_iter=200)
-    bce = nn.BCEWithLogitsLoss()
-
-    def closure():
-        opt.zero_grad()
-        loss = bce(val_logits / T, val_labels)
-        loss.backward()
-        return loss
-
-    opt.step(closure)
+    T = fit_temperature_binary(val_logits, val_labels)
 
     def evaluate(calibrated):
         confs, correct_list = [], []
@@ -173,7 +163,7 @@ def run_seed(seed):
 
     raw_acc, raw_ece = evaluate(calibrated=False)
     cal_acc, cal_ece = evaluate(calibrated=True)
-    return raw_acc, raw_ece, cal_acc, cal_ece, T.item(), len(data["test"])
+    return raw_acc, raw_ece, cal_acc, cal_ece, T, len(data["test"])
 
 
 if __name__ == "__main__":

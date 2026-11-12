@@ -60,17 +60,42 @@ def aps_prediction_set_sizes_and_coverage(probs, true_labels, qhat):
     return k + 1, true_rank <= k
 
 
-def fit_temperature(logits, labels):
-    """Temperature T minimizing cross-entropy of logits / T (Guo et al. 2017)."""
-    T = torch.nn.Parameter(torch.ones(1) * 1.5)
-    opt = torch.optim.LBFGS([T], lr=0.01, max_iter=200)
-    ce = torch.nn.CrossEntropyLoss()
+def _fit_inverse_temperature(loss_of_scaled_logits):
+    """1/T minimizing loss(logits / T); the loss is convex in 1/T, and LBFGS uses a line search."""
+    inv_t = torch.nn.Parameter(torch.ones(1))
+    opt = torch.optim.LBFGS([inv_t], lr=1.0, max_iter=100, line_search_fn="strong_wolfe",
+                            tolerance_grad=1e-10, tolerance_change=1e-12)
 
     def closure():
         opt.zero_grad()
-        loss = ce(logits / T, labels)
+        loss = loss_of_scaled_logits(inv_t)
         loss.backward()
         return loss
 
     opt.step(closure)
-    return T.item()
+    return 1.0 / inv_t.item()
+
+
+def fit_temperature(logits, labels):
+    """Temperature T minimizing cross-entropy of logits / T (Guo et al. 2017).
+
+    Until 2026-11-12 this ran LBFGS on T with a fixed step of 0.01 from
+    T=1.5, which stopped short of the minimum; see FINDINGS.md section 10.
+    """
+    logits = logits.detach().float()
+    return _fit_inverse_temperature(lambda inv_t: torch.nn.functional.cross_entropy(logits * inv_t, labels))
+
+
+def fit_temperature_binary(logits, labels):
+    """Temperature T minimizing binary cross-entropy of logits / T, for a single-logit head."""
+    logits, labels = logits.detach().float(), labels.float()
+    return _fit_inverse_temperature(
+        lambda inv_t: torch.nn.functional.binary_cross_entropy_with_logits(logits * inv_t, labels))
+
+
+def paired_bootstrap_diff(a, b, n_boot=2000, seed=0):
+    """Mean of a - b with a 95% percentile interval, resampling examples jointly (paired)."""
+    d = np.asarray(a, dtype=float) - np.asarray(b, dtype=float)
+    idx = np.random.default_rng(seed).integers(0, len(d), size=(n_boot, len(d)))
+    boots = d[idx].mean(1)
+    return d.mean(), np.percentile(boots, 2.5), np.percentile(boots, 97.5)

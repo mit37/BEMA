@@ -12,11 +12,10 @@ instead of ECE, and say so plainly rather than implying a calibration
 number that isn't actually a calibration number.
 """
 import torch
-import torch.nn as nn
 from torch.utils.data import DataLoader
 
 from model import JevCloneEncoder
-from calib_utils import ece
+from calib_utils import ece, fit_temperature, fit_temperature_binary
 from train_multitask import TaskDataset, data, vocab_size, max_len, num_choice_classes, device
 
 model = JevCloneEncoder(
@@ -42,21 +41,9 @@ with torch.no_grad():
         val_labels.append(label)
 val_logits, val_labels = torch.cat(val_logits), torch.cat(val_labels)
 
-T_noul = nn.Parameter(torch.ones(1) * 1.5)
-opt = torch.optim.LBFGS([T_noul], lr=0.01, max_iter=200)
-bce = nn.BCEWithLogitsLoss()
-
-
-def closure():
-    opt.zero_grad()
-    loss = bce(val_logits / T_noul, val_labels)
-    loss.backward()
-    return loss
-
-
-opt.step(closure)
-model.temperature.data = torch.tensor([T_noul.item()])
-print(f"Noul: learned temperature T = {T_noul.item():.4f}")
+T_noul = fit_temperature_binary(val_logits, val_labels)
+model.temperature.data = torch.tensor([T_noul])
+print(f"Noul: learned temperature T = {T_noul:.4f}")
 
 
 def eval_noul_calibration(loader, calibrated):
@@ -98,21 +85,9 @@ with torch.no_grad():
         val_labels_c.append(label)
 val_logits_c, val_labels_c = torch.cat(val_logits_c), torch.cat(val_labels_c)
 
-T_choice = nn.Parameter(torch.ones(1) * 1.5)
-opt_c = torch.optim.LBFGS([T_choice], lr=0.01, max_iter=200)
-ce = nn.CrossEntropyLoss()
-
-
-def closure_c():
-    opt_c.zero_grad()
-    loss = ce(val_logits_c / T_choice, val_labels_c)
-    loss.backward()
-    return loss
-
-
-opt_c.step(closure_c)
-model.choice_temperature.data = torch.tensor([T_choice.item()])
-print(f"Choice: learned temperature T = {T_choice.item():.4f}")
+T_choice = fit_temperature(val_logits_c, val_labels_c)
+model.choice_temperature.data = torch.tensor([T_choice])
+print(f"Choice: learned temperature T = {T_choice:.4f}")
 
 
 def eval_choice_calibration(loader, calibrated):

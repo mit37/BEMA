@@ -13,7 +13,14 @@ earlier claims (CLINC150 "class imbalance"; the Score interval being
 (2026-09-24) added bootstrap confidence intervals (§3), conformal
 coverage under typo noise, and group-conditional CQR. A fourth pass
 (2026-09-30) pretrained BEMA's encoder in-house with masked-token
-prediction, since no pretrained encoder can be downloaded (§8). This document summarizes what an independent,
+prediction, since no pretrained encoder can be downloaded (§8). A fifth
+pass (2026-10-04) added a classical TF-IDF baseline, which beat the
+transformer everywhere, then rebuilt BEMA's trunk from hashed n-grams and
+tuned and ensembled it for accuracy (§9). A sixth pass (2026-11-12)
+found and fixed a temperature-fitting bug that affected every temperature-scaled
+number in the repo (temperatures, calibrated ECE and overconfidence), measured how much it mattered and revised §9 (§10),
+added paired bootstrap intervals for §9's ensemble-versus-linear comparisons, and repeated §9
+on CLINC150 (§11). This document summarizes what an independent,
 from-scratch reproduction of Jev's core interface shape (typed state in,
 typed calibrated decision out, one non-autoregressive forward pass)
 found when actually built and tested, rather than assumed. All numbers
@@ -66,9 +73,9 @@ Reviews Score task, not STS-B.
 - **Calibration method choice matters, and no single method dominates —
   and can even hurt.** The Phase 4 sweep (`calibration_sweep.py`,
   `results_log.csv`) found Platt scaling beat temperature scaling for
-  the binary head (ECE 0.0030 vs 0.0046) while for the multi-class head,
+  the binary head (ECE 0.0030 vs 0.0090; 0.0046 with the old temperature fit, §10) while for the multi-class head,
   temperature scaling actually made ECE WORSE than doing nothing (0.0210
-  raw -> 0.0371), and isotonic regression was the only method that
+  raw -> 0.0303; 0.0371 with the old fit), and isotonic regression was the only method that
   helped (0.0113). A serious implementation of this category should not
   assume temperature scaling is always safe, let alone always best — on
   this run, for this task, it was actively counterproductive.
@@ -100,14 +107,14 @@ Reviews Score task, not STS-B.
   all, so the gap is in the point predictor, not the calibration.
   Under typo noise (`conformal_typo.py`), Choice's sets react where its
   point confidence did not: calibrated on clean text, coverage stays at
-  89-92% while sets nearly double (7 to 13-15 classes); calibrating on
+  89-92% while sets nearly double (7 to 13-14 classes); calibrating on
   typo'd text restores the 90% guarantee, and the typo-augmented model
   keeps 96-98% coverage with smaller sets.
 - **Graceful degradation on real domain shift, at least for the binary
   head's confidence.** Evaluated on real, human-written text the spam
   model was never trained on (BANKING77 customer-support questions, which
   are provably never spam by how the dataset was built), mean confidence
-  dropped from 0.978 (in-distribution) to 0.904 on this real OOD text —
+  dropped from 0.973 (in-distribution) to 0.891 on this real OOD text (0.978 to 0.904 with the old temperature fit, §10) —
   a same-metric, appropriately-calibrated-looking degradation under
   shift. (An earlier draft of this document also cited a matching
   accuracy before/after pair; that OOD figure is actually a pure
@@ -166,11 +173,11 @@ Reviews Score task, not STS-B.
   correctness, under distribution shift.** This is an important
   negative-but-informative result in this repo — see §5.
 - **The Choice head's uncertainty response to out-of-scope input is real
-  but incomplete.** Confidence dropped from 0.795 (in-distribution,
+  but incomplete.** Confidence dropped from 0.800 (in-distribution,
   measured on the held-out test split, not the split its own temperature
-  was fit on) to 0.403 (on real SMS text with no valid banking-intent
-  answer) — a
-  meaningful, real signal. But 0.403 is still ~30x higher than the
+  was fit on) to 0.423 (on real SMS text with no valid banking-intent
+  answer; 0.791 to 0.410 with the old temperature fit, §10) — a
+  meaningful, real signal. But 0.423 is still ~30x higher than the
   ~0.013 a maximally uncertain 77-way classifier would show. The model
   knows *something* is off, but doesn't know it's completely off-schema.
 - **The most severe result in the whole repo, on discovery: ordinary
@@ -181,12 +188,14 @@ Reviews Score task, not STS-B.
   correctly-classified banking77 test queries -- still squarely inside
   the model's intended domain, same schema, same task. **n=3080** (the
   full BANKING77 test split, not a small sample). Accuracy collapsed
-  from 81.9% to 51.2% while mean confidence dropped only from 0.791 to
-  0.612. Every other calibration number in this repo (Phase 3, Phase 4)
+  from 81.9% to 51.2% while mean confidence dropped only from 0.800 to
+  0.624 (0.791 to 0.612 with the old temperature fit, §10). Every other calibration number in this repo (Phase 3, Phase 4)
   is measured on clean test text and would completely miss this. **Two
   separate claims here, not one** -- see the tokenizer-audit caveat in
   §5: the calibration GAP (confidence not tracking the accuracy drop)
-  is treated as the tokenizer-independent finding; the exact MAGNITUDE
+  is treated as the tokenizer-independent finding (for this BPE +
+  transformer trunk; with §9's n-gram trunk the large overconfidence
+  under typos does not appear); the exact MAGNITUDE
   of the 81.9%->51.2% collapse is not, since it runs partly through a
   small, from-scratch BPE vocabulary's specific fragmentation behavior
   on this input. **Status as of Workstream D: confirmed to generalize**
@@ -198,13 +207,31 @@ Reviews Score task, not STS-B.
   similarly, with no clean-accuracy cost, but did not close either gap.
   The improvement also carries over to typo types the model never
   trained on (keyboard-neighbor substitutions, deletions, insertions;
-  +11 to +15 points accuracy, n=3080; see §5).
+  +11 to +15 points accuracy, n=3080; see §5). **Status as of §9:
+  specific to the from-scratch transformer.** A TF-IDF linear model and
+  the n-gram-trunk BEMA, trained on the same clean data, lose about 6-10
+  points of Choice accuracy under keyboard and mixed typos (vs 31-38 for
+  the transformer, n=3080), and they do not show the transformer's large
+  overconfidence under mixed typos (+0.15; +0.14 with the old temperature
+  fit, §10); see §9 for their figures.
   See §5 for the full discussion, including why this finding (its
   existence, generalization, and partial-mitigation result together),
-  not the OOD result above, is this repo's sharpest finding as of the
-  most recent work.
+  not the OOD result above, is this repo's sharpest finding about the
+  transformer BEMA (§9 shows it largely does not carry over to the
+  linear or n-gram models).
 
 ## 3. Where the calibration numbers are trustworthy vs. not
+
+*Every temperature-scaled number in sections 1-8 was first fitted with
+temperature code that did not converge (§10). Most have since been re-run
+with the fixed fit and are shown that way, with the old values noted. The
+exception, still old-fit and marked where it appears: the ECE and
+overconfidence rows of §8's table (the self-pretrained models were not
+re-run). For the
+multitask transformer, the corrected fit moves Choice ECE from 0.0371 to
+0.0303, Noul ECE from 0.0046 to 0.0090, and overconfidence under typos up
+by 0.012-0.013; the qualitative conclusions below hold, except that Noul's
+temperature scaling looks less good than stated, and the first bullet's "held across every run" was never true for the transformer's Choice head: there temperature scaling leaves test ECE worse than raw with either fit (raw 0.0210; old fit 0.0371, fixed fit 0.0303) (§10).*
 
 **Trustworthy, with the stated caveats:**
 - The qualitative claim "temperature scaling (or Platt/isotonic) reduces
@@ -228,15 +255,20 @@ rather than hidden:**
   run as if both were seed=42 on the same code). A subsequent fresh-clone
   sanity check disproved this: the early number was from an OLDER version
   of the code (before the encoder/tokenizer upgrade in a later commit),
-  and the later number is what the CURRENT code reproduces bit-for-bit,
-  every time, seed=42, verified by two independent full re-runs. There is
+  and the later number is what the code of that date reproduced
+  bit-for-bit, every time, seed=42, verified by two independent full
+  re-runs. (A 2026-11-12 re-run with the corrected temperature fitter,
+  §10, reproduced the accuracy and raw ECE exactly; the calibrated ECE is
+  now 0.0048, not 0.0039.) There is
   no PyTorch/CPU nondeterminism here — the earlier claim conflated a code
   change with run-to-run noise, and has been corrected in the README.
   What IS real and worth reporting is genuine cross-SEED variance:
   `seed_variation_sweep.py` runs 3 independent seeds (42, 123, 2024),
   each with its own data split, tokenizer, and training run (not the same
   seed re-run), giving calibrated accuracy 0.9785-0.9833 (mean 0.9801,
-  std 0.0028) and calibrated ECE 0.0039-0.0070 (mean 0.0054, std 0.0015).
+  std 0.0028) and calibrated ECE 0.0048-0.0083 (mean 0.0062, std 0.0018;
+  re-run 2026-11-12 with the fixed temperature fit, §10; the old fit gave
+  0.0039-0.0070, mean 0.0054, std 0.0015).
   (These std values use the unbiased sample-variance formula, dividing by
   n-1=2; an earlier version of this script divided by n=3, understating
   std by about 18% -- fixed, and the numbers above reflect the corrected,
@@ -247,7 +279,8 @@ rather than hidden:**
   42, 123 and 2024 on the SAME data split (so it measures init and
   batch-order noise, not split noise, and is a narrower measure than the
   Noul sweep above). With mean pooling: Choice test accuracy 0.8195 ±
-  0.0011 (n=3080), calibrated Choice ECE 0.0341 ± 0.0042, Score MAE
+  0.0011 (n=3080), calibrated Choice ECE 0.0281 ± 0.0026 (0.0341 ±
+  0.0042 with the old temperature fit, §10), Score MAE
   0.1858 ± 0.0055 and Score Pearson r 0.5605 ± 0.0234 (n=1517). Choice
   accuracy is very stable across seeds. Score r is not: it ranges
   0.534-0.579, and the single-run r=0.53 quoted elsewhere in this repo
@@ -259,18 +292,21 @@ rather than hidden:**
   entirely; the Choice/Score sweep varies only the training seed.
 - **Test-set sampling uncertainty is now measured** (`bootstrap_ci.py`:
   2000 bootstrap resamples of each fixed test split, existing
-  checkpoints, paired for differences). 95% intervals: Noul accuracy
-  0.9785 [0.968, 0.988] and calibrated ECE 0.0046 [0.0038, 0.0153]
-  (n=836); Choice accuracy 0.8188 [0.806, 0.832] and calibrated ECE
-  0.0371 [0.033, 0.051] (n=3080); Score MAE 0.187 [0.176, 0.199] and
+  checkpoints, paired for differences; re-run 2026-11-12 with the fixed
+  temperature fit, §10). 95% intervals: Noul accuracy 0.9785 [0.968,
+  0.988] and calibrated ECE 0.0090 [0.0047, 0.0190] (n=836); Choice
+  accuracy 0.8188 [0.806, 0.832] and calibrated ECE 0.0303 [0.0256,
+  0.0436] (n=3080); with the old fit the two ECEs were 0.0046 [0.0038,
+  0.0153] and 0.0371 [0.033, 0.051]; Score MAE 0.187 [0.176, 0.199] and
   Pearson r 0.534 [0.491, 0.576] (n=1517). Two things follow. The
   differences this repo leans on are well outside the noise (e.g. typo
   augmentation's gain on unseen keyboard typos, +12.8 points [11.2,
   14.5]; its small clean-text gain, +1.6 [0.5, 2.8]; CLINC150's threshold
-  cost to in-scope accuracy, −9.7 [−10.5, −8.9]). But single ECE values
-  are soft: binned ECE is noisy and biased upward at these sample sizes,
-  so the headline "calibrated Noul ECE ≈ 0.005" is better read as "at
-  most about 0.015". BANKING77's test split is the dataset's official
+  cost to in-scope accuracy, −9.8 [−10.6, −8.9]; −9.7 [−10.5, −8.9] with
+  the old fit). But single ECE values are soft: binned ECE is noisy and
+  biased upward at these sample sizes, so a calibrated Noul ECE of about
+  0.005-0.009 is better read as "at most about 0.02" (old fit: "at most
+  about 0.015"). BANKING77's test split is the dataset's official
   one, so resampling that fixed set is the relevant uncertainty; for the
   randomly split Noul and Score data, a different split would add further
   variation (measured for Noul by the seed sweep above).
@@ -288,7 +324,7 @@ much this toy reproduction actually demonstrates:
 |---|---|---|
 | Non-autoregressive, single forward pass | **Yes, fully.** Architecturally real: one `encode()` call, typed heads read from it. | High |
 | Fixed-schema output ("cannot emit malformed output") | **Yes, fully.** Structural, not learned — heads are fixed-shape linear projections. | High |
-| Calibrated confidence that tracks real accuracy | **On clean test data, mostly yes for Noul specifically** (calibrated ECE 0.0039-0.0070 across 3 seeds, §3). **On realistic noisy input, no by default** — Phase 5b found ordinary typos collapse Choice accuracy 81.9%→51.2% while confidence drops only 0.791→0.612, a real miscalibration inside the model's own domain, not just at OOD edges (see §5). Clean-test-set ECE and noisy-input calibration are demonstrably different properties here. **Workstream B found this is substantially, not fully, fixable**: training on 50%-typo-augmented data narrowed the accuracy-collapse gap by roughly half (31.4pp→16.0pp drop) and the calibration mismatch similarly, with no clean-accuracy tradeoff, and the gain carries over to typo types never seen in training (+11-15 points accuracy, ECE roughly halved). But the gap did not close: accuracy under noise stays 13-24 points below clean (see §5). | Medium for clean input, Low-Medium once realistic noise is introduced (partially mitigable with targeted augmentation) |
+| Calibrated confidence that tracks real accuracy | **On clean test data, mostly yes for Noul specifically** (calibrated ECE 0.0048-0.0083 across 3 seeds with the fixed temperature fit, §3, §10). **On realistic noisy input, no by default for the from-scratch transformer** — Phase 5b found ordinary typos collapse Choice accuracy 81.9%→51.2% while confidence drops only 0.800→0.624 (0.791→0.612 with the old temperature fit, §10), a real miscalibration inside the model's own domain, not just at OOD edges (see §5). Clean-test-set ECE and noisy-input calibration are demonstrably different properties here. **Workstream B found this is substantially, not fully, fixable**: training on 50%-typo-augmented data narrowed the accuracy-collapse gap by roughly half (31.4pp→16.0pp drop) and the calibration mismatch similarly, with no clean-accuracy tradeoff, and the gain carries over to typo types never seen in training (+11-15 points accuracy, ECE roughly halved). But the gap did not close: accuracy under noise stays 13-24 points below clean (see §5). **§9: the typo collapse is tied to the from-scratch transformer/BPE trunk, not the typed heads.** The same typed heads on a hashed n-gram trunk, trained on clean data only, lose 6.5-9.8 points of Choice accuracy under keyboard and mixed typos (transformer: 31-38; 3-seed means, n=3080), and they do not show the transformer's large overconfidence under mixed typos (+0.15 with the fixed temperature fit, +0.14 with the old; §10); see §9 for their figures. | Medium for clean input; Low-Medium for the transformer under realistic noise (partly fixed by augmentation); Medium with the n-gram trunk (§9) |
 | Multiple typed decision shapes (Noul/Choice/Score) | **All three now show real, working signal.** Score (Amazon Fine Food Reviews, r=0.53) is weaker than Noul/Choice but genuinely learns and generalizes, unlike the STS-B attempt it replaced (r=0.29, flat training curve). None reach a "production-grade" bar, but none is a dead task either. | Low-Medium |
 | Speed/cost advantage over LLMs (40-200x claimed) | **Not independently verified — confirmed unreachable, not just untried** (see `LLM_BENCHMARK.md`). This repo's own model is fast (~1.4ms/example measured), but a real LLM benchmark requires an LLM API and no usable one exists in this sandbox: `api.anthropic.com` is network-reachable but no API credentials are present (`ANTHROPIC_API_KEY`/`CLAUDE_CODE_OAUTH_TOKEN`/`ANTHROPIC_AUTH_TOKEN` all unset), no local LLM server is running, and no LLM SDK is installed. The comparison still uses a documented industry reference figure for LLM latency, not a live measurement. The *shape* of the claim (a small non-autoregressive forward pass beats an LLM API round-trip) is directionally very plausible, but "40-200x" specifically remains Jev's number, not something this repo measured against a real LLM. | Low (weakest-evidenced claim in this repo) |
 | Domain breadth / general-purpose typed questions over arbitrary schemas | **No, still the weakest part of this reproduction, though now tested on one more task.** Four narrow, single-purpose tasks total (spam/ham, 77 banking intents, food-review star ratings, and now CLINC150's 151-way intent+oos, `CLINC150.md`), each needing its own dataset, its own tokenizer/encoder in CLINC150's case, and largely its own calibration. Jev's actual product claim is schema generality across arbitrary domains WITHOUT per-domain retraining — nothing here demonstrates that; each new task in this repo required a full retrain, not zero-shot or few-shot adaptation of an existing model. | Very Low |
@@ -305,24 +341,44 @@ scale, and a verified speed/cost advantage over actual LLM APIs.
 more time"):**
 - **No pretrained encoder access.** Confirmed via direct network tests
   (not assumed): `huggingface.co` and `download.pytorch.org` are both
-  blocked by this sandbox's network policy. This is the single biggest
-  ceiling on quality — every number in this repo comes from a
-  from-scratch encoder trained on a few thousand examples per task. A
+  blocked by this sandbox's network policy. What real pretrained weights
+  would add is untested here (§6, §8). What was measured: in-house
+  masked-token pretraining added +0.0087 Choice accuracy and +0.0286
+  Score r (§8). Replacing the from-scratch transformer with a hashed
+  n-gram trunk, still with no pretrained weights, added +0.0771 Choice
+  accuracy (0.8195 to 0.8966 tuned; +0.0703 untuned) and +0.221 Score r
+  (0.5605 to 0.7818) (§9; 3-seed means, Choice n=3080, Score n=1517). So
+  the largest measured gain came from replacing the transformer, not
+  from pretraining it. Every model here (transformer, n-gram and TF-IDF
+  linear) is trained from scratch on this repo's training splits. A
   real Jev competitor would almost certainly start from pretrained
   weights.
 - **CPU-only, single environment.** All training ran on CPU; the
   multi-task run (3 tasks x ~266 steps x 12 epochs) took ~30 minutes for
   a 96-dim/3-layer encoder. Anything meaningfully larger, or a genuine
-  hyperparameter search (rather than the two or three configurations
-  actually tried here), was out of reach in the time available.
+  hyperparameter search for the transformer (rather than the two or
+  three configurations actually tried), was out of reach in the time
+  available. The much cheaper n-gram BEMA got a small 8-setting,
+  validation-only search (seed 42, §9), which chose the tuned
+  configuration cited above.
 - **No sentence-pair architecture question anymore, since there's no
   sentence pair.** The STS-B-era finding that a naive concat+meanpool
   architecture actively hurts a sentence-pair task (§2, historical) no
   longer applies now that the Score task is single-text star-rating
-  regression -- there's no pair to mishandle. The remaining gap between
-  r=0.53 and a "strong" sentiment-regression result is most plausibly
-  the same encoder-capacity/no-pretrained-weights bottleneck named
-  above, not a new architecture problem specific to this dataset.
+  regression -- there's no pair to mishandle. §9 has since shown where
+  most of the gap between r=0.53 and a "strong" sentiment-regression
+  result came from. On the same split, with no pretrained weights, the
+  same Score-head design on a hashed n-gram trunk reaches r=0.78
+  (0.7818 ± 0.0022, 3 seeds, n=1517), and a TF-IDF Ridge model reaches
+  0.7821. In-house pretraining of the transformer (§8) added only
+  +0.0286. Part of the gap is input length, not the model: the
+  transformer reads only the first 64 tokens of each review, and the
+  TF-IDF model cut to that same view reaches r=0.7148 (§9). So the
+  r=0.53-0.58 was mainly a limit of the small from-scratch transformer
+  trunk, with about 30% of the gap from truncation (0.0673 of 0.2216 in r, against the 3-seed mean 0.5605, n=1517): reaching 0.71 on
+  the same input, and 0.78 on the whole review, did not need pretrained
+  weights. Whether a real pretrained encoder would do better than 0.78
+  is untested.
 - **Small held-out test sets (836-3,080 examples per task).** Bootstrap
   intervals (§3) show accuracies are pinned to about ±1-2 points, but
   ECE values are only good to within roughly a factor of 2-3.
@@ -342,8 +398,8 @@ off-schema answer) don't share.
 But Phase 5's OOD test shows this guarantee doesn't extend to correctness.
 Feed the banking-intent classifier text that has no valid banking-intent
 answer (real SMS spam/ham messages), and it doesn't refuse, abstain, or
-even show much uncertainty — it picks one of 77 categories with 40%
-average confidence, down from 79% in-distribution but nowhere near the 1%
+even show much uncertainty — it picks one of 77 categories with 42%
+average confidence, down from 80% in-distribution (41% and 79% with the old temperature fit, §10) but nowhere near the 1%
 a genuinely "I don't know" response would imply. The model cannot produce
 a *malformed* answer, but it absolutely can, and does, produce a
 *confidently wrong* one when asked something outside its intended scope.
@@ -352,8 +408,10 @@ This matters commercially, not just academically: if "cannot hallucinate"
 is read by a customer as "the confidence score is a trustworthy AND
 complete signal that the model is out of its depth," this toy reproduction
 suggests that's not automatically true even with textbook-correct
-calibration (temperature/Platt/isotonic scaling, all applied and all
-measurably improving ECE here). A model can be well-calibrated on its
+calibration (temperature/Platt/isotonic scaling, all applied; Platt and
+isotonic lowered test ECE wherever applied, and temperature scaling lowered
+Noul's, but it made the transformer's Choice ECE worse than raw with either
+fit: 0.0210 raw → 0.0371 old fit / 0.0303 fixed fit, §10). A model can be well-calibrated on its
 training distribution and still fail silently — meaning confidently,
 without a low-confidence flag — the moment real-world input drifts
 outside that distribution. Any team evaluating this category as a
@@ -381,7 +439,8 @@ adjacent-character swaps -- an ordinary fast-typing typo, not an
 adversarial attack, verified by hand to be fully readable ("How do I
 locate my card?" -> "Howd o I locate my crad?"). Accuracy collapsed from
 81.9% to 51.2% -- nearly halved -- while mean confidence dropped only
-from 0.791 to 0.612. That gap (confidence down ~23%, accuracy down ~37
+from 0.800 to 0.624 (0.791 to 0.612 with the old temperature fit, §10).
+That gap (confidence down ~22%, accuracy down ~37
 relative percentage points) is a real, quantified miscalibration, and it
 happens on input that is squarely INSIDE the model's intended domain,
 using the exact same schema, on the exact kind of noise every real text
@@ -428,13 +487,22 @@ confirming this is a real but not universal mechanism, not an artifact
 of a single cherry-picked example.
 
 *Two claims, and only one of them is the tokenizer-independent finding:*
-1. **The calibration gap** -- confidence (0.791→0.612, a ~23% relative
-   drop) not tracking the accuracy collapse (81.9%→51.2%, a ~37% relative
+1. **The calibration gap** -- confidence (0.800→0.624, a ~22% relative
+   drop; 0.791→0.612 with the old temperature fit) not tracking the accuracy collapse (81.9%→51.2%, a ~37% relative
    drop) -- is treated as real and likely tokenizer-independent. Whatever
    specific mechanism corrupts the model's internal representation under
    this perturbation, a well-calibrated model's confidence should track
    however much its accuracy actually degrades. It didn't. This is this
    repo's headline finding and is not walked back by the tokenizer audit.
+   (Qualified by §9: when the BPE + transformer trunk is replaced by
+   hashed word/character n-grams, with the same head design and the same
+   clean training data, the large gap does not appear: those models lose
+   6.5-9.8 points under keyboard and mixed typos (3-seed means, n=3080)
+   and do not show the transformer's large overconfidence (+0.15 under
+   mixed typos; +0.14 with the old temperature fit, §10); §9 has their
+   figures. So the large gap holds for this
+   BPE + transformer trunk, not across input representations. §9 changes
+   tokenizer and encoder together, so it does not separate the two.)
 2. **The exact magnitude of the accuracy collapse** is NOT claimed to
    generalize to a production-grade subword-tokenized encoder. This
    repo's tokenizer is small (8,000 tokens) and trained on a narrow,
@@ -468,7 +536,11 @@ cannot: whether the calibration gap survives with a production-grade
 tokenizer even if the accuracy-collapse magnitude shrinks, which is the
 single result that would tell us whether this is a real property of
 System-One-style architectures or an artifact of this toy
-implementation's tokenizer.
+implementation's tokenizer. (§9 has since shown it is not a property of
+System-One-style typed heads as such: BEMA with the same heads on a
+hashed n-gram trunk does not show the transformer's large overconfidence
+under typos. Whether a pretrained subword transformer would show it is
+still open.)
 
 **Does adversarial data augmentation fix the typo-collapse finding?
 Mostly yes, on this toy task — a genuinely encouraging, fully-measured
@@ -487,11 +559,16 @@ identical fixed-seed typo perturbations to both models:
 | Metric | Baseline | Augmented | Delta |
 |---|---|---|---|
 | Clean-test accuracy (Choice, n=3,080) | 0.8188 | 0.8347 | **+0.0159** |
-| Clean-test mean confidence | 0.7906 | 0.8133 | +0.0228 |
+| Clean-test mean confidence | 0.8001 | 0.8169 | +0.0169 |
 | Typo-test accuracy | 0.5052 | 0.6744 | **+0.1692** |
-| Typo-test mean confidence | 0.6122 | 0.7046 | +0.0925 |
+| Typo-test mean confidence | 0.6243 | 0.7091 | +0.0848 |
 | Accuracy drop under typos | 0.3136 (−31.4pp) | 0.1604 (−16.0pp) | **gap narrowed by ~half** |
-| Confidence drop under typos | 0.1784 | 0.1087 | gap narrowed by ~39% |
+| Confidence drop under typos | 0.1758 | 0.1078 | gap narrowed by ~39% |
+
+(Re-run 2026-11-12 with the fixed temperature fit, §10; the accuracies
+reproduced exactly. With the old, non-convergent fit the confidences were
+0.7906 / 0.8133 clean and 0.6122 / 0.7046 with typos, and the confidence
+drops 0.1784 / 0.1087.)
 
 Both halves of the original finding improve substantially:
 1. **The accuracy-collapse gap narrowed by roughly half** — typo-test
@@ -505,7 +582,7 @@ Both halves of the original finding improve substantially:
    present, but meaningfully closer to tracking.
 3. **No clean-accuracy tradeoff was observed — if anything, the
    augmented model is slightly better on clean, unperturbed test data
-   too** (+1.6 points accuracy, +2.3 points confidence). This is not the
+   too** (+1.6 points accuracy, +1.7 points confidence). This is not the
    classic robustness/accuracy tradeoff pattern; augmentation with a
    fixed typo mechanism at 50% duplication rate looks like a
    close-to-free improvement on this toy task, possibly because the
@@ -534,22 +611,26 @@ identical text:
 
 | Noise (2 edits unless noted) | In training? | Baseline acc / ECE | Augmented acc / ECE | Acc gain |
 |---|---|---|---|---|
-| none (clean) | - | 0.8188 / 0.037 | 0.8347 / 0.034 | +0.016 |
-| adjacent swap | yes | 0.5000 / 0.112 | 0.6718 / 0.032 | +0.172 |
-| adjacent swap ×4 | same kind, heavier | 0.3276 / 0.202 | 0.5295 / 0.095 | +0.202 |
-| keyboard-neighbor substitution | no | 0.5276 / 0.094 | 0.6558 / 0.035 | +0.128 |
-| deletion | no | 0.5503 / 0.092 | 0.6870 / 0.026 | +0.137 |
-| insertion | no | 0.5899 / 0.062 | 0.7026 / 0.024 | +0.113 |
-| substitution + deletion + insertion | no | 0.4461 / 0.139 | 0.5958 / 0.066 | +0.150 |
+| none (clean) | - | 0.8188 / 0.030 | 0.8347 / 0.032 | +0.016 |
+| adjacent swap | yes | 0.5000 / 0.124 | 0.6718 / 0.038 | +0.172 |
+| adjacent swap ×4 | same kind, heavier | 0.3276 / 0.215 | 0.5295 / 0.100 | +0.202 |
+| keyboard-neighbor substitution | no | 0.5276 / 0.106 | 0.6558 / 0.040 | +0.128 |
+| deletion | no | 0.5503 / 0.099 | 0.6870 / 0.029 | +0.137 |
+| insertion | no | 0.5899 / 0.074 | 0.7026 / 0.025 | +0.113 |
+| substitution + deletion + insertion | no | 0.4461 / 0.152 | 0.5958 / 0.071 | +0.150 |
 
 (The baseline's swap accuracy here, 0.5000, differs slightly from the
-0.5052 above because the swaps are a different random draw.) On every
+0.5052 above because the swaps are a different random draw. ECEs are from
+the 2026-11-12 re-run with the fixed temperature fit, §10; accuracies
+reproduced exactly, and with the old fit the baseline / augmented ECEs
+were 0.037 / 0.034 clean and 0.094 / 0.035, 0.092 / 0.026, 0.062 / 0.024
+and 0.139 / 0.066 on the four held-out corruptions.) On every
 held-out corruption the augmented model is 11-15 points more accurate
 and its ECE falls by roughly half or more, so the fix is not limited to
 the exact noise it was trained on. It is still not a cure: accuracy
 under held-out noise stays 13-24 points below clean accuracy, the model
 remains overconfident under every corruption (mean confidence exceeds
-accuracy by 0.9-9.5 points), and none of these synthetic corruptions is
+accuracy by 1.3-10.0 points; 0.9-9.5 with the old fit), and none of these synthetic corruptions is
 a substitute for testing on real user-typed text.
 
 **Does the typo-miscalibration finding generalize past BANKING77? Yes —
@@ -561,14 +642,22 @@ perturbation with its own dedicated encoder, its own dedicated
 4,000-token tokenizer trained from scratch on this corpus alone (not the
 shared multitask vocabulary), and 151 classes instead of 77. Result:
 accuracy 71.80%→45.04% (a ~37% relative collapse) while confidence only
-dropped 0.7514→0.5615 (a ~25% relative drop) — the same qualitative
+dropped 0.7489→0.5583 (a ~25% relative drop; 0.7514→0.5615 with the old
+temperature fit, §10) — the same qualitative
 pattern, at a similar relative magnitude, as BANKING77's 81.9%→51.2%
-accuracy collapse against a 0.791→0.612 confidence drop. Two different
+accuracy collapse against a 0.800→0.624 confidence drop. Two different
 datasets, different vocabularies, different domains, different class
 counts, same result: this meaningfully strengthens the claim that the
-typo-miscalibration gap is a real property worth checking for in any
-System-One-style architecture, not a quirk of one dataset's tokenizer or
-domain.
+typo-miscalibration gap is a real property of this from-scratch
+transformer encoder, not a quirk of one dataset's tokenizer or domain.
+Both runs use the same `JevCloneEncoder` architecture, so this is
+generalization across datasets, not across architectures. §9 shows that
+on BANKING77 the same typed heads on a hashed n-gram trunk, and a TF-IDF
+linear model, do not show the transformer's large overconfidence under
+mixed typos (+0.15; +0.14 with the old temperature fit, §10); see §9 for
+their figures. The gap is still worth
+checking for in any System-One-style model, but it is not a property of
+those models in general. (§11 confirms this on CLINC150 itself, n=5,500: under the same typos the transformer's overconfidence rises by 0.0770 (from +0.0309 clean to +0.1079), while the overconfidence of every linear and n-gram model, single or ensembled, moves by less than 0.011 in either direction. The linear and n-gram models also lose only 7-9.5 points of accuracy, where the transformer loses 27.)
 
 CLINC150 also tested something BANKING77's schema couldn't: an explicit,
 human-labeled out-of-scope class, the "learned 'none of the above'
@@ -580,10 +669,11 @@ training set has exactly 100 examples for every class, oos included. The
 oos class simply has to cover "everything else" with the same budget as
 one narrow intent. The more useful result is that the confidence score
 carries the missing signal (`clinc150_oos_threshold.py`): top-class
-probability averages 0.82 on in-scope vs 0.44 on out-of-scope test
+probability averages 0.82 on in-scope vs 0.43 on out-of-scope test
 queries (AUROC 0.88), and rejecting answers below a validation-tuned
-threshold raises oos recall to 85.7%, at a cost of in-scope accuracy
-84.2%→74.5% (oos precision 46%). So "knows when it doesn't know" is
+threshold raises oos recall to 86.1%, at a cost of in-scope accuracy
+84.2%→74.4% (oos precision 46%; re-run with the fixed temperature fit,
+§10). So "knows when it doesn't know" is
 partly true here, but only as a tunable tradeoff, not for free. See
 `CLINC150.md` for the full table and tradeoff curve.
 
@@ -642,12 +732,17 @@ accuracy slightly but leaves the typo collapse unchanged.
 
 It is not evidence
 either for or against the calibration gap being a general
-System-One-architecture property; it is an open question this
-environment cannot answer. Anyone with HuggingFace Hub access can run
-this experiment directly against this repo's `adversarial_stress_test.py`
-and `train_multitask.py` by swapping in a pretrained encoder for the
-Choice head -- that is the specific, well-defined next step this
-reconnaissance effort could not complete.
+System-One-architecture property. §9 later answered that general
+question in this environment: BEMA with the same typed heads on a hashed
+n-gram trunk, trained on the same clean data, loses 6.5-9.8 points
+under keyboard and mixed typos (transformer: 31-38; 3-seed means,
+n=3080) and does not show the transformer's large overconfidence. What
+stays open is the narrower question of whether a pretrained subword
+transformer would show the gap. Anyone with HuggingFace Hub access can
+run this experiment directly against this repo's
+`adversarial_stress_test.py` and `train_multitask.py` by swapping in a
+pretrained encoder for the Choice head -- that is the specific,
+well-defined next step this reconnaissance effort could not complete.
 
 ## 7. Workstream E: attention pooling vs. mean pooling
 
@@ -667,9 +762,14 @@ both variants with three seeds (42, 123, 2024) on the same data split:
 |---|---|---|---|
 | Noul accuracy (n=836) | 0.9801 ± 0.0050 | 0.9809 ± 0.0041 | +0.0008 ± 0.0014 |
 | Choice accuracy (n=3080) | 0.8195 ± 0.0011 | 0.8202 ± 0.0143 | +0.0008 ± 0.0136 |
-| Choice ECE, calibrated | 0.0341 ± 0.0042 | 0.0314 ± 0.0046 | −0.0027 ± 0.0050 |
+| Choice ECE, calibrated | 0.0281 ± 0.0026 | 0.0277 ± 0.0044 | −0.0004 ± 0.0039 |
 | Score MAE (lower is better, n=1517) | 0.1858 ± 0.0055 | 0.1809 ± 0.0041 | −0.0049 ± 0.0095 |
 | Score Pearson r | 0.5605 ± 0.0234 | 0.5666 ± 0.0199 | +0.0061 ± 0.0190 |
+
+(Re-run 2026-11-12 with the fixed temperature fit, §10: every accuracy
+and Score number reproduced exactly; with the old, non-convergent fit the
+Choice ECE row was 0.0341 ± 0.0042, 0.0314 ± 0.0046 and −0.0027 ±
+0.0050.)
 
 (mean ± sample standard deviation over seeds.)
 
@@ -715,6 +815,13 @@ multitask model with exactly `train_multitask.py`'s recipe.
 | Choice accuracy drop, mixed typos | 0.3827 ± 0.0112 | 0.3851 ± 0.0031 | +0.0024 ± 0.0142 |
 | Overconfidence under mixed typos | 0.1395 ± 0.0006 | 0.1389 ± 0.0009 | −0.0006 ± 0.0015 |
 
+(The ECE and overconfidence rows use the old, non-convergent temperature
+fit, §10. The from-scratch models give 0.0281 ± 0.0026 and +0.1507 ±
+0.0024 with the fixed fit; the self-pretrained models were not re-run,
+so the paired comparison of those two rows is only available with the
+old fit. The accuracy, Score and drop rows do not depend on the
+temperature.)
+
 **Result: small, consistent gains on clean text; no effect at all on the
 typo problem.** Pretraining raised clean Choice accuracy by about 0.9
 points and Score correlation by about 0.03, both on every seed, with
@@ -723,9 +830,16 @@ typos and the overconfidence that comes with it are the same as training
 from scratch, to within seed noise, for every corruption tested. For
 comparison, training on typo-augmented data (§5) cut the same collapse
 by 11-17 points. On this evidence, the typo miscalibration is not caused
-by a lack of general language knowledge that pretraining supplies; it
-comes from never seeing corrupted text, and the direct fix works where
-pretraining does not.
+by a lack of general language knowledge that pretraining supplies.
+Training on corrupted text partly fixes it (§5), and pretraining does
+not. Never seeing corrupted text is not enough on its own to cause it,
+though: §9's TF-IDF linear model and n-gram-trunk BEMA, trained on the
+same clean text, lose only about 6-10 points under the same keyboard and
+mixed typos (31-38 here), and they do not show this model's large
+overconfidence (+0.15 under mixed typos; +0.14 with the old temperature
+fit, as in the table above); §9 has their figures. So the
+problem is tied to the from-scratch transformer/BPE trunk, not to clean
+training data alone. Augmentation narrows it but does not remove it.
 
 **What this does not settle.** 1.1M tokens of clean, in-domain text is
 orders of magnitude less than a production pretrained encoder sees, and a
@@ -733,3 +847,329 @@ web-scale corpus contains plenty of real typos. So this does not answer
 §6's question about a model like BERT or DistilBERT, which could behave
 differently. It does show that pretraining in itself, at the scale
 possible here, is not a remedy.
+
+## 9. Accuracy: a linear baseline, an n-gram trunk, and ensembles
+
+*Revised 2026-11-12. The first version of this section used a temperature
+fitter that did not converge (§10). Single-model accuracy and all Score and Noul numbers are
+unchanged by the fix; ECE, overconfidence and the ensembles' Choice accuracies (the ensembles average calibrated probabilities, so e.g. the mix's clean accuracy moved from 0.9201 to 0.9198) are recomputed with the fixed fitter, and paired bootstrap intervals are
+added. Two claims of the first version shrank under the fix: the linear model's and the ensembles' underconfidence under typos (−0.02 to −0.04 then, −0.006 to −0.020 now; mostly an artifact of the fitter), and the ECE cost of ensembling (the 3-seed ensemble's clean ECE is 0.0120 against a mean of 0.0074 for its three members, not about 0.02 against 0.008).*
+
+**The baseline came first, and it was unflattering.** `linear_baseline.py`
+fits TF-IDF features (word 1-2 grams plus character 2-5 grams) with a
+linear model per task, regularization chosen on validation. On the same
+test splits it beat the transformer BEMA on every task, and under typos it
+loses 6-9 points with overconfidence near zero (−0.006 to −0.014; the
+transformer: +0.11 to +0.15, 3-seed means). So the typo
+miscalibration in §5 is a property of the small from-scratch transformer,
+not of typed-decision models in general.
+
+**BEMA with an n-gram trunk.** `ngram_model.py` keeps BEMA's design (one
+shared state per input, read by fixed-shape Noul / Choice / Score heads,
+all three trained jointly on `train_multitask.py`'s splits with its
+checkpoint rule), but builds the state from the mean embedding of hashed
+word 1-2 grams and character 2-5 grams instead of a transformer. These are
+the same n-gram types the baseline uses, but unweighted (no TF-IDF, no
+min_df cut, hashing collisions possible). Hyperparameters were chosen by
+running `train_ngram.py --val-only --epochs 8` once per setting: 8
+settings, seed 42, validation only, scored by the combined validation
+score (Noul accuracy + Choice accuracy + 1 − Score MAE):
+
+| width | dropout | embedding lr | combined val score |
+|---|---|---|---|
+| 96 | 0.15 | 3e-3 | 2.7519 |
+| 96 | 0.15 | 1e-3 | 2.7622 |
+| 96 | 0.4 | 3e-3 | 2.7672 |
+| 96 | 0.4 | 1e-3 | 2.7655 |
+| 256 | 0.15 | 3e-3 | 2.7592 |
+| 256 | 0.15 | 1e-3 | 2.7653 |
+| **256** | **0.4** | **3e-3** | **2.7723** |
+| 256 | 0.4 | 1e-3 | 2.7682 |
+
+Test was scored once for the chosen setting and once for the untuned
+default (width 96, dropout 0.15, lr 3e-3, 12 epochs). The tuned run was
+repeated on 2026-11-12 on a different machine and torch version and
+reproduced every accuracy, Score and Noul number to four decimals.
+
+**Ensembles.** `ensemble.py` averages the three tuned seeds' calibrated
+probabilities, and mixes that average with the linear baseline. The
+mixing weight was picked on Choice validation accuracy from
+{0, .25, .5, .75, 1}: 0.9153, 0.9207, **0.9253**, 0.9173, 0.9093, so
+w = 0.5. The ensemble temperature was refitted on validation.
+
+Test results. Single models are mean ± std over seeds 42/123/2024;
+ensembles and the linear model are single deterministic runs. Choice
+n=3080, Score n=1517, Noul n=836.
+
+| Test metric | Transformer BEMA (§8) | Linear TF-IDF | n-gram BEMA, default | n-gram BEMA, tuned | 3-seed n-gram ensemble | n-gram ensemble + linear (w=0.5) |
+|---|---|---|---|---|---|---|
+| Choice accuracy (clean) | 0.8195 ± 0.0011 | 0.9114 | 0.8898 ± 0.0020 | 0.8966 ± 0.0058 | 0.9153 | **0.9198** |
+| Choice ECE (calibrated) | 0.0281 ± 0.0026 | 0.0127 | 0.0141 ± 0.0044 | **0.0074 ± 0.0016** | 0.0120 | 0.0116 |
+| Choice accuracy, keyboard typos | 0.5107 ± 0.0147 | 0.8471 | 0.8156 ± 0.0081 | 0.8315 ± 0.0089 | 0.8594 | **0.8679** |
+| Choice accuracy, mixed typos | 0.4368 ± 0.0102 | 0.8253 | 0.7923 ± 0.0111 | 0.8075 ± 0.0074 | 0.8419 | **0.8506** |
+| Drop under keyboard / mixed typos | 0.309 / 0.383 | 0.064 / 0.086 | 0.074 / 0.098 | 0.065 / 0.089 | 0.056 / 0.073 | 0.052 / 0.069 |
+| Overconfidence, mixed typos | +0.1507 ± 0.0024 | −0.0142 | +0.0106 ± 0.0077 | +0.0139 ± 0.0059 | −0.0115 | −0.0201 |
+| Score MAE | 0.1858 ± 0.0055 | 0.1503 | 0.1298 ± 0.0015 | 0.1244 ± 0.0016 | **0.1232** | 0.1351 |
+| Score Pearson r | 0.5605 ± 0.0234 | 0.7821 | 0.7776 ± 0.0040 | 0.7818 ± 0.0022 | 0.7896 | **0.8012** |
+| Noul accuracy | 0.9801 ± 0.0050 | 0.9880 | 0.9852 ± 0.0030 | 0.9852 ± 0.0042 | 0.9868 | **0.9904** |
+
+The transformer column is §8's from-scratch models (same three seeds)
+re-evaluated with the fixed fitter by `transformer_recheck.py`, retrained
+on 2026-11-12. Its accuracies, Score and Noul numbers reproduce §8
+exactly; with the fixed fit its ECE is 0.0281 (old fit 0.0341) and its
+overconfidence under mixed typos +0.1507 (old fit +0.1395).
+
+Paired bootstrap differences from the linear baseline (`ensemble.py`;
+B=2000 resamples of the test examples, 95% percentile intervals; positive
+means better than linear; for Score, linear MAE minus the model's MAE):
+
+| | 3-seed n-gram ensemble − linear | ensemble + linear mix − linear |
+|---|---|---|
+| Choice accuracy, clean (n=3080) | +0.0039 [−0.0036, +0.0110] | **+0.0084 [+0.0032, +0.0136]** |
+| Choice accuracy, swap typos | **+0.0237 [+0.0133, +0.0344]** | **+0.0256 [+0.0185, +0.0331]** |
+| Choice accuracy, keyboard typos | **+0.0123 [+0.0023, +0.0221]** | **+0.0208 [+0.0133, +0.0279]** |
+| Choice accuracy, mixed typos | **+0.0166 [+0.0055, +0.0282]** | **+0.0253 [+0.0169, +0.0334]** |
+| Score, MAE reduction (n=1517) | **+0.0272 [+0.0220, +0.0325]** | **+0.0152 [+0.0126, +0.0179]** |
+| Noul accuracy (n=836) | −0.0012 [−0.0096, +0.0072] | +0.0024 [−0.0036, +0.0084] |
+
+What this shows, and what it does not:
+
+- **Choice accuracy went from 81.95% (transformer) to 91.98%.** The trunk
+  swap gives most of it (+7.0 points untuned, +7.7 tuned); seed
+  ensembling adds 1.9 more; mixing with the linear model another 0.45.
+  A single tuned n-gram model (89.66%) is still 1.5 points below the
+  linear baseline. The 3-seed ensemble's 0.39-point lead over linear is
+  within noise (interval spans zero). The mix's lead, 0.84 points (26 of
+  3080 queries), is small but its interval excludes zero.
+- **Typo robustness:** every n-gram variant loses 5-10 points under
+  keyboard and mixed typos (single models 6.5-9.8, ensembles 5.2-7.3),
+  against 31-38 for the transformer, and both ensembles are significantly more accurate than the linear model under every typo type (the paired intervals are for accuracy under typos; the size of the drop itself was not bootstrapped). Mean
+  overconfidence under typos is at most +0.014 for the single n-gram
+  models (worst single seed +0.018, tuned, mixed typos), against +0.15
+  for the transformer. The linear model and the ensembles are slightly
+  *under*confident under typos (−0.006 to −0.020).
+- **Calibration:** with a converged temperature, clean ECE is 0.0074-0.0141
+  for every linear and n-gram model here (single models: 3-seed means);
+  the transformer is far worse (0.0281 ± 0.0026 with the fixed fit;
+  0.0341 with the old one). Among the others the tuned single model is
+  lowest (0.0074) and the untuned one highest (0.0141); the ensembles
+  (0.0120, 0.0116) and the linear model (0.0127) differ by at most
+  0.0011, no interval was computed for that gap, and it is too small to
+  rank them given how soft single ECE values are (§3).
+- **Score and Noul:** the mixing weight was chosen on Choice validation
+  only and reused for Score and Noul. It gives the best Score correlation
+  (0.80) and Noul accuracy, but its Score MAE (0.135) is worse than every
+  n-gram model without the mix (0.123-0.130), because the linear Ridge
+  model's MAE is worse. Both ensembles beat the linear baseline on Score
+  MAE; neither Noul difference from linear is distinguishable from zero
+  (0.9904 vs 0.9880 is 2 of 836 messages).
+- **Cost:** the 3-seed ensemble is three forward passes, and the mix adds
+  a TF-IDF transform and a linear model. It is still non-autoregressive
+  with a fixed output shape, but it is not "one forward pass".
+- **Unequal input length (a confound for Score):** the transformer reads
+  only the first 64 BPE tokens of each input (`prepare_multitask.py`
+  MAX_LEN=64); the TF-IDF and n-gram models read the whole text.
+  For Score this matters: 57.9% of test reviews (n=1517) are
+  longer than 64 tokens. `truncation_control.py` refits the linear
+  baseline on exactly the transformer's 64-token view: Score r falls
+  from 0.7821 to 0.7148 and MAE rises from 0.1503 to 0.1662. So about
+  0.07 of the 0.22 gap in r between the linear model and the transformer
+  comes from reading more text, and about 0.15 (0.7148 vs 0.5605) remains
+  on equal input. For Choice (0.1% of test inputs cut) and Noul (3.6%)
+  it makes no material difference: 0.9114 vs 0.9107 and 0.9880 vs
+  0.9880. The n-gram BEMA was not re-run on truncated text, so its Score
+  numbers carry the same advantage.
+- **For the Jev comparison:** the accuracy gain comes from swapping the
+  learned-from-scratch transformer for n-gram features, i.e. from a
+  better input representation (for Score, partly also from reading the
+  whole review, as above), not from anything specific to the typed-head
+  design. Jev's claims should be judged against strong
+  classical baselines like this one, not against a weak neural one.
+
+
+## 10. Correction: the temperature fitter did not converge
+
+**What was wrong.** Every temperature in this repo was fitted with the
+same few lines, copied thirteen times into eight scripts and also used
+by `calib_utils.fit_temperature` (which six more scripts call): LBFGS on T, starting at T=1.5, with a fixed step of 0.01 and no line
+search. That moves T only a small fraction of the way to the
+cross-entropy minimum per iteration, and when the best T is below 1 the
+loss is concave in T near the start, where this update is unreliable: it can stop well short of the minimum or run through T=0 to a negative temperature. On
+synthetic logits with a known best temperature, it returned 0.725 for a
+true 0.4, −41 for a true 0.8, 2.46 for a true 3.0, and was close only
+near 1-1.6 (1.012 for 1.0, 1.207 for 1.2). The fit was found by an
+independent code audit on 2026-11-12 (two reviewers per finding) and
+confirmed with that synthetic check. `calib_utils` now fits 1/T, in
+which the loss is convex, with a strong-Wolfe line search
+(`fit_temperature`, plus `fit_temperature_binary` for the Noul head),
+unit-tested against a fine grid minimum for best temperatures 0.4, 1.0 and 3.0 (0.4 and 3.0 for the binary fit).
+Every script now calls these helpers.
+
+**What it affected.** Temperatures, calibrated ECE and overconfidence,
+everywhere: Noul (`calibrate.py`, `calibrate_multitask.py`,
+`seed_variation_sweep.py`, `conformal.py`), Choice
+(`calibrate_multitask.py`, `multiseed_sweep.py`, `self_pretrain.py`,
+`conformal.py`, `conformal_typo.py`, `augment_and_retrain.py`), Phase 4
+(`calibration_sweep.py`), CLINC150 (`clinc150_pipeline.py`) and §9; `augment_and_retrain.py` fits Noul too. Numbers computed from the temperatures these scripts store in the calibrated checkpoints inherit the old fit as well: `ood_stress_test.py` (Phase 5), `adversarial_stress_test.py` (Phase 5b), `heldout_noise_test.py`, `bootstrap_ci.py` and `clinc150_oos_threshold.py`. Of these, all but `bootstrap_ci.py` were re-run with the fixed fit (below).
+Accuracy, Score and argmax predictions do not depend on the temperature, except inside §9's ensembles, which average calibrated probabilities, and in CLINC150's out-of-scope rule (`clinc150_oos_threshold.py`), which thresholds the temperature-scaled top probability. That rule, and `clinc150_pipeline.py`, were re-run with the fixed fit (CLINC150.md, §5 and §11 now show the re-run); §3's bootstrap interval for the rule's in-scope cost was recomputed too (−9.8 [−10.6, −8.9]; old fit −9.7 [−10.5, −8.9]).
+Split-conformal coverage is guaranteed on exchangeable data for any score function fixed before calibration, and `conformal.py` fits the temperature on val_a and the conformal quantile on val_b, so the clean-test guarantee (at least 90%) holds with either fitter. The measured Choice figures in CONFORMAL.md (APS coverage 98.83%, the set sizes, and all coverage under typos, where exchangeability fails and no guarantee applies) depend on the temperature; `conformal.py` and `conformal_typo.py` were re-run, and every coverage moved by at most 0.1 point and every average set size by at most 0.07 classes (CONFORMAL.md shows the re-run). Noul's threshold sets are unaffected (the temperature rescales a single logit, a monotone change to the score), and the Score head has no temperature.
+
+**What was re-run.** Everything that produces a temperature-dependent
+number in this repo, except `self_pretrain.py`. The re-runs are:
+- §9's models, the transformer audit and the from-scratch transformer's
+  three seeds;
+- the single-task pipeline and its seed sweep, and Phases 3, 4, 5 and 5b;
+- `conformal.py` and `conformal_typo.py`;
+- the augmentation retrain and the held-out-noise test;
+- CLINC150;
+- `bootstrap_ci.py` (§3's intervals) and `multiseed_sweep.py` (§7).
+
+Every single-model argmax accuracy reproduced exactly (the §9 ensembles average calibrated probabilities, so theirs moved slightly, and the accuracies under CLINC150's out-of-scope threshold rule moved too: 0.7653 → 0.7655 overall, in-scope 0.7449 → 0.7442). Not re-run: `self_pretrain.py` (§8's
+self-pretrained column; about 2.5 hours).
+
+**How much it mattered** (`temperature_audit.py`: old and fixed fits on
+the same validation logits, test n=3080 for Choice, 836 for Noul). The
+transformer is `train_multitask.py` retrained here with seed 42; it
+reproduces the published temperatures and ECEs exactly (Choice T=1.18,
+ECE 0.0371; Noul T=2.36, ECE 0.0046; README Phase 4), so its "old"
+column is the published one.
+
+| Model, head | T, old → fixed | Clean ECE, old → fixed | Overconfidence under mixed typos, old → fixed |
+|---|---|---|---|
+| Transformer, Choice | 1.181 → 1.143 | 0.0371 → 0.0303 | +0.1391 → **+0.1519** |
+| Transformer, Noul | 2.363 → 2.610 | 0.0046 → **0.0090** | — |
+| Linear TF-IDF, Choice | 0.794 → 0.720 | 0.0159 → 0.0127 | −0.0421 → −0.0142 |
+| n-gram BEMA tuned, Choice, seed 42 | 1.553 → 1.561 | 0.0073 → 0.0083 | +0.0085 → +0.0071 |
+| n-gram BEMA tuned, Choice, seed 123 | 1.519 → 1.524 | 0.0085 → 0.0083 | +0.0169 → +0.0162 |
+| n-gram BEMA tuned, Choice, seed 2024 | 1.705 → 1.741 | 0.0084 → 0.0056 | +0.0233 → +0.0183 |
+
+Validation NLL fell or stayed equal in every row, as it must.
+
+What changes in the conclusions:
+
+- **The transformer's typo miscalibration (§5, §8) stands, and is
+  slightly larger.** With the fixed fit its overconfidence under typos
+  rises by 0.012-0.013 (seed 42: swap +0.112 → +0.124, keyboard +0.094 →
+  +0.106, mixed +0.139 → +0.152). Over all three from-scratch seeds
+  (`transformer_recheck.py`, test n=3080): clean ECE 0.0341 ± 0.0042 →
+  0.0281 ± 0.0026, mixed-typo overconfidence +0.1395 ± 0.0006 → +0.1507
+  ± 0.0024, with accuracies unchanged. The +0.14 figures quoted earlier
+  in §2-§8 were mixed-typo figures from the old fit and understated it by
+  about 0.011; they are now shown as old values beside +0.15. §8's table
+  was not re-run (`self_pretrain.py` takes about 2.5 hours).
+- **"Temperature scaling made Choice ECE worse than raw" (README, Phase
+  4) stands:** the fixed fit gives 0.0303, still worse than raw 0.0210.
+- **The published Noul ECE was flattered by the bug.** The
+  cross-entropy-optimal temperature gives ECE 0.0090, not 0.0046; still
+  better than raw (0.0159), but Platt scaling (0.0030) and isotonic
+  regression (0.0049) now beat temperature scaling on this test split (no interval was computed for these differences). With 836 test
+  messages and about 18 errors, Noul ECE is noisy either way. The single-task
+  3-seed sweep in §3 was re-run (`seed_variation_sweep.py`, n=837 per
+  seed): calibrated ECE 0.0048-0.0083 (mean 0.0062), against
+  0.0039-0.0070 (mean 0.0054) with the old fit; accuracy unchanged.
+- **§9's calibration claims changed the most**, because the linear model (T=0.720)
+  and the ensemble mix (T=0.860; the 3-seed ensemble's own refitted temperature is not logged) have best temperatures below 1, where the old fit
+  failed worst. The first version of §9 reported them slightly
+  underconfident under typos (−0.02 to −0.04); with a converged
+  temperature that is −0.006 to −0.020. §9 has been revised.
+- **The tuned n-gram models barely move**: their best temperatures (1.52-1.74)
+  are where the old fit happened to start. The untuned default n-gram models
+  were not in this audit and their temperatures were not logged. Retrained
+  with the fixed fit, they give the same accuracies as before, but their
+  calibration moved more. Means over 3 seeds, Choice test n=3080: mixed-typo
+  overconfidence went from +0.0039 to +0.0106, and clean ECE from 0.0158 to
+  0.0141 (§9).
+- **The typo augmentation (§5) was re-run** (`augment_and_retrain.py`,
+  `heldout_noise_test.py`; n=3080). Accuracies reproduced exactly; the confidences moved by 0.004-0.012, and the augmented model still cuts
+  ECE by half or more on every held-out corruption (§5 shows the
+  re-run).
+- **Phases 5 and 5b were re-run** with the fixed fit
+  (`calibrate_multitask.py`, which reproduced this audit's fixed
+  temperatures and ECEs exactly, then `ood_stress_test.py` and
+  `adversarial_stress_test.py`). Accuracies are unchanged. The headline
+  typo result becomes: accuracy 81.9% → 51.2% while confidence drops
+  only 0.800 → 0.624 (old fit 0.791 → 0.612), i.e. confidence down 22%
+  against accuracy down 37% (n=3080). Phase 5's in-distribution →
+  out-of-domain confidences are 0.9728 → 0.8907 for Noul (old 0.9780 →
+  0.9036) and 0.8001 → 0.4234 for Choice (old 0.7906 → 0.4097).
+- **CLINC150's transformer was re-run** with the fixed fit
+  (`clinc150_pipeline.py`, `clinc150_oos_threshold.py`; test n=5,500).
+  Accuracy reproduced exactly (0.7180). The temperature moved 1.5739 →
+  1.5860, scaled ECE 0.0412 → 0.0407, typo-test confidence 0.5615 →
+  0.5583, and the threshold rule's overall accuracy 0.7653 → 0.7655 (tau
+  unchanged at 0.67); conformal coverage is unchanged (0.9827), set size
+  17.31 → 17.27. CLINC150.md shows the re-run.
+
+## 11. Does §9 replicate on CLINC150?
+
+`clinc150_classical.py` repeats §9's comparison on CLINC150 (151 classes:
+150 intents plus out-of-scope, "oos"), with `clinc150_pipeline.py`'s
+splits and its typo perturbation (two adjacent-character swaps, same
+seed), so every typo number below pairs with the transformer's in
+CLINC150.md. The n-gram configuration is the one tuned on BANKING77,
+reused without re-tuning; the linear model's C (50) and the mixing weight
+(w = 0.25, from {0, .25, .5, .75, 1}: val accuracy 0.9119, **0.9148**,
+0.9119, 0.9106, 0.9055) were chosen on validation, and every model's
+temperature was fitted on validation with the fixed fitter. "oos
+threshold" is `clinc150_oos_threshold.py`'s rule: answer oos when the top
+probability is below tau, with tau chosen on validation.
+
+Test n=5,500 (4,500 in-scope, 1,000 oos). Single n-gram models are mean ±
+std over seeds 42/123/2024.
+
+| Test metric | Transformer (CLINC150.md) | Linear TF-IDF | n-gram BEMA, single | 3-seed n-gram ensemble | ensemble + linear (w=0.25) |
+|---|---|---|---|---|---|
+| Overall accuracy (argmax) | 0.7180 | 0.7949 | 0.7885 ± 0.0109 | 0.8098 | **0.8118** |
+| In-scope accuracy (n=4,500) | 0.8418 | 0.9231 | 0.9116 ± 0.0040 | 0.9267 | **0.9302** |
+| oos recall, argmax (n=1,000) | 0.1610 | 0.2180 | 0.2350 ± 0.0720 | **0.2840** | 0.2790 |
+| oos AUROC of 1 − top probability | 0.8802 | **0.9365** | 0.9068 ± 0.0124 | 0.9246 | 0.9306 |
+| Overall accuracy with oos threshold | 0.7655 (tau 0.67) | **0.8645** (tau 0.76) | 0.8158 ± 0.0028 | 0.8571 (tau 0.78) | 0.8596 (tau 0.81) |
+| Calibrated ECE (clean) | 0.0407 | 0.0442 | 0.0447 ± 0.0035 | **0.0319** | 0.0343 |
+| Overconfidence, clean | +0.0309 | +0.0384 | +0.0444 ± 0.0037 | **+0.0319** | +0.0343 |
+| Accuracy with typos | 0.4504 | 0.7004 | 0.7018 ± 0.0097 | 0.7367 | **0.7405** |
+| Accuracy drop under typos | 0.2676 | 0.0945 | 0.0867 ± 0.0016 | 0.0731 | **0.0713** |
+| Overconfidence, typos | +0.1079 | +0.0308 | +0.0522 ± 0.0055 | +0.0264 | **+0.0245** |
+
+The transformer column is `clinc150_pipeline.py` and
+`clinc150_oos_threshold.py` re-run on 2026-11-12 with the fixed
+temperature fit (T=1.5860; the old fit gave 1.5739). Its accuracy
+reproduces CLINC150.md exactly; its temperature-dependent numbers moved by
+at most 0.004 (§10): overconfidence under typos +0.1111 → +0.1079 (0.0032), and the threshold rule's oos recall, quoted below, 0.857 → 0.861.
+
+Paired bootstrap of overall argmax accuracy against the linear model
+(B=2000, 95% intervals, n=5,500): 3-seed ensemble +0.0149 [+0.0084,
++0.0213] clean and +0.0364 [+0.0278, +0.0449] with typos; ensemble +
+linear +0.0169 [+0.0109, +0.0229] clean and +0.0402 [+0.0324, +0.0480]
+with typos.
+
+What replicates, and what does not:
+
+- **The main §9 result replicates.** The linear model and the n-gram
+  BEMA both beat the transformer by large margins (overall accuracy
+  0.79 vs 0.72; in-scope 0.91-0.92 vs 0.84), and under typos they lose
+  7-9.5 points where the transformer loses 27. On average a single n-gram model
+  is again slightly below the linear model (mean 0.7885 vs 0.7949, n=3
+  seeds), but not every seed is: seed 42 alone reaches 0.7995, and the
+  seed std (0.0109) is larger than the gap (0.0064). Both ensembles beat
+  the linear model with intervals that exclude zero, clean and with typos
+  (on BANKING77 the 3-seed ensemble's clean interval spanned zero). Here the gain is
+  larger than on BANKING77 (+1.5 to +1.7 points clean, +3.6 to +4.0
+  with typos).
+- **Out-of-scope detection is better too.** With the validation-chosen
+  threshold the linear model reaches 0.8645 overall (in-scope 0.8598,
+  oos recall 0.886, oos precision 0.627) against the transformer's
+  0.7655 (0.7442 / 0.861 / 0.461). The linear model's confidence
+  separates oos best (AUROC 0.937); single n-gram models are weaker here
+  (0.907), and their threshold results trail the linear model's by about
+  5 points overall (0.8158 vs 0.8645).
+- **Calibration does not replicate cleanly.** Every model, the
+  transformer included, is overconfident on CLINC150's clean test set by
+  +0.03 to +0.05. The likely cause is the split design rather than the
+  models: validation is 3% oos (100 of 3,100) while test is 18% (1,000 of
+  5,500), and oos queries are where every model is wrong most often (oos
+  recall 0.16-0.31 against in-scope accuracy 0.84-0.93), so a temperature
+  fitted on validation is too low for test (CLINC150.md discusses the
+  same val/test gap for accuracy). Under typos the
+  transformer's overconfidence rises by +0.077 over clean; the linear
+  model's falls by 0.008, the ensembles' by 0.006-0.010, and single
+  n-gram models' rises by +0.008.

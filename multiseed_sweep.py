@@ -18,10 +18,9 @@ import pickle
 
 import numpy as np
 import torch
-import torch.nn as nn
 from torch.utils.data import DataLoader
 
-from calib_utils import ece as ece_score
+from calib_utils import ece as ece_score, fit_temperature
 from model import JevCloneEncoder
 from train_multitask import (TaskDataset, data, device, eval_choice, eval_noul,
                              max_len, num_choice_classes, train_model, vocab_size)
@@ -56,18 +55,8 @@ def choice_logits(model, split):
 def calibrated_choice_ece(model):
     val_logits, val_labels = choice_logits(model, "val")
     test_logits, test_labels = choice_logits(model, "test")
-    T = nn.Parameter(torch.ones(1) * 1.5)
-    opt = torch.optim.LBFGS([T], lr=0.01, max_iter=200)
-    ce = nn.CrossEntropyLoss()
-
-    def closure():
-        opt.zero_grad()
-        loss = ce(val_logits / T, val_labels)
-        loss.backward()
-        return loss
-
-    opt.step(closure)
-    probs = torch.softmax(test_logits / T.item(), dim=-1)
+    T = fit_temperature(val_logits, val_labels)
+    probs = torch.softmax(test_logits / T, dim=-1)
     conf, pred = probs.max(dim=-1)
     return ece_score(conf.tolist(), (pred == test_labels).float().tolist())
 

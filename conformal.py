@@ -32,11 +32,11 @@ import random
 
 import numpy as np
 import torch
-import torch.nn as nn
 from torch.utils.data import DataLoader
 
 from model import JevCloneEncoder
-from calib_utils import aps_prediction_set_sizes_and_coverage, aps_score, conformal_quantile, split_val
+from calib_utils import (aps_prediction_set_sizes_and_coverage, aps_score, conformal_quantile,
+                         fit_temperature, fit_temperature_binary, split_val)
 from train_multitask import TaskDataset, data, vocab_size, max_len, num_choice_classes, device
 
 ALPHA = 0.10  # target: 90% coverage
@@ -81,20 +81,7 @@ def get_noul_logits(rows):
 val_a_logits, val_a_labels = get_noul_logits(noul_val_a)
 
 # Refit temperature on val_a ONLY (fresh fit, independent of val_b/test)
-T_noul = nn.Parameter(torch.ones(1) * 1.5)
-opt = torch.optim.LBFGS([T_noul], lr=0.01, max_iter=200)
-bce = nn.BCEWithLogitsLoss()
-
-
-def closure():
-    opt.zero_grad()
-    loss = bce(val_a_logits / T_noul, val_a_labels)
-    loss.backward()
-    return loss
-
-
-opt.step(closure)
-T_noul_val = T_noul.item()
+T_noul_val = fit_temperature_binary(val_a_logits, val_a_labels)
 print(f"Temperature refit on val_a only: T={T_noul_val:.4f} "
       f"(NOT the same fit as calibrate_multitask.py, which used the full val set)")
 
@@ -167,20 +154,7 @@ def get_choice_logits(rows):
 
 choice_val_a_logits, choice_val_a_labels = get_choice_logits(choice_val_a)
 
-T_choice = nn.Parameter(torch.ones(1) * 1.5)
-opt_c = torch.optim.LBFGS([T_choice], lr=0.01, max_iter=200)
-ce = nn.CrossEntropyLoss()
-
-
-def closure_c():
-    opt_c.zero_grad()
-    loss = ce(choice_val_a_logits / T_choice, choice_val_a_labels)
-    loss.backward()
-    return loss
-
-
-opt_c.step(closure_c)
-T_choice_val = T_choice.item()
+T_choice_val = fit_temperature(choice_val_a_logits, choice_val_a_labels)
 print(f"choice_temperature refit on val_a only: T={T_choice_val:.4f}")
 
 
