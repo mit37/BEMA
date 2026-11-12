@@ -63,7 +63,7 @@ one forward pass — no token generation.
 - **Correction, 2026-11-12 (FINDINGS.md §10):** every temperature in this
   repo had been fitted with code that did not converge; all scripts now
   use a fixed fitter. Re-run with it so far: the single-task Noul result
-  above, §9's linear / n-gram / ensemble models, the from-scratch
+  above and its 3-seed sweep, §9's linear / n-gram / ensemble models, the from-scratch
   transformer's Choice calibration (3 seeds), Phases 5 and 5b, and
   CLINC150. Accuracies,
   Score metrics and Noul's conformal sets do not depend on the
