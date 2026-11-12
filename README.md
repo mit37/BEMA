@@ -63,11 +63,14 @@ one forward pass — no token generation.
 - **Correction, 2026-11-12 (FINDINGS.md §10):** every temperature in this
   repo had been fitted with code that did not converge; all scripts now
   use a fixed fitter. Everything temperature-dependent was then re-run
-  except the self-pretraining comparison and the bootstrap intervals, and
+  except the self-pretraining comparison, the attention-pooling side of
+  the pooling comparison (`multiseed_sweep.py`, FINDINGS.md §7) and the
+  bootstrap intervals, and
   this README shows the re-run values with the old ones noted. Every
   single-model accuracy and Score metric reproduced exactly (only the §9
-  ensembles' accuracies, which average calibrated probabilities, moved
-  slightly). Two changes matter here: the multitask Noul ECE got worse
+  ensembles' accuracies, which average calibrated probabilities, and
+  CLINC150's out-of-scope threshold rule, which thresholds the calibrated
+  top probability, moved slightly). Two changes matter here: the multitask Noul ECE got worse
   (0.0046 → 0.0090), and the transformer's typo overconfidence got
   slightly larger (mixed typos, 3-seed mean:
   +0.1395 → +0.1507).
@@ -147,7 +150,9 @@ NOT change or override the separate licenses on the bundled third-party
 datasets described in the table above, each of which keeps its own
 terms regardless of this repo's code license.
 
-**Results** (clean run, 2026-09-21, held-out test splits the calibration
+**Results** (clean run, 2026-09-21; calibrated column from the 2026-11-12 re-run of `calibrate_multitask.py` with the fixed temperature fitter, see the note below; held-out test splits the calibration
+step never touched, Score dataset = Amazon Fine Food Reviews as described
+above):
 step never touched, Score dataset = Amazon Fine Food Reviews as described
 above):
 
@@ -287,7 +292,7 @@ synthetic labels):
    correctly-classified spam (character spacing, leetspeak
    substitution, case noise — the kind of thing real spammers actually
    do to evade filters): accuracy drops only slightly (89.7%→88.8%)
-   with confidence dropping proportionally (0.968→0.918; 0.972→0.926 with
+   with confidence dropping more than accuracy (0.968→0.918; 0.972→0.926 with
    the old temperature fit) — reasonably
    graceful degradation.
 3. **Typo robustness on real banking77 queries** (**n=3080** — the full
@@ -345,7 +350,8 @@ own numbers would have looked strong without this test, and were not.
 walking it back.** First, it generalizes: CLINC150 (`CLINC150.md`, a
 second, structurally different 151-class task with its own dedicated
 tokenizer) shows the same pattern at a similar relative magnitude
-(accuracy 71.80%→45.04%, confidence only 0.7489→0.5583) — this is not a
+(accuracy 71.80%→45.04%, confidence only 0.7489→0.5583; 0.7514→0.5615
+with the old temperature fit) — this is not a
 BANKING77-specific artifact. Second, it's partially fixable: training on
 typo-augmented data (`augment_and_retrain.py`, FINDINGS.md §5) narrowed
 BANKING77's accuracy-collapse gap by roughly half (31.4pp→16.0pp) and the
@@ -391,7 +397,8 @@ crowdsourced intents across many domains, plus a genuine out-of-scope
 class (CC-BY 3.0, verified in `DATA_LICENSES.md`) — run specifically to
 test whether the typo-miscalibration finding above generalizes past
 BANKING77. It does: accuracy collapsed 71.80%→45.04% under the same
-ordinary-typo perturbation while confidence dropped only 0.7489→0.5583,
+ordinary-typo perturbation while confidence dropped only 0.7489→0.5583
+(0.7514→0.5615 with the old temperature fit),
 the same pattern at a similar relative magnitude on a structurally
 different dataset (different tokenizer, different domain mix, 151 vs 77
 classes). It also tested out-of-scope detection: used as one more
@@ -400,7 +407,7 @@ out-of-scope queries (vs 84.2% in-scope accuracy), even though training
 data is balanced (100 examples per class, oos included). The confidence
 score does most of the work instead: rejecting answers whose top
 probability is below a validation-tuned threshold
-(`clinc150_oos_threshold.py`) raises oos recall to 86.1%, at a cost of
+(`clinc150_oos_threshold.py`) raises oos recall to 86.1% (85.7% with the old temperature fit), at a cost of
 about 10 points of in-scope accuracy. Full writeup, including the
 conformal and calibration numbers for this task, in `CLINC150.md`.
 

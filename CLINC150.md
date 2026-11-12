@@ -75,7 +75,7 @@ tokenizer:
   relative drop).
 
 This is the same qualitative pattern found on BANKING77 (81.9%→51.2%
-accuracy collapse vs 0.800→0.624 confidence drop, a ~37% relative
+accuracy collapse vs 0.800→0.624 confidence drop, a ~38% relative
 accuracy drop against a ~22% relative confidence drop; 0.791→0.612 and
 ~23% with the old temperature fit, FINDINGS.md §10) — the magnitudes
 are close, not just the direction. **This is the strongest evidence yet
@@ -158,7 +158,7 @@ Coverage (98.27%) comfortably exceeds the 90% target — the guarantee
 holds, consistent with Workstream A's other results, all of which
 over-covered rather than under-covered (a conservative, not a broken,
 result). But the average prediction set size (17.27 of 151 classes,
-~11.5%) is proportionally similar to BANKING77's Choice result (avg ~7 of
+~11.4%) is proportionally similar to BANKING77's Choice result (avg ~7 of
 77, ~9%) — in both cases, guaranteeing 90% coverage over a many-class
 softmax with real per-class ambiguity requires a set that's too wide to
 narrow a user's next action much on its own. This is consistent with
