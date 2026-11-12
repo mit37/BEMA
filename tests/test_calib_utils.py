@@ -1,8 +1,10 @@
 import numpy as np
 import pytest
+import torch
 
 from calib_utils import (aps_prediction_set_sizes_and_coverage, aps_score, conformal_quantile,
-                         ece, paired_bootstrap_diff, split_val)
+                         ece, fit_temperature, fit_temperature_binary, paired_bootstrap_diff,
+                         split_val)
 
 
 def test_ece_is_zero_when_confidence_matches_accuracy():
@@ -72,3 +74,29 @@ def test_paired_bootstrap_diff_brackets_the_mean_and_is_exact_for_constant_gaps(
     assert point == pytest.approx(0.5)
     assert lo <= point <= hi
     assert paired_bootstrap_diff([1] * 50, [0] * 50) == pytest.approx((1.0, 1.0, 1.0))
+
+
+@pytest.mark.parametrize("scale", [0.4, 1.0, 3.0])
+def test_fit_temperature_finds_the_cross_entropy_minimum(scale):
+    # Labels drawn from softmax(z), logits = scale * z, so the best temperature is about `scale`.
+    g = torch.Generator().manual_seed(0)
+    z = torch.randn(4000, 10, generator=g) * 2
+    labels = torch.multinomial(torch.softmax(z, -1), 1, generator=g).squeeze(1)
+    logits = scale * z
+    T = fit_temperature(logits, labels)
+    grid = torch.exp(torch.linspace(np.log(0.05), np.log(20), 4001))
+    losses = torch.stack([torch.nn.functional.cross_entropy(logits / t, labels) for t in grid])
+    best = grid[losses.argmin()].item()
+    assert abs(np.log(T) - np.log(best)) < 0.01
+    assert abs(T / scale - 1) < 0.1
+
+
+@pytest.mark.parametrize("scale", [0.4, 3.0])
+def test_fit_temperature_binary_finds_the_cross_entropy_minimum(scale):
+    g = torch.Generator().manual_seed(1)
+    z = torch.randn(4000, generator=g) * 2
+    labels = torch.bernoulli(torch.sigmoid(z), generator=g)
+    T = fit_temperature_binary(scale * z, labels)
+    grid = torch.exp(torch.linspace(np.log(0.05), np.log(20), 4001))
+    losses = torch.stack([torch.nn.functional.binary_cross_entropy_with_logits(scale * z / t, labels) for t in grid])
+    assert abs(np.log(T) - np.log(grid[losses.argmin()].item())) < 0.01

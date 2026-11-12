@@ -35,3 +35,5 @@ ensemble_results.pkl
 # OS
 .DS_Store
 clinc150_classical_results.pkl
+truncation_control_results.pkl
+temperature_audit_results.pkl
