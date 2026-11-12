@@ -2,7 +2,7 @@ import numpy as np
 import pytest
 
 from calib_utils import (aps_prediction_set_sizes_and_coverage, aps_score, conformal_quantile,
-                         ece, split_val)
+                         ece, paired_bootstrap_diff, split_val)
 
 
 def test_ece_is_zero_when_confidence_matches_accuracy():
@@ -65,3 +65,10 @@ def test_split_val_is_deterministic_disjoint_and_complete():
     a2, b2 = split_val(range(101), seed=5)
     assert (a1, b1) == (a2, b2)
     assert len(a1) == 50 and sorted(a1 + b1) == list(range(101))
+
+
+def test_paired_bootstrap_diff_brackets_the_mean_and_is_exact_for_constant_gaps():
+    point, lo, hi = paired_bootstrap_diff([1, 1, 0, 1], [0, 1, 0, 0])
+    assert point == pytest.approx(0.5)
+    assert lo <= point <= hi
+    assert paired_bootstrap_diff([1] * 50, [0] * 50) == pytest.approx((1.0, 1.0, 1.0))

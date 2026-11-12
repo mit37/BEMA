@@ -74,3 +74,11 @@ def fit_temperature(logits, labels):
 
     opt.step(closure)
     return T.item()
+
+
+def paired_bootstrap_diff(a, b, n_boot=2000, seed=0):
+    """Mean of a - b with a 95% percentile interval, resampling examples jointly (paired)."""
+    d = np.asarray(a, dtype=float) - np.asarray(b, dtype=float)
+    idx = np.random.default_rng(seed).integers(0, len(d), size=(n_boot, len(d)))
+    boots = d[idx].mean(1)
+    return d.mean(), np.percentile(boots, 2.5), np.percentile(boots, 97.5)

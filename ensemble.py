@@ -7,7 +7,9 @@ validation; the ensemble averages probabilities. The linear model's
 mixing weight w (0 = n-gram only, 1 = linear only) is chosen on Choice
 validation accuracy, and the ensemble's own temperature is then refitted
 on validation. Noul averages probabilities, Score averages predictions,
-with the same w. Test is scored once.
+with the same w. Test is scored once. The linear model alone (w = 1) is
+scored through the same path, and the ensembles' differences from it are
+bootstrapped paired over test examples (calib_utils.paired_bootstrap_diff).
 
 Needs the checkpoints from:
   python3 train_ngram.py --d-model 256 --dropout 0.4 --sparse-lr 3e-3 --epochs 8 --tag _tuned
@@ -20,7 +22,7 @@ import numpy as np
 import torch
 from sklearn.linear_model import LogisticRegression, Ridge
 
-from calib_utils import ece, fit_temperature
+from calib_utils import ece, fit_temperature, paired_bootstrap_diff
 from heldout_noise_test import perturbed
 from linear_baseline import acc, fit_best, neg_mae, split
 from ngram_model import NgramEncoder, ngram_features
@@ -87,23 +89,26 @@ if __name__ == "__main__":
     T = fit_temperature(torch.log(choice_probs(xv, w).clamp_min(1e-12)), torch.tensor(yv))
     print(f"Chosen on validation: w={w}, ensemble temperature {T:.3f}")
 
-    results = {"w": w}
-    for name, ww in (("ngram3", 0.0), ("mix", w)):
+    results, per_example = {"w": w}, {}
+    for name, ww in (("linear", 1.0), ("ngram3", 0.0), ("mix", w)):
+        ex = per_example[name] = {}
         xn, yn = split("noul", "test")
         pn = (1 - ww) * ngram_outputs(models, temps, "noul", xn) + ww * linear_outputs(lin, "noul", xn)
-        results[f"{name}_noul_acc"] = ((pn > 0.5).numpy() == yn).mean()
+        ex["noul"] = ((pn > 0.5).numpy() == yn).astype(float)
+        results[f"{name}_noul_acc"] = ex["noul"].mean()
         xs, ys = split("score", "test")
         ps = ((1 - ww) * ngram_outputs(models, temps, "score", xs) + ww * linear_outputs(lin, "score", xs)).numpy()
-        results[f"{name}_score_mae"] = np.abs(ps - ys).mean()
+        ex["score_abs_err"] = np.abs(ps - ys)
+        results[f"{name}_score_mae"] = ex["score_abs_err"].mean()
         results[f"{name}_score_r"] = np.corrcoef(ps, ys)[0, 1]
         xt, yt = split("choice", "test")
         Tn = T if name == "mix" else fit_temperature(
-            torch.log(choice_probs(xv, 0.0).clamp_min(1e-12)), torch.tensor(yv))
+            torch.log(choice_probs(xv, ww).clamp_min(1e-12)), torch.tensor(yv))
         for noise in ("clean",) + NOISES:
             t = xt if noise == "clean" else perturbed(xt, noise)
             probs = torch.softmax(torch.log(choice_probs(t, ww).clamp_min(1e-12)) / Tn, -1)
             conf, pred = probs.max(-1)
-            correct = (pred.numpy() == yt).astype(float)
+            correct = ex[noise] = (pred.numpy() == yt).astype(float)
             results[f"{name}_{noise}_acc"] = correct.mean()
             results[f"{name}_{noise}_overconf"] = conf.mean().item() - correct.mean()
             results[f"{name}_{noise}_ece"] = ece(conf.tolist(), correct.tolist())
@@ -113,6 +118,16 @@ if __name__ == "__main__":
         for noise in ("clean",) + NOISES:
             print(f"  {noise:<10} acc {results[f'{name}_{noise}_acc']:.4f}  "
                   f"overconf {results[f'{name}_{noise}_overconf']:+.4f}  ECE {results[f'{name}_{noise}_ece']:.4f}")
+    print("\nPaired bootstrap (B=2000, 95% percentile interval) of differences against the linear baseline;"
+          "\npositive = better than linear (for Score MAE: linear MAE minus this model's MAE):")
+    for name in ("ngram3", "mix"):
+        for key in ("clean",) + NOISES + ("noul", "score_abs_err"):
+            a, b = per_example[name][key], per_example["linear"][key]
+            if key == "score_abs_err":
+                a, b = b, a
+            point, lo, hi = paired_bootstrap_diff(a, b)
+            results[f"{name}_minus_linear_{key}"] = (point, lo, hi)
+            print(f"  {name:<7}{key:<14}{point:+.4f}  [{lo:+.4f}, {hi:+.4f}]  n={len(a)}")
     with open("ensemble_results.pkl", "wb") as f:
         pickle.dump(results, f)
     print("Saved ensemble_results.pkl")
