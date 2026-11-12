@@ -64,13 +64,12 @@ one forward pass — no token generation.
   repo had been fitted with code that did not converge; all scripts now
   use a fixed fitter. Re-run with it so far: the single-task Noul result
   above and its 3-seed sweep, §9's linear / n-gram / ensemble models, the from-scratch
-  transformer's Choice calibration (3 seeds), Phases 5 and 5b, and
-  CLINC150. Accuracies,
+  transformer's Choice calibration (3 seeds), Phases 3, 4, 5 and 5b,
+  and CLINC150. Accuracies,
   Score metrics and Noul's conformal sets do not depend on the
-  temperature. Still old-fit values in this README: the Phase 3 / Phase 4
-  temperature rows (corrected values are noted there), the augmentation
-  calibration figures, and the Choice conformal coverage and set sizes.
-  Phases 5 and 5b were re-run and show both values. Where re-measured, the fix made the
+  temperature. Phases 3, 4, 5 and 5b and `conformal.py` were re-run and
+  show both values. Still old-fit values in this README: the augmentation
+  calibration figures and conformal coverage under typos. Where re-measured, the fix made the
   multitask Noul ECE worse (0.0046 → 0.0090) and the transformer's typo
   overconfidence slightly larger (mixed typos, 3-seed mean: +0.1395 →
   +0.1507).
@@ -156,14 +155,15 @@ above):
 
 | Task   | Metric          | Raw            | Calibrated      |
 |--------|-----------------|-----------------|------------------|
-| Noul   | acc / ECE       | 0.9785 / 0.0159 | 0.9785 / 0.0046 (temp. scaling) |
-| Choice | acc / ECE       | 0.8188 / 0.0210 | 0.8188 / 0.0371 (temp. scaling — see note below) |
+| Noul   | acc / ECE       | 0.9785 / 0.0159 | 0.9785 / 0.0090 (temp. scaling) |
+| Choice | acc / ECE       | 0.8188 / 0.0210 | 0.8188 / 0.0303 (temp. scaling — see note below) |
 | Score  | MAE / Pearson r | 0.1872 / 0.5340 | — (regression, not calibrated the same way) |
 
-(Correction, 2026-11-12: these temperatures came from a fitter that did
-not converge. Re-fitted properly on the same model, Noul gives T=2.61 and
-ECE 0.0090 (not 0.0046) and Choice T=1.14 and ECE 0.0303 (not 0.0371);
-FINDINGS.md §10.)
+(Correction, 2026-11-12: the first version of this table used a
+temperature fitter that did not converge, giving Noul T=2.36 / ECE 0.0046
+and Choice T=1.18 / ECE 0.0371. The values above are
+`calibrate_multitask.py` re-run with the fixed fitter (Noul T=2.61, Choice
+T=1.14); accuracy and raw ECE reproduced exactly. FINDINGS.md §10.)
 
 **Score works reasonably well here**, unlike the STS-B task it replaced:
 Pearson r=0.53 on a genuinely held-out test split, with training MAE
@@ -178,8 +178,8 @@ Stale, tasteless, and arrived broken.") scores 0.15, correctly low,
 despite that exact phrasing never appearing in the training reviews.
 
 **A genuine, honest surprise: temperature scaling made Choice's ECE
-*worse*, not better** (0.0210 raw → 0.0371 after temp. scaling; still
-0.0303 with the corrected fitter, FINDINGS.md §10). This can
+*worse*, not better** (0.0210 raw → 0.0303 after temp. scaling; 0.0371
+with the old, non-convergent fitter, FINDINGS.md §10). This can
 legitimately happen — a global temperature is fit on validation data and
 doesn't guarantee improvement on a different held-out test split,
 especially when the raw model happens to already be well-calibrated on
@@ -206,17 +206,19 @@ measured on held-out test), appending every run to `results_log.csv`:
 | Task   | Method               | Accuracy | ECE    |
 |--------|----------------------|----------|--------|
 | Noul   | raw                  | 0.9785   | 0.0159 |
-| Noul   | temperature (T=2.36) | 0.9785   | 0.0046 |
+| Noul   | temperature (T=2.61) | 0.9785   | 0.0090 |
 | Noul   | **platt**            | 0.9797   | **0.0030** |
 | Noul   | isotonic             | 0.9773   | 0.0049 |
 | Choice | raw                  | 0.8188   | 0.0210 |
-| Choice | temperature (T=1.18) | 0.8188   | 0.0371 (worse than raw — see note above) |
+| Choice | temperature (T=1.14) | 0.8188   | 0.0303 (worse than raw — see note above) |
 | Choice | **isotonic (max-conf)** | 0.8188 | **0.0113** |
 
-(The two temperature rows used the non-convergent fitter; corrected, they
-are T=2.61 / ECE 0.0090 for Noul and T=1.14 / ECE 0.0303 for Choice.
-Platt still wins for Noul, but isotonic now also beats temperature
-there; for Choice, temperature is still worse than raw. FINDINGS.md §10.)
+(Re-run 2026-11-12 with the fixed temperature fitter. The first version's
+temperature rows, T=2.36 / ECE 0.0046 for Noul and T=1.18 / ECE 0.0371
+for Choice, came from a fitter that did not converge; the raw, Platt and
+isotonic rows do not use it and reproduced exactly. Platt still wins for
+Noul, but isotonic now also beats temperature there; for Choice,
+temperature is still worse than raw. FINDINGS.md §10.)
 
 No single method wins everywhere: Platt scaling beats temperature scaling
 for Noul; for Choice, temperature scaling actually made ECE worse than

@@ -37,18 +37,17 @@ nonconformity scores and quantiles on val_b only — fully disjoint from
 both the temperature fit and the final test set. (The Score head has no
 such calibration-layer parameter, so this split matters less there, but
 the same val_a/val_b split is used for consistency.) The temperature
-values from this refit (T=2.46 for Noul, T=1.19 for Choice) were close to
-`calibrate_multitask.py`'s full-val fit (T=2.36, T=1.18).
+values from this refit (T=2.76 for Noul, T=1.16 for Choice) are close to
+`calibrate_multitask.py`'s full-val fit (T=2.61, T=1.14).
 
-(Correction, 2026-11-12: all four of these temperatures came from a fitter
-that did not converge (FINDINGS.md §10). The converged full-val fit is
-T=2.61 for Noul and T=1.14 for Choice; the val_a-only optimum was not
-computed. `conformal.py` and `conformal_typo.py` now use the converged
-fitter. Noul's threshold sets do not depend on the temperature, and the
-Score head has none. The Choice APS coverage (98.83%), the set sizes and
-the typo grid below were computed with the old fit and were not
-recomputed; split-conformal's clean-test guarantee holds with either
-fit.)
+(Correction, 2026-11-12: the first version of this file used a
+temperature fitter that did not converge (FINDINGS.md §10), which gave
+T=2.46 / 1.19 here and 2.36 / 1.18 on the full validation set.
+`conformal.py` was re-run with the fixed fitter and the results below
+are the re-run's: Noul and Score are unchanged (Noul's threshold sets do
+not depend on the temperature, and Score has none); Choice coverage is
+unchanged at 98.83%, its average set size moved from 7.07 to 7.00 and its
+median from 6 to 5.)
 
 ## Results
 
@@ -57,7 +56,7 @@ Target coverage: 90% (alpha=0.10) for all three heads.
 | Task | n (calib / test) | Method | Target | Measured coverage | Set size / interval width |
 |---|---|---|---|---|---|
 | Noul | 418 / 836 | Threshold (LAC) conformal | 90% | **90.91%** | avg 0.92 of 2 classes (see note below) |
-| Choice | 750 / 3080 | APS (non-randomized) | 90% | **98.83%** | avg 7.07 of 77 classes (median 6) |
+| Choice | 750 / 3080 | APS (non-randomized) | 90% | **98.83%** | avg 7.00 of 77 classes (median 5) |
 | Score | 759 / 1517 | Absolute-residual conformal | 90% | **89.85%** | raw width 1.066; mean 0.656 after clipping to the [0,1] label range |
 | Score | 759 / 1517 | CQR (`score_cqr.py`) | 90% | **90.11%** | mean 0.608, median 0.570, clipped to [0,1] |
 
@@ -103,15 +102,15 @@ non-randomized APS method used here is known to be conservative by
 construction (it rounds up to the next class boundary rather than
 interpolating exactly to the target quantile, which the randomized
 variant of APS would do). The guarantee (coverage >= 90%) held with room
-to spare, at a real cost: average set size 7.07 out of 77 classes. That
+to spare, at a real cost: average set size 7.00 out of 77 classes. That
 is genuinely informative — a random-guess baseline would need a set of
 size ~70 to hit 90% coverage with a poorly-discriminating model, and
-7.07 shows the model's probability estimates carry real signal — but it
-is also not "tight": half of test examples need a set of 6 or more
-categories to reach the guarantee, and the largest set seen was 35 of
+7.00 shows the model's probability estimates carry real signal — but it
+is also not "tight": about half of test examples (49.7%) need a set of 6
+or more categories to reach the guarantee, and the largest set seen was 35 of
 77 categories. A caller expecting a short, actionable shortlist most of
-the time would find this useful roughly half the time (49.4% of
-examples get a set of 5 or fewer) and unwieldy the rest.
+the time would find this useful roughly half the time (50.3% of
+examples get a set of 5 or fewer; 49.4% with the old fit) and unwieldy the rest.
 
 ### Score: valid, wide, and uneven across rating levels
 
