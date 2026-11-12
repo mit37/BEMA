@@ -225,10 +225,9 @@ Reviews Score task, not STS-B.
 *Every temperature-scaled number in sections 1-8 was first fitted with
 temperature code that did not converge (§10). Most have since been re-run
 with the fixed fit and are shown that way, with the old values noted. The
-exceptions, still old-fit and marked where they appear: the bootstrap
-intervals in this section (`bootstrap_ci.py`), §7's attention-pooling ECE
-column, and the ECE and overconfidence rows of §8's table (the
-self-pretrained models were not re-run). For the
+exceptions, still old-fit and marked where they appear: §7's
+attention-pooling ECE column and the ECE and overconfidence rows of §8's
+table (the self-pretrained models were not re-run). For the
 multitask transformer, the corrected fit moves Choice ECE from 0.0371 to
 0.0303, Noul ECE from 0.0046 to 0.0090, and overconfidence under typos up
 by 0.012-0.013; the qualitative conclusions below hold, except that Noul's
@@ -293,20 +292,21 @@ rather than hidden:**
   entirely; the Choice/Score sweep varies only the training seed.
 - **Test-set sampling uncertainty is now measured** (`bootstrap_ci.py`:
   2000 bootstrap resamples of each fixed test split, existing
-  checkpoints, paired for differences; the calibrated ECE intervals use the
-  old, non-convergent temperature fit and were not re-run, §10). 95%
-  intervals: Noul accuracy
-  0.9785 [0.968, 0.988] and calibrated ECE 0.0046 [0.0038, 0.0153]
-  (n=836); Choice accuracy 0.8188 [0.806, 0.832] and calibrated ECE
-  0.0371 [0.033, 0.051] (n=3080); Score MAE 0.187 [0.176, 0.199] and
+  checkpoints, paired for differences; re-run 2026-11-12 with the fixed
+  temperature fit, §10). 95% intervals: Noul accuracy 0.9785 [0.968,
+  0.988] and calibrated ECE 0.0090 [0.0047, 0.0190] (n=836); Choice
+  accuracy 0.8188 [0.806, 0.832] and calibrated ECE 0.0303 [0.0256,
+  0.0436] (n=3080); with the old fit the two ECEs were 0.0046 [0.0038,
+  0.0153] and 0.0371 [0.033, 0.051]; Score MAE 0.187 [0.176, 0.199] and
   Pearson r 0.534 [0.491, 0.576] (n=1517). Two things follow. The
   differences this repo leans on are well outside the noise (e.g. typo
   augmentation's gain on unseen keyboard typos, +12.8 points [11.2,
   14.5]; its small clean-text gain, +1.6 [0.5, 2.8]; CLINC150's threshold
-  cost to in-scope accuracy, −9.7 [−10.5, −8.9]). But single ECE values
-  are soft: binned ECE is noisy and biased upward at these sample sizes,
-  so the headline "calibrated Noul ECE ≈ 0.005" is better read as "at
-  most about 0.015". BANKING77's test split is the dataset's official
+  cost to in-scope accuracy, −9.8 [−10.6, −8.9]; −9.7 [−10.5, −8.9] with
+  the old fit). But single ECE values are soft: binned ECE is noisy and
+  biased upward at these sample sizes, so a calibrated Noul ECE of about
+  0.005-0.009 is better read as "at most about 0.02" (old fit: "at most
+  about 0.015"). BANKING77's test split is the dataset's official
   one, so resampling that fixed set is the relevant uncertainty; for the
   randomly split Noul and Score data, a different split would add further
   variation (measured for Noul by the seed sweep above).
@@ -1011,24 +1011,24 @@ everywhere: Noul (`calibrate.py`, `calibrate_multitask.py`,
 (`calibrate_multitask.py`, `multiseed_sweep.py`, `self_pretrain.py`,
 `conformal.py`, `conformal_typo.py`, `augment_and_retrain.py`), Phase 4
 (`calibration_sweep.py`), CLINC150 (`clinc150_pipeline.py`) and §9; `augment_and_retrain.py` fits Noul too. Numbers computed from the temperatures these scripts store in the calibrated checkpoints inherit the old fit as well: `ood_stress_test.py` (Phase 5), `adversarial_stress_test.py` (Phase 5b), `heldout_noise_test.py`, `bootstrap_ci.py` and `clinc150_oos_threshold.py`. Of these, all but `bootstrap_ci.py` were re-run with the fixed fit (below).
-Accuracy, Score and argmax predictions do not depend on the temperature, except inside §9's ensembles, which average calibrated probabilities, and in CLINC150's out-of-scope rule (`clinc150_oos_threshold.py`), which thresholds the temperature-scaled top probability. That rule, and `clinc150_pipeline.py`, were re-run with the fixed fit (CLINC150.md, §5 and §11 now show the re-run); only §3's bootstrap interval for the rule's in-scope cost (−9.7 [−10.5, −8.9]; the point estimate is now −9.8) was not recomputed.
+Accuracy, Score and argmax predictions do not depend on the temperature, except inside §9's ensembles, which average calibrated probabilities, and in CLINC150's out-of-scope rule (`clinc150_oos_threshold.py`), which thresholds the temperature-scaled top probability. That rule, and `clinc150_pipeline.py`, were re-run with the fixed fit (CLINC150.md, §5 and §11 now show the re-run); §3's bootstrap interval for the rule's in-scope cost was recomputed too (−9.8 [−10.6, −8.9]; old fit −9.7 [−10.5, −8.9]).
 Split-conformal coverage is guaranteed on exchangeable data for any score function fixed before calibration, and `conformal.py` fits the temperature on val_a and the conformal quantile on val_b, so the clean-test guarantee (at least 90%) holds with either fitter. The measured Choice figures in CONFORMAL.md (APS coverage 98.83%, the set sizes, and all coverage under typos, where exchangeability fails and no guarantee applies) depend on the temperature; `conformal.py` and `conformal_typo.py` were re-run, and every coverage moved by at most 0.1 point and every average set size by at most 0.07 classes (CONFORMAL.md shows the re-run). Noul's threshold sets are unaffected (the temperature rescales a single logit, a monotone change to the score), and the Score head has no temperature.
 
 **What was re-run.** Everything that produces a temperature-dependent
-number in this repo, except `self_pretrain.py`, `bootstrap_ci.py` and the
-attention-pooling seeds of `multiseed_sweep.py`. The re-runs are:
+number in this repo, except `self_pretrain.py` and the attention-pooling
+seeds of `multiseed_sweep.py`. The re-runs are:
 - §9's models, the transformer audit and the from-scratch transformer's
   three seeds;
 - the single-task pipeline and its seed sweep, and Phases 3, 4, 5 and 5b;
 - `conformal.py` and `conformal_typo.py`;
 - the augmentation retrain and the held-out-noise test;
-- CLINC150.
+- CLINC150;
+- `bootstrap_ci.py` (§3's intervals).
 
 Every single-model argmax accuracy reproduced exactly (the §9 ensembles average calibrated probabilities, so theirs moved slightly, and the accuracies under CLINC150's out-of-scope threshold rule moved too: 0.7653 → 0.7655 overall, in-scope 0.7449 → 0.7442). Not re-run: `self_pretrain.py` (§8's
-self-pretrained column; about 2.5 hours), `bootstrap_ci.py` (§3's
-intervals) and the attention-pooling seeds of `multiseed_sweep.py` (§7's
-Choice ECE row; its mean-pooling seeds were re-evaluated by
-`transformer_recheck.py`).
+self-pretrained column; about 2.5 hours) and the attention-pooling seeds
+of `multiseed_sweep.py` (§7's Choice ECE row; its mean-pooling seeds were
+re-evaluated by `transformer_recheck.py`).
 
 **How much it mattered** (`temperature_audit.py`: old and fixed fits on
 the same validation logits, test n=3080 for Choice, 836 for Noul). The
