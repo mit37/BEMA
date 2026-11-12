@@ -6,7 +6,9 @@ small transformer on every task and barely suffer from typos. This model
 keeps BEMA's design (one shared state per input, read by fixed-shape
 Noul / Choice / Score heads, all three tasks trained jointly) but builds
 the state from the mean embedding of hashed word 1-2 grams and character
-2-5 grams, the same features the baseline uses.
+2-5 grams: the same n-gram types the baseline uses, but unweighted (no
+TF-IDF and no per-block normalization, so character n-grams dominate the
+mean), without the baseline's min_df=2 cut, and with hashing collisions.
 """
 import re
 import zlib
