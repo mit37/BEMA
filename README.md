@@ -141,6 +141,11 @@ above):
 | Choice | acc / ECE       | 0.8188 / 0.0210 | 0.8188 / 0.0371 (temp. scaling — see note below) |
 | Score  | MAE / Pearson r | 0.1872 / 0.5340 | — (regression, not calibrated the same way) |
 
+(Correction, 2026-11-12: these temperatures came from a fitter that did
+not converge. Re-fitted properly on the same model, Noul gives T=2.61 and
+ECE 0.0090 (not 0.0046) and Choice T=1.14 and ECE 0.0303 (not 0.0371);
+FINDINGS.md §10.)
+
 **Score works reasonably well here**, unlike the STS-B task it replaced:
 Pearson r=0.53 on a genuinely held-out test split, with training MAE
 improving steadily across all 12 epochs (0.262→0.177) rather than
@@ -154,7 +159,8 @@ Stale, tasteless, and arrived broken.") scores 0.15, correctly low,
 despite that exact phrasing never appearing in the training reviews.
 
 **A genuine, honest surprise: temperature scaling made Choice's ECE
-*worse*, not better** (0.0210 raw → 0.0371 after temp. scaling). This can
+*worse*, not better** (0.0210 raw → 0.0371 after temp. scaling; still
+0.0303 with the corrected fitter, FINDINGS.md §10). This can
 legitimately happen — a global temperature is fit on validation data and
 doesn't guarantee improvement on a different held-out test split,
 especially when the raw model happens to already be well-calibrated on
@@ -187,6 +193,11 @@ measured on held-out test), appending every run to `results_log.csv`:
 | Choice | raw                  | 0.8188   | 0.0210 |
 | Choice | temperature (T=1.18) | 0.8188   | 0.0371 (worse than raw — see note above) |
 | Choice | **isotonic (max-conf)** | 0.8188 | **0.0113** |
+
+(The two temperature rows used the non-convergent fitter; corrected, they
+are T=2.61 / ECE 0.0090 for Noul and T=1.14 / ECE 0.0303 for Choice.
+Platt still wins for Noul, but isotonic now also beats temperature
+there; for Choice, temperature is still worse than raw. FINDINGS.md §10.)
 
 No single method wins everywhere: Platt scaling beats temperature scaling
 for Noul; for Choice, temperature scaling actually made ECE worse than
@@ -405,11 +416,25 @@ conformal and calibration numbers for this task, in `CLINC150.md`.
   for all three tasks on the same splits; the classical baseline in
   FINDINGS.md §9.
 - `ngram_model.py` / `train_ngram.py` — BEMA with a hashed n-gram trunk
-  in place of the transformer (same heads, data and checkpoint rule);
-  `--val-only` runs a validation-only hyperparameter search.
+  in place of the transformer (same heads, splits and checkpoint rule).
+  `--val-only` trains one configuration on seed 42 and prints its best
+  combined validation score without touching test; the 8-setting search
+  in FINDINGS.md §9 ran it once per setting with `--epochs 8`.
 - `ensemble.py` — the 3-seed n-gram ensemble and its mix with the linear
-  baseline, mixing weight chosen on validation; the most accurate
-  configuration in this repo (FINDINGS.md §9).
+  baseline (mixing weight chosen on Choice validation), with paired
+  bootstrap intervals against the linear model. The mix has the best
+  Choice accuracy in this repo, but worse Score MAE than any n-gram model
+  without the mix (FINDINGS.md §9).
+- `clinc150_classical.py` — repeats the §9 comparison (linear, n-gram
+  BEMA, ensembles) on CLINC150, with `clinc150_pipeline.py`'s splits and
+  typo perturbation; the n-gram configuration is the BANKING77-tuned one,
+  not re-tuned (FINDINGS.md §11).
+- `temperature_audit.py` — fits the old (non-convergent) and the fixed
+  temperature on the same validation logits and reports how much test ECE
+  and overconfidence move (FINDINGS.md §10).
+- `truncation_control.py` — refits the linear baseline on the first 64
+  BPE tokens the transformer sees, to size the input-length confound in
+  FINDINGS.md §9.
 - `multiseed_sweep.py` — Workstream E: mean vs attention pooling across
   three training seeds, also giving seed variance for Choice and Score;
   results in FINDINGS.md.
@@ -462,12 +487,17 @@ python3 heldout_noise_test.py       # ...and its test on unseen typo types
 python3 multiseed_sweep.py          # Mean vs attention pooling, 3 seeds (Workstream E, slow)
 python3 self_pretrain.py            # Self-supervised pretraining + fine-tune, 3 seeds (~2.5 h on 4 CPUs)
 python3 linear_baseline.py          # TF-IDF linear baseline
-python3 train_ngram.py --d-model 256 --dropout 0.4 --sparse-lr 3e-3 --epochs 8 --tag _tuned  # n-gram BEMA, 3 seeds
+python3 train_ngram.py              # n-gram BEMA, untuned default, 3 seeds
+python3 train_ngram.py --val-only --d-model 256 --dropout 0.4 --sparse-lr 3e-3 --epochs 8  # one search setting
+python3 train_ngram.py --d-model 256 --dropout 0.4 --sparse-lr 3e-3 --epochs 8 --tag _tuned  # tuned, 3 seeds
 python3 ensemble.py                 # Seed ensemble + linear mix (needs the _tuned checkpoints)
+python3 truncation_control.py       # Linear baseline on the transformer's 64-token view
+python3 temperature_audit.py        # Old vs fixed temperature fit (needs _tuned and multitask checkpoints)
 
 # Workstream D: second independent domain-breadth task (see CLINC150.md)
 python3 clinc150_pipeline.py
 python3 clinc150_oos_threshold.py
+python3 clinc150_classical.py       # Linear / n-gram BEMA / ensembles on CLINC150
 
 # Bootstrap confidence intervals (needs the checkpoints above)
 python3 bootstrap_ci.py
@@ -494,9 +524,11 @@ python3 benchmark_speed.py
   did not need pretrained weights: on the same split, with no pretrained
   weights, the TF-IDF Ridge baseline (0.7821) and the tuned
   n-gram-trunk BEMA (0.7818, 3-seed mean) both reach
-  r=0.78 (FINDINGS.md §9). Self-pretraining the transformer added only
-  +0.0286 (FINDINGS.md §8). The small from-scratch transformer trunk was
-  the main limit. Whether a production pretrained encoder would do better
+  r=0.78 (FINDINGS.md §9). Under a third of that gap is input length (0.067 of the 0.222 in r between the transformer's 3-seed mean, 0.5605, and the TF-IDF model's 0.7821):
+  the transformer reads only a review's first 64 tokens, and the TF-IDF
+  model cut to the same view reaches 0.7148. Self-pretraining the
+  transformer added only +0.0286 (FINDINGS.md §8). The small
+  from-scratch transformer trunk was the main limit. Whether a production pretrained encoder would do better
   than 0.78 is untested here.
 - No single real dataset in this repo has all three label types on the same
   text, so "one state, many typed questions" is demonstrated

@@ -27,8 +27,9 @@ checkpoint. Same architecture (`JevCloneEncoder`, d_model=96, nhead=6,
 3 layers) and training recipe (12 epochs, AdamW lr=3e-4, gradient-clipped)
 as the multitask model (`train_multitask.py`). The TF-IDF linear baseline
 and n-gram-trunk BEMA of FINDINGS.md §9 use different architectures;
-`clinc150_classical.py` repeats them on this task, but its results are
-not reported yet.
+`clinc150_classical.py` repeats them on this task; results in
+FINDINGS.md §11 (they beat this transformer by 7-9.4 points of overall
+accuracy and lose 7-9.5 points under the same typos instead of 27).
 
 ## Results (n as noted; held-out test split, never touched during
 training/calibration/conformal fitting)

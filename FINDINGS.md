@@ -16,7 +16,11 @@ coverage under typo noise, and group-conditional CQR. A fourth pass
 prediction, since no pretrained encoder can be downloaded (§8). A fifth
 pass (2026-10-04) added a classical TF-IDF baseline, which beat the
 transformer everywhere, then rebuilt BEMA's trunk from hashed n-grams and
-tuned and ensembled it for accuracy (§9). This document summarizes what an independent,
+tuned and ensembled it for accuracy (§9). A sixth pass (2026-11-12)
+found and fixed a temperature-fitting bug that affected every temperature-scaled
+number in the repo (temperatures, calibrated ECE and overconfidence), measured how much it mattered and revised §9 (§10),
+added paired bootstrap intervals for §9's ensemble-versus-linear comparisons, and repeated §9
+on CLINC150 (§11). This document summarizes what an independent,
 from-scratch reproduction of Jev's core interface shape (typed state in,
 typed calibrated decision out, one non-autoregressive forward pass)
 found when actually built and tested, rather than assumed. All numbers
@@ -217,6 +221,13 @@ Reviews Score task, not STS-B.
 
 ## 3. Where the calibration numbers are trustworthy vs. not
 
+*Every temperature-scaled number in sections 1-8 was fitted with
+temperature code that did not converge (§10). For the multitask
+transformer, the corrected fit moves Choice ECE from 0.0371 to 0.0303,
+Noul ECE from 0.0046 to 0.0090, and overconfidence under typos up by
+0.012-0.013; the qualitative conclusions below hold, except that Noul's
+temperature scaling looks less good than stated, and the first bullet's "held across every run" was never true for the transformer's Choice head: there temperature scaling leaves test ECE worse than raw with either fit (raw 0.0210; old fit 0.0371, fixed fit 0.0303) (§10).*
+
 **Trustworthy, with the stated caveats:**
 - The qualitative claim "temperature scaling (or Platt/isotonic) reduces
   ECE on held-out test data without changing accuracy" is well-supported:
@@ -343,8 +354,12 @@ more time"):**
   same Score-head design on a hashed n-gram trunk reaches r=0.78
   (0.7818 ± 0.0022, 3 seeds, n=1517), and a TF-IDF Ridge model reaches
   0.7821. In-house pretraining of the transformer (§8) added only
-  +0.0286. So the r=0.53-0.58 was mainly a limit of the small
-  from-scratch transformer trunk: reaching 0.78 did not need pretrained
+  +0.0286. Part of the gap is input length, not the model: the
+  transformer reads only the first 64 tokens of each review, and the
+  TF-IDF model cut to that same view reaches r=0.7148 (§9). So the
+  r=0.53-0.58 was mainly a limit of the small from-scratch transformer
+  trunk, with about 30% of the gap from truncation (0.0673 of 0.2216 in r, against the 3-seed mean 0.5605, n=1517): reaching 0.71 on
+  the same input, and 0.78 on the whole review, did not need pretrained
   weights. Whether a real pretrained encoder would do better than 0.78
   is untested.
 - **Small held-out test sets (836-3,080 examples per task).** Bootstrap
@@ -610,8 +625,7 @@ on BANKING77 the same typed heads on a hashed n-gram trunk, and a TF-IDF
 linear model, do not show the transformer's large overconfidence under
 mixed typos (+0.14); see §9 for their figures. The gap is still worth
 checking for in any System-One-style model, but it is not a property of
-those models in general. (No n-gram or linear results on CLINC150 are
-reported yet; `clinc150_classical.py` repeats those models there.)
+those models in general. (§11 confirms this on CLINC150 itself, n=5,500: under the same typos the transformer's overconfidence rises by 0.0777 (old temperature fit, marked † in §11), while the overconfidence of every linear and n-gram model, single or ensembled, moves by less than 0.011 in either direction. The linear and n-gram models also lose only 7-9.5 points of accuracy, where the transformer loses 27.)
 
 CLINC150 also tested something BANKING77's schema couldn't: an explicit,
 human-labeled out-of-scope class, the "learned 'none of the above'
@@ -790,29 +804,52 @@ possible here, is not a remedy.
 
 ## 9. Accuracy: a linear baseline, an n-gram trunk, and ensembles
 
+*Revised 2026-11-12. The first version of this section used a temperature
+fitter that did not converge (§10). Single-model accuracy and all Score and Noul numbers are
+unchanged by the fix; ECE, overconfidence and the ensembles' Choice accuracies (the ensembles average calibrated probabilities, so e.g. the mix's clean accuracy moved from 0.9201 to 0.9198) are recomputed with the fixed fitter, and paired bootstrap intervals are
+added. Two claims of the first version shrank under the fix: the linear model's and the ensembles' underconfidence under typos (−0.02 to −0.04 then, −0.006 to −0.020 now; mostly an artifact of the fitter), and the ECE cost of ensembling (the 3-seed ensemble's clean ECE is 0.0120 against a mean of 0.0074 for its three members, not about 0.02 against 0.008).*
+
 **The baseline came first, and it was unflattering.** `linear_baseline.py`
 fits TF-IDF features (word 1-2 grams plus character 2-5 grams) with a
 linear model per task, regularization chosen on validation. On the same
-test splits it beat the transformer BEMA on every task, and it showed no
-overconfidence under typos. So the typo miscalibration in §5 is a property
-of the small from-scratch transformer, not of typed-decision models in
-general.
+test splits it beat the transformer BEMA on every task, and under typos it
+loses 6-9 points with overconfidence near zero (−0.006 to −0.014; the
+transformer: +0.15). So the typo
+miscalibration in §5 is a property of the small from-scratch transformer,
+not of typed-decision models in general.
 
 **BEMA with an n-gram trunk.** `ngram_model.py` keeps BEMA's design (one
 shared state per input, read by fixed-shape Noul / Choice / Score heads,
-all three trained jointly with `train_multitask.py`'s data and checkpoint
-rule), but builds the state from the mean embedding of hashed word and
-character n-grams instead of a transformer. Hyperparameters were chosen
-by `train_ngram.py --val-only`: 8 settings (width 96/256, dropout
-0.15/0.4, embedding learning rate 3e-3/1e-3, 8 epochs), seed 42,
-validation only. The best was width 256, dropout 0.4, learning rate 3e-3.
-Test was scored once for that setting and once for the untuned default.
+all three trained jointly on `train_multitask.py`'s splits with its
+checkpoint rule), but builds the state from the mean embedding of hashed
+word 1-2 grams and character 2-5 grams instead of a transformer. These are
+the same n-gram types the baseline uses, but unweighted (no TF-IDF, no
+min_df cut, hashing collisions possible). Hyperparameters were chosen by
+running `train_ngram.py --val-only --epochs 8` once per setting: 8
+settings, seed 42, validation only, scored by the combined validation
+score (Noul accuracy + Choice accuracy + 1 − Score MAE):
+
+| width | dropout | embedding lr | combined val score |
+|---|---|---|---|
+| 96 | 0.15 | 3e-3 | 2.7519 |
+| 96 | 0.15 | 1e-3 | 2.7622 |
+| 96 | 0.4 | 3e-3 | 2.7672 |
+| 96 | 0.4 | 1e-3 | 2.7655 |
+| 256 | 0.15 | 3e-3 | 2.7592 |
+| 256 | 0.15 | 1e-3 | 2.7653 |
+| **256** | **0.4** | **3e-3** | **2.7723** |
+| 256 | 0.4 | 1e-3 | 2.7682 |
+
+Test was scored once for the chosen setting and once for the untuned
+default (width 96, dropout 0.15, lr 3e-3, 12 epochs). The tuned run was
+repeated on 2026-11-12 on a different machine and torch version and
+reproduced every accuracy, Score and Noul number to four decimals.
 
 **Ensembles.** `ensemble.py` averages the three tuned seeds' calibrated
 probabilities, and mixes that average with the linear baseline. The
 mixing weight was picked on Choice validation accuracy from
-{0, .25, .5, .75, 1}: 0.914, 0.920, **0.925**, 0.918, 0.909, so w = 0.5.
-The ensemble temperature was refitted on validation.
+{0, .25, .5, .75, 1}: 0.9153, 0.9207, **0.9253**, 0.9173, 0.9093, so
+w = 0.5. The ensemble temperature was refitted on validation.
 
 Test results. Single models are mean ± std over seeds 42/123/2024;
 ensembles and the linear model are single deterministic runs. Choice
@@ -820,45 +857,244 @@ n=3080, Score n=1517, Noul n=836.
 
 | Test metric | Transformer BEMA (§8) | Linear TF-IDF | n-gram BEMA, default | n-gram BEMA, tuned | 3-seed n-gram ensemble | n-gram ensemble + linear (w=0.5) |
 |---|---|---|---|---|---|---|
-| Choice accuracy (clean) | 0.8195 ± 0.0011 | 0.9114 | 0.8898 ± 0.0020 | 0.8966 ± 0.0058 | 0.9153 | **0.9201** |
-| Choice ECE (calibrated) | 0.0341 ± 0.0042 | 0.0159 | 0.0158 ± 0.0011 | 0.0081 ± 0.0006 | 0.0207 | 0.0173 |
-| Choice accuracy, keyboard typos | — | 0.8471 | 0.8156 ± 0.0081 | 0.8315 ± 0.0089 | 0.8601 | **0.8669** |
-| Choice accuracy, mixed typos | — | 0.8253 | 0.7923 ± 0.0111 | 0.8075 ± 0.0074 | 0.8425 | **0.8529** |
-| Drop under keyboard / mixed typos | 0.309 / 0.383 | 0.064 / 0.086 | 0.074 / 0.098 | 0.065 / 0.089 | 0.055 / 0.073 | 0.053 / 0.067 |
-| Overconfidence, mixed typos | +0.1395 | −0.0421 | +0.0039 | +0.0162 ± 0.0075 | −0.0302 | −0.0437 |
+| Choice accuracy (clean) | 0.8195 ± 0.0011 | 0.9114 | 0.8898 ± 0.0020 | 0.8966 ± 0.0058 | 0.9153 | **0.9198** |
+| Choice ECE (calibrated) | 0.0281 ± 0.0026 | 0.0127 | 0.0141 ± 0.0044 | **0.0074 ± 0.0016** | 0.0120 | 0.0116 |
+| Choice accuracy, keyboard typos | 0.5107 ± 0.0147 | 0.8471 | 0.8156 ± 0.0081 | 0.8315 ± 0.0089 | 0.8594 | **0.8679** |
+| Choice accuracy, mixed typos | 0.4368 ± 0.0102 | 0.8253 | 0.7923 ± 0.0111 | 0.8075 ± 0.0074 | 0.8419 | **0.8506** |
+| Drop under keyboard / mixed typos | 0.309 / 0.383 | 0.064 / 0.086 | 0.074 / 0.098 | 0.065 / 0.089 | 0.056 / 0.073 | 0.052 / 0.069 |
+| Overconfidence, mixed typos | +0.1507 ± 0.0024 | −0.0142 | +0.0106 ± 0.0077 | +0.0139 ± 0.0059 | −0.0115 | −0.0201 |
 | Score MAE | 0.1858 ± 0.0055 | 0.1503 | 0.1298 ± 0.0015 | 0.1244 ± 0.0016 | **0.1232** | 0.1351 |
 | Score Pearson r | 0.5605 ± 0.0234 | 0.7821 | 0.7776 ± 0.0040 | 0.7818 ± 0.0022 | 0.7896 | **0.8012** |
 | Noul accuracy | 0.9801 ± 0.0050 | 0.9880 | 0.9852 ± 0.0030 | 0.9852 ± 0.0042 | 0.9868 | **0.9904** |
 
+The transformer column is §8's from-scratch models (same three seeds)
+re-evaluated with the fixed fitter by `transformer_recheck.py`, retrained
+on 2026-11-12. Its accuracies, Score and Noul numbers reproduce §8
+exactly; with the fixed fit its ECE is 0.0281 (old fit 0.0341) and its
+overconfidence under mixed typos +0.1507 (old fit +0.1395).
+
+Paired bootstrap differences from the linear baseline (`ensemble.py`;
+B=2000 resamples of the test examples, 95% percentile intervals; positive
+means better than linear; for Score, linear MAE minus the model's MAE):
+
+| | 3-seed n-gram ensemble − linear | ensemble + linear mix − linear |
+|---|---|---|
+| Choice accuracy, clean (n=3080) | +0.0039 [−0.0036, +0.0110] | **+0.0084 [+0.0032, +0.0136]** |
+| Choice accuracy, swap typos | **+0.0237 [+0.0133, +0.0344]** | **+0.0256 [+0.0185, +0.0331]** |
+| Choice accuracy, keyboard typos | **+0.0123 [+0.0023, +0.0221]** | **+0.0208 [+0.0133, +0.0279]** |
+| Choice accuracy, mixed typos | **+0.0166 [+0.0055, +0.0282]** | **+0.0253 [+0.0169, +0.0334]** |
+| Score, MAE reduction (n=1517) | **+0.0272 [+0.0220, +0.0325]** | **+0.0152 [+0.0126, +0.0179]** |
+| Noul accuracy (n=836) | −0.0012 [−0.0096, +0.0072] | +0.0024 [−0.0036, +0.0084] |
+
 What this shows, and what it does not:
 
-- **Choice accuracy went from 82.0% (transformer) to 92.0%.** The trunk
-  swap gives most of it; tuning adds about 0.7 points; seed ensembling 1.9
-  more; mixing with the linear model another 0.5. A single tuned n-gram
-  model (89.7%) is still 1.5 points below the linear baseline. Only
-  ensembles beat it, the mix by 0.87 points on one test split; no
-  bootstrap CI was computed for that gap.
-- **Typo robustness:** every n-gram variant loses 5-10 points under typos,
-  against 31-38 for the transformer, and their mean overconfidence under
-  typos stays within ±0.05 (worst single seed: +0.023, tuned model, mixed
-  typos), against +0.14 for the transformer. The ensembles lean slightly *under*confident
-  (−0.02 to −0.04), as does the linear model; that is the safe direction
-  for a decision model, but it is still miscalibration.
-- **Calibration:** the best clean ECE belongs to the single tuned model
-  (0.008); ensembling raised it to about 0.02 even after refitting the
-  temperature.
+- **Choice accuracy went from 81.95% (transformer) to 91.98%.** The trunk
+  swap gives most of it (+7.0 points untuned, +7.7 tuned); seed
+  ensembling adds 1.9 more; mixing with the linear model another 0.45.
+  A single tuned n-gram model (89.66%) is still 1.5 points below the
+  linear baseline. The 3-seed ensemble's 0.39-point lead over linear is
+  within noise (interval spans zero). The mix's lead, 0.84 points (26 of
+  3080 queries), is small but its interval excludes zero.
+- **Typo robustness:** every n-gram variant loses 5-10 points under
+  keyboard and mixed typos (single models 6.5-9.8, ensembles 5.2-7.3),
+  against 31-38 for the transformer, and both ensembles are significantly more accurate than the linear model under every typo type (the paired intervals are for accuracy under typos; the size of the drop itself was not bootstrapped). Mean
+  overconfidence under typos is at most +0.014 for the single n-gram
+  models (worst single seed +0.018, tuned, mixed typos), against +0.15
+  for the transformer. The linear model and the ensembles are slightly
+  *under*confident under typos (−0.006 to −0.020).
+- **Calibration:** with a converged temperature, clean ECE is 0.0074-0.0141
+  for every linear and n-gram model here (single models: 3-seed means);
+  the transformer is far worse (0.0281 ± 0.0026 with the fixed fit;
+  0.0341 with the old one). Among the others the tuned single model is
+  lowest (0.0074) and the untuned one highest (0.0141); the ensembles
+  (0.0120, 0.0116) and the linear model (0.0127) differ by at most
+  0.0011, no interval was computed for that gap, and it is too small to
+  rank them given how soft single ECE values are (§3).
 - **Score and Noul:** the mixing weight was chosen on Choice validation
-  only and reused for Score and Noul. It helps Score correlation and Noul
-  but makes Score MAE worse than the n-gram ensemble alone (0.135 vs
-  0.123), because the linear Ridge model's MAE is worse. The Noul
-  differences are a few of 836 messages (0.9904 vs 0.9880 is 2 messages)
-  and are not meaningful.
+  only and reused for Score and Noul. It gives the best Score correlation
+  (0.80) and Noul accuracy, but its Score MAE (0.135) is worse than every
+  n-gram model without the mix (0.123-0.130), because the linear Ridge
+  model's MAE is worse. Both ensembles beat the linear baseline on Score
+  MAE; neither Noul difference from linear is distinguishable from zero
+  (0.9904 vs 0.9880 is 2 of 836 messages).
 - **Cost:** the 3-seed ensemble is three forward passes, and the mix adds
   a TF-IDF transform and a linear model. It is still non-autoregressive
   with a fixed output shape, but it is not "one forward pass".
+- **Unequal input length (a confound for Score):** the transformer reads
+  only the first 64 BPE tokens of each input (`prepare_multitask.py`
+  MAX_LEN=64); the TF-IDF and n-gram models read the whole text.
+  For Score this matters: 57.9% of test reviews (n=1517) are
+  longer than 64 tokens. `truncation_control.py` refits the linear
+  baseline on exactly the transformer's 64-token view: Score r falls
+  from 0.7821 to 0.7148 and MAE rises from 0.1503 to 0.1662. So about
+  0.07 of the 0.22 gap in r between the linear model and the transformer
+  comes from reading more text, and about 0.15 (0.7148 vs 0.5605) remains
+  on equal input. For Choice (0.1% of test inputs cut) and Noul (3.6%)
+  it makes no material difference: 0.9114 vs 0.9107 and 0.9880 vs
+  0.9880. The n-gram BEMA was not re-run on truncated text, so its Score
+  numbers carry the same advantage.
 - **For the Jev comparison:** the accuracy gain comes from swapping the
   learned-from-scratch transformer for n-gram features, i.e. from a
-  better input representation, not from anything specific to the
-  typed-head design. Jev's claims should be judged against strong
+  better input representation (for Score, partly also from reading the
+  whole review, as above), not from anything specific to the typed-head
+  design. Jev's claims should be judged against strong
   classical baselines like this one, not against a weak neural one.
 
+
+## 10. Correction: the temperature fitter did not converge
+
+**What was wrong.** Every temperature in this repo was fitted with the
+same few lines, copied thirteen times into eight scripts and also used
+by `calib_utils.fit_temperature` (which six more scripts call): LBFGS on T, starting at T=1.5, with a fixed step of 0.01 and no line
+search. That moves T only a small fraction of the way to the
+cross-entropy minimum per iteration, and when the best T is below 1 the
+loss is concave in T near the start, where this update is unreliable: it can stop well short of the minimum or run through T=0 to a negative temperature. On
+synthetic logits with a known best temperature, it returned 0.725 for a
+true 0.4, −41 for a true 0.8, 2.46 for a true 3.0, and was close only
+near 1-1.6 (1.012 for 1.0, 1.207 for 1.2). The fit was found by an
+independent code audit on 2026-11-12 (two reviewers per finding) and
+confirmed with that synthetic check. `calib_utils` now fits 1/T, in
+which the loss is convex, with a strong-Wolfe line search
+(`fit_temperature`, plus `fit_temperature_binary` for the Noul head),
+unit-tested against a fine grid minimum for best temperatures 0.4, 1.0 and 3.0 (0.4 and 3.0 for the binary fit).
+Every script now calls these helpers.
+
+**What it affected.** Temperatures, calibrated ECE and overconfidence,
+everywhere: Noul (`calibrate.py`, `calibrate_multitask.py`,
+`seed_variation_sweep.py`, `conformal.py`), Choice
+(`calibrate_multitask.py`, `multiseed_sweep.py`, `self_pretrain.py`,
+`conformal.py`, `conformal_typo.py`, `augment_and_retrain.py`), Phase 4
+(`calibration_sweep.py`), CLINC150 (`clinc150_pipeline.py`) and §9; `augment_and_retrain.py` fits Noul too. Numbers computed from the temperatures these scripts store in the calibrated checkpoints inherit the old fit as well: `ood_stress_test.py` (Phase 5), `adversarial_stress_test.py` (Phase 5b), `heldout_noise_test.py`, `bootstrap_ci.py` and `clinc150_oos_threshold.py`.
+Accuracy, Score and argmax predictions do not depend on the temperature, except inside §9's ensembles, which average calibrated probabilities, and in CLINC150's out-of-scope rule (`clinc150_oos_threshold.py`), which thresholds the temperature-scaled top probability. That rule's tau, AUROC and thresholded accuracy, recall and precision (CLINC150.md; §3's −9.7-point threshold cost; §5; the transformer's threshold rows in §11) used the old fit and were not re-run.
+Split-conformal coverage is guaranteed on exchangeable data for any score function fixed before calibration, and `conformal.py` fits the temperature on val_a and the conformal quantile on val_b, so the clean-test guarantee (at least 90%) holds with either fitter. The measured Choice figures in CONFORMAL.md (APS coverage 98.83%, the set sizes, and all coverage under typos, where exchangeability fails and no guarantee applies) depend on the temperature and were not recomputed. Noul's threshold sets are unaffected (the temperature rescales a single logit, a monotone change to the score), and the Score head has no temperature.
+
+**How much it mattered** (`temperature_audit.py`: old and fixed fits on
+the same validation logits, test n=3080 for Choice, 836 for Noul). The
+transformer is `train_multitask.py` retrained here with seed 42; it
+reproduces the published temperatures and ECEs exactly (Choice T=1.18,
+ECE 0.0371; Noul T=2.36, ECE 0.0046; README Phase 4), so its "old"
+column is the published one.
+
+| Model, head | T, old → fixed | Clean ECE, old → fixed | Overconfidence under mixed typos, old → fixed |
+|---|---|---|---|
+| Transformer, Choice | 1.181 → 1.143 | 0.0371 → 0.0303 | +0.1391 → **+0.1519** |
+| Transformer, Noul | 2.363 → 2.610 | 0.0046 → **0.0090** | — |
+| Linear TF-IDF, Choice | 0.794 → 0.720 | 0.0159 → 0.0127 | −0.0421 → −0.0142 |
+| n-gram BEMA tuned, Choice, seed 42 | 1.553 → 1.561 | 0.0073 → 0.0083 | +0.0085 → +0.0071 |
+| n-gram BEMA tuned, Choice, seed 123 | 1.519 → 1.524 | 0.0085 → 0.0083 | +0.0169 → +0.0162 |
+| n-gram BEMA tuned, Choice, seed 2024 | 1.705 → 1.741 | 0.0084 → 0.0056 | +0.0233 → +0.0183 |
+
+Validation NLL fell or stayed equal in every row, as it must.
+
+What changes in the conclusions:
+
+- **The transformer's typo miscalibration (§5, §8) stands, and is
+  slightly larger.** With the fixed fit its overconfidence under typos
+  rises by 0.012-0.013 (seed 42: swap +0.112 → +0.124, keyboard +0.094 →
+  +0.106, mixed +0.139 → +0.152). Over all three from-scratch seeds
+  (`transformer_recheck.py`, test n=3080): clean ECE 0.0341 ± 0.0042 →
+  0.0281 ± 0.0026, mixed-typo overconfidence +0.1395 ± 0.0006 → +0.1507
+  ± 0.0024, with accuracies unchanged. The +0.14 figures quoted in §2-§8
+  are mixed-typo figures from the old fit and understate it by about
+  0.011; they were left as the record. §8's self-pretrained column was
+  not re-run (`self_pretrain.py` takes about 2.5 hours).
+- **"Temperature scaling made Choice ECE worse than raw" (README, Phase
+  4) stands:** the fixed fit gives 0.0303, still worse than raw 0.0210.
+- **The published Noul ECE was flattered by the bug.** The
+  cross-entropy-optimal temperature gives ECE 0.0090, not 0.0046; still
+  better than raw (0.0159), but Platt scaling (0.0030) and isotonic
+  regression (0.0049) now beat temperature scaling on this test split (no interval was computed for these differences). With 836 test
+  messages and about 18 errors, Noul ECE is noisy either way. The 3-seed
+  Noul figures in §3 (calibrated ECE 0.0039-0.0070) used the same old
+  fit and were not re-run.
+- **§9's calibration claims changed the most**, because the linear model (T=0.720)
+  and the ensemble mix (T=0.860; the 3-seed ensemble's own refitted temperature is not logged) have best temperatures below 1, where the old fit
+  failed worst. The first version of §9 reported them slightly
+  underconfident under typos (−0.02 to −0.04); with a converged
+  temperature that is −0.006 to −0.020. §9 has been revised.
+- **The tuned n-gram models barely move**: their best temperatures (1.52-1.74)
+  are where the old fit happened to start. The untuned default n-gram models
+  were not in this audit and their temperatures were not logged. Retrained
+  with the fixed fit, they give the same accuracies as before, but their
+  calibration moved more. Means over 3 seeds, Choice test n=3080: mixed-typo
+  overconfidence went from +0.0039 to +0.0106, and clean ECE from 0.0158 to
+  0.0141 (§9).
+- **CLINC150's transformer (T=1.5739, CLINC150.md)** is in the same
+  regime as the n-gram models, so its numbers should move little; it was
+  not re-run.
+
+## 11. Does §9 replicate on CLINC150?
+
+`clinc150_classical.py` repeats §9's comparison on CLINC150 (151 classes:
+150 intents plus out-of-scope, "oos"), with `clinc150_pipeline.py`'s
+splits and its typo perturbation (two adjacent-character swaps, same
+seed), so every typo number below pairs with the transformer's in
+CLINC150.md. The n-gram configuration is the one tuned on BANKING77,
+reused without re-tuning; the linear model's C (50) and the mixing weight
+(w = 0.25, from {0, .25, .5, .75, 1}: val accuracy 0.9119, **0.9148**,
+0.9119, 0.9106, 0.9055) were chosen on validation, and every model's
+temperature was fitted on validation with the fixed fitter. "oos
+threshold" is `clinc150_oos_threshold.py`'s rule: answer oos when the top
+probability is below tau, with tau chosen on validation.
+
+Test n=5,500 (4,500 in-scope, 1,000 oos). Single n-gram models are mean ±
+std over seeds 42/123/2024.
+
+| Test metric | Transformer (CLINC150.md) | Linear TF-IDF | n-gram BEMA, single | 3-seed n-gram ensemble | ensemble + linear (w=0.25) |
+|---|---|---|---|---|---|
+| Overall accuracy (argmax) | 0.7180 | 0.7949 | 0.7885 ± 0.0109 | 0.8098 | **0.8118** |
+| In-scope accuracy (n=4,500) | 0.8418 | 0.9231 | 0.9116 ± 0.0040 | 0.9267 | **0.9302** |
+| oos recall, argmax (n=1,000) | 0.1610 | 0.2180 | 0.2350 ± 0.0720 | **0.2840** | 0.2790 |
+| oos AUROC of 1 − top probability | 0.88 † | **0.9365** | 0.9068 ± 0.0124 | 0.9246 | 0.9306 |
+| Overall accuracy with oos threshold | 0.7653 (tau 0.67) † | **0.8645** (tau 0.76) | 0.8158 ± 0.0028 | 0.8571 (tau 0.78) | 0.8596 (tau 0.81) |
+| Calibrated ECE (clean) | 0.0412 † | 0.0442 | 0.0447 ± 0.0035 | **0.0319** | 0.0343 |
+| Overconfidence, clean | +0.0334 † | +0.0384 | +0.0444 ± 0.0037 | **+0.0319** | +0.0343 |
+| Accuracy with typos | 0.4504 | 0.7004 | 0.7018 ± 0.0097 | 0.7367 | **0.7405** |
+| Accuracy drop under typos | 0.2676 | 0.0945 | 0.0867 ± 0.0016 | 0.0731 | **0.0713** |
+| Overconfidence, typos | +0.1111 † | +0.0308 | +0.0522 ± 0.0055 | +0.0264 | **+0.0245** |
+
+† From the transformer's temperature (T=1.5739), fitted with the old code
+and not re-run; its oos AUROC and threshold results use the same
+temperature-scaled probabilities. §10 shows the old code lands close to
+the optimum only when the best temperature is near 1-1.6, as for the
+n-gram models (moved by at most 0.036), not above that (2.363 for the Noul
+head's 2.610, 2.46 for a synthetic 3.0); this model's optimum was not
+computed.
+
+Paired bootstrap of overall argmax accuracy against the linear model
+(B=2000, 95% intervals, n=5,500): 3-seed ensemble +0.0149 [+0.0084,
++0.0213] clean and +0.0364 [+0.0278, +0.0449] with typos; ensemble +
+linear +0.0169 [+0.0109, +0.0229] clean and +0.0402 [+0.0324, +0.0480]
+with typos.
+
+What replicates, and what does not:
+
+- **The main §9 result replicates.** The linear model and the n-gram
+  BEMA both beat the transformer by large margins (overall accuracy
+  0.79 vs 0.72; in-scope 0.91-0.92 vs 0.84), and under typos they lose
+  7-9.5 points where the transformer loses 27. On average a single n-gram model
+  is again slightly below the linear model (mean 0.7885 vs 0.7949, n=3
+  seeds), but not every seed is: seed 42 alone reaches 0.7995, and the
+  seed std (0.0109) is larger than the gap (0.0064). Both ensembles beat
+  the linear model with intervals that exclude zero, clean and with typos
+  (on BANKING77 the 3-seed ensemble's clean interval spanned zero). Here the gain is
+  larger than on BANKING77 (+1.5 to +1.7 points clean, +3.6 to +4.0
+  with typos).
+- **Out-of-scope detection is better too.** With the validation-chosen
+  threshold the linear model reaches 0.8645 overall (in-scope 0.8598,
+  oos recall 0.886, oos precision 0.627) against the transformer's
+  0.7653 (0.7449 / 0.857 / 0.461). The linear model's confidence
+  separates oos best (AUROC 0.937); single n-gram models are weaker here
+  (0.907), and their threshold results trail the linear model's by about
+  5 points overall (0.8158 vs 0.8645).
+- **Calibration does not replicate cleanly.** Every model, the
+  transformer included, is overconfident on CLINC150's clean test set by
+  +0.03 to +0.05. The likely cause is the split design rather than the
+  models: validation is 3% oos (100 of 3,100) while test is 18% (1,000 of
+  5,500), and oos queries are where every model is wrong most often (oos
+  recall 0.16-0.31 against in-scope accuracy 0.84-0.93), so a temperature
+  fitted on validation is too low for test (CLINC150.md discusses the
+  same val/test gap for accuracy). Under typos the
+  transformer's overconfidence rises by +0.078 over clean; the linear
+  model's falls by 0.008, the ensembles' by 0.006-0.010, and single
+  n-gram models' rises by +0.008.
