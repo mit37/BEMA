@@ -225,9 +225,9 @@ Reviews Score task, not STS-B.
 *Every temperature-scaled number in sections 1-8 was first fitted with
 temperature code that did not converge (§10). Most have since been re-run
 with the fixed fit and are shown that way, with the old values noted. The
-exceptions, still old-fit and marked where they appear: §7's
-attention-pooling ECE column and the ECE and overconfidence rows of §8's
-table (the self-pretrained models were not re-run). For the
+exception, still old-fit and marked where it appears: the ECE and
+overconfidence rows of §8's table (the self-pretrained models were not
+re-run). For the
 multitask transformer, the corrected fit moves Choice ECE from 0.0371 to
 0.0303, Noul ECE from 0.0046 to 0.0090, and overconfidence under typos up
 by 0.012-0.013; the qualitative conclusions below hold, except that Noul's
@@ -762,14 +762,14 @@ both variants with three seeds (42, 123, 2024) on the same data split:
 |---|---|---|---|
 | Noul accuracy (n=836) | 0.9801 ± 0.0050 | 0.9809 ± 0.0041 | +0.0008 ± 0.0014 |
 | Choice accuracy (n=3080) | 0.8195 ± 0.0011 | 0.8202 ± 0.0143 | +0.0008 ± 0.0136 |
-| Choice ECE, calibrated | 0.0341 ± 0.0042 | 0.0314 ± 0.0046 | −0.0027 ± 0.0050 |
+| Choice ECE, calibrated | 0.0281 ± 0.0026 | 0.0277 ± 0.0044 | −0.0004 ± 0.0039 |
 | Score MAE (lower is better, n=1517) | 0.1858 ± 0.0055 | 0.1809 ± 0.0041 | −0.0049 ± 0.0095 |
 | Score Pearson r | 0.5605 ± 0.0234 | 0.5666 ± 0.0199 | +0.0061 ± 0.0190 |
 
-(The Choice ECE row uses the old, non-convergent temperature fit, §10.
-The mean-pooling seeds re-evaluated with the fixed fit give 0.0281 ±
-0.0026; the attention-pooling seeds were not re-run, so the paired
-difference is not available with the fixed fit.)
+(Re-run 2026-11-12 with the fixed temperature fit, §10: every accuracy
+and Score number reproduced exactly; with the old, non-convergent fit the
+Choice ECE row was 0.0341 ± 0.0042, 0.0314 ± 0.0046 and −0.0027 ±
+0.0050.)
 
 (mean ± sample standard deviation over seeds.)
 
@@ -1015,20 +1015,17 @@ Accuracy, Score and argmax predictions do not depend on the temperature, except 
 Split-conformal coverage is guaranteed on exchangeable data for any score function fixed before calibration, and `conformal.py` fits the temperature on val_a and the conformal quantile on val_b, so the clean-test guarantee (at least 90%) holds with either fitter. The measured Choice figures in CONFORMAL.md (APS coverage 98.83%, the set sizes, and all coverage under typos, where exchangeability fails and no guarantee applies) depend on the temperature; `conformal.py` and `conformal_typo.py` were re-run, and every coverage moved by at most 0.1 point and every average set size by at most 0.07 classes (CONFORMAL.md shows the re-run). Noul's threshold sets are unaffected (the temperature rescales a single logit, a monotone change to the score), and the Score head has no temperature.
 
 **What was re-run.** Everything that produces a temperature-dependent
-number in this repo, except `self_pretrain.py` and the attention-pooling
-seeds of `multiseed_sweep.py`. The re-runs are:
+number in this repo, except `self_pretrain.py`. The re-runs are:
 - §9's models, the transformer audit and the from-scratch transformer's
   three seeds;
 - the single-task pipeline and its seed sweep, and Phases 3, 4, 5 and 5b;
 - `conformal.py` and `conformal_typo.py`;
 - the augmentation retrain and the held-out-noise test;
 - CLINC150;
-- `bootstrap_ci.py` (§3's intervals).
+- `bootstrap_ci.py` (§3's intervals) and `multiseed_sweep.py` (§7).
 
 Every single-model argmax accuracy reproduced exactly (the §9 ensembles average calibrated probabilities, so theirs moved slightly, and the accuracies under CLINC150's out-of-scope threshold rule moved too: 0.7653 → 0.7655 overall, in-scope 0.7449 → 0.7442). Not re-run: `self_pretrain.py` (§8's
-self-pretrained column; about 2.5 hours) and the attention-pooling seeds
-of `multiseed_sweep.py` (§7's Choice ECE row; its mean-pooling seeds were
-re-evaluated by `transformer_recheck.py`).
+self-pretrained column; about 2.5 hours).
 
 **How much it mattered** (`temperature_audit.py`: old and fixed fits on
 the same validation logits, test n=3080 for Choice, 836 for Noul). The

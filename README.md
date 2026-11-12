@@ -63,9 +63,8 @@ one forward pass — no token generation.
 - **Correction, 2026-11-12 (FINDINGS.md §10):** every temperature in this
   repo had been fitted with code that did not converge; all scripts now
   use a fixed fitter. Everything temperature-dependent was then re-run
-  except the self-pretraining comparison and the attention-pooling side
-  of the pooling comparison (`multiseed_sweep.py`, FINDINGS.md §7), and
-  this README shows the re-run values with the old ones noted. Every
+  except the self-pretraining comparison (FINDINGS.md §8), and this
+  README shows the re-run values with the old ones noted. Every
   single-model accuracy and Score metric reproduced exactly (only the §9
   ensembles' accuracies, which average calibrated probabilities, and
   CLINC150's out-of-scope threshold rule, which thresholds the calibrated
