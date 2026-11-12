@@ -342,8 +342,11 @@ more time"):**
 - **CPU-only, single environment.** All training ran on CPU; the
   multi-task run (3 tasks x ~266 steps x 12 epochs) took ~30 minutes for
   a 96-dim/3-layer encoder. Anything meaningfully larger, or a genuine
-  hyperparameter search (rather than the two or three configurations
-  actually tried here), was out of reach in the time available.
+  hyperparameter search for the transformer (rather than the two or
+  three configurations actually tried), was out of reach in the time
+  available. The much cheaper n-gram BEMA got a small 8-setting,
+  validation-only search (seed 42, §9), which chose the tuned
+  configuration cited above.
 - **No sentence-pair architecture question anymore, since there's no
   sentence pair.** The STS-B-era finding that a naive concat+meanpool
   architecture actively hurts a sentence-pair task (§2, historical) no
@@ -391,8 +394,10 @@ This matters commercially, not just academically: if "cannot hallucinate"
 is read by a customer as "the confidence score is a trustworthy AND
 complete signal that the model is out of its depth," this toy reproduction
 suggests that's not automatically true even with textbook-correct
-calibration (temperature/Platt/isotonic scaling, all applied and all
-measurably improving ECE here). A model can be well-calibrated on its
+calibration (temperature/Platt/isotonic scaling, all applied; Platt and
+isotonic lowered test ECE wherever applied, and temperature scaling lowered
+Noul's, but it made the transformer's Choice ECE worse than raw with either
+fit: 0.0210 raw → 0.0371 old fit / 0.0303 fixed fit, §10). A model can be well-calibrated on its
 training distribution and still fail silently — meaning confidently,
 without a low-confidence flag — the moment real-world input drifts
 outside that distribution. Any team evaluating this category as a
@@ -612,7 +617,8 @@ perturbation with its own dedicated encoder, its own dedicated
 4,000-token tokenizer trained from scratch on this corpus alone (not the
 shared multitask vocabulary), and 151 classes instead of 77. Result:
 accuracy 71.80%→45.04% (a ~37% relative collapse) while confidence only
-dropped 0.7514→0.5615 (a ~25% relative drop) — the same qualitative
+dropped 0.7489→0.5583 (a ~25% relative drop; 0.7514→0.5615 with the old
+temperature fit, §10) — the same qualitative
 pattern, at a similar relative magnitude, as BANKING77's 81.9%→51.2%
 accuracy collapse against a 0.791→0.612 confidence drop. Two different
 datasets, different vocabularies, different domains, different class
@@ -625,7 +631,7 @@ on BANKING77 the same typed heads on a hashed n-gram trunk, and a TF-IDF
 linear model, do not show the transformer's large overconfidence under
 mixed typos (+0.14); see §9 for their figures. The gap is still worth
 checking for in any System-One-style model, but it is not a property of
-those models in general. (§11 confirms this on CLINC150 itself, n=5,500: under the same typos the transformer's overconfidence rises by 0.0777 (old temperature fit, marked † in §11), while the overconfidence of every linear and n-gram model, single or ensembled, moves by less than 0.011 in either direction. The linear and n-gram models also lose only 7-9.5 points of accuracy, where the transformer loses 27.)
+those models in general. (§11 confirms this on CLINC150 itself, n=5,500: under the same typos the transformer's overconfidence rises by 0.0770 (from +0.0309 clean to +0.1079), while the overconfidence of every linear and n-gram model, single or ensembled, moves by less than 0.011 in either direction. The linear and n-gram models also lose only 7-9.5 points of accuracy, where the transformer loses 27.)
 
 CLINC150 also tested something BANKING77's schema couldn't: an explicit,
 human-labeled out-of-scope class, the "learned 'none of the above'
@@ -637,10 +643,11 @@ training set has exactly 100 examples for every class, oos included. The
 oos class simply has to cover "everything else" with the same budget as
 one narrow intent. The more useful result is that the confidence score
 carries the missing signal (`clinc150_oos_threshold.py`): top-class
-probability averages 0.82 on in-scope vs 0.44 on out-of-scope test
+probability averages 0.82 on in-scope vs 0.43 on out-of-scope test
 queries (AUROC 0.88), and rejecting answers below a validation-tuned
-threshold raises oos recall to 85.7%, at a cost of in-scope accuracy
-84.2%→74.5% (oos precision 46%). So "knows when it doesn't know" is
+threshold raises oos recall to 86.1%, at a cost of in-scope accuracy
+84.2%→74.4% (oos precision 46%; re-run with the fixed temperature fit,
+§10). So "knows when it doesn't know" is
 partly true here, but only as a tunable tradeoff, not for free. See
 `CLINC150.md` for the full table and tradeoff curve.
 
@@ -814,7 +821,7 @@ fits TF-IDF features (word 1-2 grams plus character 2-5 grams) with a
 linear model per task, regularization chosen on validation. On the same
 test splits it beat the transformer BEMA on every task, and under typos it
 loses 6-9 points with overconfidence near zero (−0.006 to −0.014; the
-transformer: +0.15). So the typo
+transformer: +0.11 to +0.15, 3-seed means). So the typo
 miscalibration in §5 is a property of the small from-scratch transformer,
 not of typed-decision models in general.
 
@@ -965,7 +972,7 @@ everywhere: Noul (`calibrate.py`, `calibrate_multitask.py`,
 (`calibrate_multitask.py`, `multiseed_sweep.py`, `self_pretrain.py`,
 `conformal.py`, `conformal_typo.py`, `augment_and_retrain.py`), Phase 4
 (`calibration_sweep.py`), CLINC150 (`clinc150_pipeline.py`) and §9; `augment_and_retrain.py` fits Noul too. Numbers computed from the temperatures these scripts store in the calibrated checkpoints inherit the old fit as well: `ood_stress_test.py` (Phase 5), `adversarial_stress_test.py` (Phase 5b), `heldout_noise_test.py`, `bootstrap_ci.py` and `clinc150_oos_threshold.py`.
-Accuracy, Score and argmax predictions do not depend on the temperature, except inside §9's ensembles, which average calibrated probabilities, and in CLINC150's out-of-scope rule (`clinc150_oos_threshold.py`), which thresholds the temperature-scaled top probability. That rule's tau, AUROC and thresholded accuracy, recall and precision (CLINC150.md; §3's −9.7-point threshold cost; §5; the transformer's threshold rows in §11) used the old fit and were not re-run.
+Accuracy, Score and argmax predictions do not depend on the temperature, except inside §9's ensembles, which average calibrated probabilities, and in CLINC150's out-of-scope rule (`clinc150_oos_threshold.py`), which thresholds the temperature-scaled top probability. That rule, and `clinc150_pipeline.py`, were re-run with the fixed fit (CLINC150.md, §5 and §11 now show the re-run); only §3's bootstrap interval for the rule's in-scope cost (−9.7 [−10.5, −8.9]; the point estimate is now −9.8) was not recomputed.
 Split-conformal coverage is guaranteed on exchangeable data for any score function fixed before calibration, and `conformal.py` fits the temperature on val_a and the conformal quantile on val_b, so the clean-test guarantee (at least 90%) holds with either fitter. The measured Choice figures in CONFORMAL.md (APS coverage 98.83%, the set sizes, and all coverage under typos, where exchangeability fails and no guarantee applies) depend on the temperature and were not recomputed. Noul's threshold sets are unaffected (the temperature rescales a single logit, a monotone change to the score), and the Score head has no temperature.
 
 **How much it mattered** (`temperature_audit.py`: old and fixed fits on
@@ -1019,9 +1026,13 @@ What changes in the conclusions:
   calibration moved more. Means over 3 seeds, Choice test n=3080: mixed-typo
   overconfidence went from +0.0039 to +0.0106, and clean ECE from 0.0158 to
   0.0141 (§9).
-- **CLINC150's transformer (T=1.5739, CLINC150.md)** is in the same
-  regime as the n-gram models, so its numbers should move little; it was
-  not re-run.
+- **CLINC150's transformer was re-run** with the fixed fit
+  (`clinc150_pipeline.py`, `clinc150_oos_threshold.py`; test n=5,500).
+  Accuracy reproduced exactly (0.7180). The temperature moved 1.5739 →
+  1.5860, scaled ECE 0.0412 → 0.0407, typo-test confidence 0.5615 →
+  0.5583, and the threshold rule's overall accuracy 0.7653 → 0.7655 (tau
+  unchanged at 0.67); conformal coverage is unchanged (0.9827), set size
+  17.31 → 17.27. CLINC150.md shows the re-run.
 
 ## 11. Does §9 replicate on CLINC150?
 
@@ -1045,21 +1056,19 @@ std over seeds 42/123/2024.
 | Overall accuracy (argmax) | 0.7180 | 0.7949 | 0.7885 ± 0.0109 | 0.8098 | **0.8118** |
 | In-scope accuracy (n=4,500) | 0.8418 | 0.9231 | 0.9116 ± 0.0040 | 0.9267 | **0.9302** |
 | oos recall, argmax (n=1,000) | 0.1610 | 0.2180 | 0.2350 ± 0.0720 | **0.2840** | 0.2790 |
-| oos AUROC of 1 − top probability | 0.88 † | **0.9365** | 0.9068 ± 0.0124 | 0.9246 | 0.9306 |
-| Overall accuracy with oos threshold | 0.7653 (tau 0.67) † | **0.8645** (tau 0.76) | 0.8158 ± 0.0028 | 0.8571 (tau 0.78) | 0.8596 (tau 0.81) |
-| Calibrated ECE (clean) | 0.0412 † | 0.0442 | 0.0447 ± 0.0035 | **0.0319** | 0.0343 |
-| Overconfidence, clean | +0.0334 † | +0.0384 | +0.0444 ± 0.0037 | **+0.0319** | +0.0343 |
+| oos AUROC of 1 − top probability | 0.8802 | **0.9365** | 0.9068 ± 0.0124 | 0.9246 | 0.9306 |
+| Overall accuracy with oos threshold | 0.7655 (tau 0.67) | **0.8645** (tau 0.76) | 0.8158 ± 0.0028 | 0.8571 (tau 0.78) | 0.8596 (tau 0.81) |
+| Calibrated ECE (clean) | 0.0407 | 0.0442 | 0.0447 ± 0.0035 | **0.0319** | 0.0343 |
+| Overconfidence, clean | +0.0309 | +0.0384 | +0.0444 ± 0.0037 | **+0.0319** | +0.0343 |
 | Accuracy with typos | 0.4504 | 0.7004 | 0.7018 ± 0.0097 | 0.7367 | **0.7405** |
 | Accuracy drop under typos | 0.2676 | 0.0945 | 0.0867 ± 0.0016 | 0.0731 | **0.0713** |
-| Overconfidence, typos | +0.1111 † | +0.0308 | +0.0522 ± 0.0055 | +0.0264 | **+0.0245** |
+| Overconfidence, typos | +0.1079 | +0.0308 | +0.0522 ± 0.0055 | +0.0264 | **+0.0245** |
 
-† From the transformer's temperature (T=1.5739), fitted with the old code
-and not re-run; its oos AUROC and threshold results use the same
-temperature-scaled probabilities. §10 shows the old code lands close to
-the optimum only when the best temperature is near 1-1.6, as for the
-n-gram models (moved by at most 0.036), not above that (2.363 for the Noul
-head's 2.610, 2.46 for a synthetic 3.0); this model's optimum was not
-computed.
+The transformer column is `clinc150_pipeline.py` and
+`clinc150_oos_threshold.py` re-run on 2026-11-12 with the fixed
+temperature fit (T=1.5860; the old fit gave 1.5739). Its accuracy
+reproduces CLINC150.md exactly; its temperature-dependent numbers moved by
+at most 0.003 (§10).
 
 Paired bootstrap of overall argmax accuracy against the linear model
 (B=2000, 95% intervals, n=5,500): 3-seed ensemble +0.0149 [+0.0084,
@@ -1083,7 +1092,7 @@ What replicates, and what does not:
 - **Out-of-scope detection is better too.** With the validation-chosen
   threshold the linear model reaches 0.8645 overall (in-scope 0.8598,
   oos recall 0.886, oos precision 0.627) against the transformer's
-  0.7653 (0.7449 / 0.857 / 0.461). The linear model's confidence
+  0.7655 (0.7442 / 0.861 / 0.461). The linear model's confidence
   separates oos best (AUROC 0.937); single n-gram models are weaker here
   (0.907), and their threshold results trail the linear model's by about
   5 points overall (0.8158 vs 0.8645).
@@ -1095,6 +1104,6 @@ What replicates, and what does not:
   recall 0.16-0.31 against in-scope accuracy 0.84-0.93), so a temperature
   fitted on validation is too low for test (CLINC150.md discusses the
   same val/test gap for accuracy). Under typos the
-  transformer's overconfidence rises by +0.078 over clean; the linear
+  transformer's overconfidence rises by +0.077 over clean; the linear
   model's falls by 0.008, the ensembles' by 0.006-0.010, and single
   n-gram models' rises by +0.008.

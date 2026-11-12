@@ -322,7 +322,7 @@ own numbers would have looked strong without this test, and were not.
 walking it back.** First, it generalizes: CLINC150 (`CLINC150.md`, a
 second, structurally different 151-class task with its own dedicated
 tokenizer) shows the same pattern at a similar relative magnitude
-(accuracy 71.80%→45.04%, confidence only 0.7514→0.5615) — this is not a
+(accuracy 71.80%→45.04%, confidence only 0.7489→0.5583) — this is not a
 BANKING77-specific artifact. Second, it's partially fixable: training on
 typo-augmented data (`augment_and_retrain.py`, FINDINGS.md §5) narrowed
 BANKING77's accuracy-collapse gap by roughly half (31.4pp→16.0pp) and the
@@ -336,8 +336,9 @@ baseline and BEMA with a hashed n-gram trunk were both trained on clean
 text only. Under the keyboard-neighbor and mixed typos of
 `heldout_noise_test.py` (n=3080), they lose about 6-10 points of Choice
 accuracy, against 31-38 for the transformer, and they do not show its
-large overconfidence (+0.14 under mixed typos; FINDINGS.md §9 has their
-figures). Read together: this is a real failure mode of this
+large overconfidence (+0.15 under mixed typos, 3-seed mean with the
+corrected temperature fit, +0.14 with the old one; FINDINGS.md §9 has
+their figures, §10 the fit correction). Read together: this is a real failure mode of this
 transformer that generalizes across datasets. Augmentation partly fixes
 it, and a different input representation largely avoids it.
 
@@ -367,7 +368,7 @@ crowdsourced intents across many domains, plus a genuine out-of-scope
 class (CC-BY 3.0, verified in `DATA_LICENSES.md`) — run specifically to
 test whether the typo-miscalibration finding above generalizes past
 BANKING77. It does: accuracy collapsed 71.80%→45.04% under the same
-ordinary-typo perturbation while confidence dropped only 0.7514→0.5615,
+ordinary-typo perturbation while confidence dropped only 0.7489→0.5583,
 the same pattern at a similar relative magnitude on a structurally
 different dataset (different tokenizer, different domain mix, 151 vs 77
 classes). It also tested out-of-scope detection: used as one more
@@ -376,7 +377,7 @@ out-of-scope queries (vs 84.2% in-scope accuracy), even though training
 data is balanced (100 examples per class, oos included). The confidence
 score does most of the work instead: rejecting answers whose top
 probability is below a validation-tuned threshold
-(`clinc150_oos_threshold.py`) raises oos recall to 85.7%, at a cost of
+(`clinc150_oos_threshold.py`) raises oos recall to 86.1%, at a cost of
 about 10 points of in-scope accuracy. Full writeup, including the
 conformal and calibration numbers for this task, in `CLINC150.md`.
 
@@ -419,7 +420,9 @@ conformal and calibration numbers for this task, in `CLINC150.md`.
   in place of the transformer (same heads, splits and checkpoint rule).
   `--val-only` trains one configuration on seed 42 and prints its best
   combined validation score without touching test; the 8-setting search
-  in FINDINGS.md §9 ran it once per setting with `--epochs 8`.
+  in FINDINGS.md §9 ran it once per setting with `--epochs 8`. A full run
+  reuses `bema_ngram{tag}_seed*.pt` only if they were trained with the
+  same settings, and stops otherwise; use a new `--tag` to change them.
 - `ensemble.py` — the 3-seed n-gram ensemble and its mix with the linear
   baseline (mixing weight chosen on Choice validation), with paired
   bootstrap intervals against the linear model. The mix has the best

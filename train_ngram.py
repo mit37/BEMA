@@ -14,6 +14,7 @@ heads use AdamW.
 Usage: python3 train_ngram.py
 """
 import argparse
+import json
 import math
 import os
 import pickle
@@ -154,13 +155,21 @@ if __name__ == "__main__":
               f"epochs={cfg.epochs} best_combined_val={best:.4f}")
         raise SystemExit
     results = {}
+    train_cfg = {k: getattr(cfg, k) for k in ("d_model", "dropout", "sparse_lr", "epochs")}
     for seed in SEEDS:
         path = f"bema_ngram{cfg.tag}_seed{seed}.pt"
+        meta = path[:-3] + ".json"  # training config, so a checkpoint is never reused under other settings
         if os.path.exists(path):
+            saved = json.load(open(meta)) if os.path.exists(meta) else None
+            if saved != train_cfg:
+                raise SystemExit(f"{path} was trained with {saved}, not {train_cfg}; "
+                                 "delete it or pass a different --tag")
             model = make_model(cfg)
             model.load_state_dict(torch.load(path))
         else:
             model, _ = train(seed, path, cfg)
+            with open(meta, "w") as f:
+                json.dump(train_cfg, f)
         results[seed] = evaluate(model)
         print(f"[seed {seed}] " + " ".join(f"{k}={v:.4f}" for k, v in results[seed].items()), flush=True)
 

@@ -37,10 +37,18 @@ nonconformity scores and quantiles on val_b only — fully disjoint from
 both the temperature fit and the final test set. (The Score head has no
 such calibration-layer parameter, so this split matters less there, but
 the same val_a/val_b split is used for consistency.) The temperature
-values from this refit (T=2.46 for Noul, T=1.19 for Choice) are close to
-but not identical to `calibrate_multitask.py`'s full-val fit (T=2.36,
-T=1.18) — expected, since they're fit on half the data with a different
-(fixed) seed; both are legitimate estimates of the same quantity.
+values from this refit (T=2.46 for Noul, T=1.19 for Choice) were close to
+`calibrate_multitask.py`'s full-val fit (T=2.36, T=1.18).
+
+(Correction, 2026-11-12: all four of these temperatures came from a fitter
+that did not converge (FINDINGS.md §10). The converged full-val fit is
+T=2.61 for Noul and T=1.14 for Choice; the val_a-only optimum was not
+computed. `conformal.py` and `conformal_typo.py` now use the converged
+fitter. Noul's threshold sets do not depend on the temperature, and the
+Score head has none. The Choice APS coverage (98.83%), the set sizes and
+the typo grid below were computed with the old fit and were not
+recomputed; split-conformal's clean-test guarantee holds with either
+fit.)
 
 ## Results
 
@@ -208,7 +216,8 @@ typos (n=3080) and do not show that large overconfidence.
 conformal's guarantee assumes calibration and test data are exchangeable,
 which calibrating on clean text and serving typo'd text breaks. Same
 protocol as above (temperature on val_a, APS on val_b, test n=3080);
-the baseline row on clean text reproduces the 98.83% / 7.07 result.
+the baseline row on clean text matched the 98.83% / 7.07 result (both
+with the old temperature fitter, FINDINGS.md §10; not re-run).
 
 | Model | Calibrated on | Test text | Coverage | Avg set size |
 |---|---|---|---|---|

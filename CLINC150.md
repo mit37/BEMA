@@ -42,15 +42,25 @@ training/calibration/conformal fitting)
 | Test accuracy, in-scope only (n=4,500) | 0.8418 |
 | Test recall on the out-of-scope class (n=1,000) | **0.1610** |
 | ECE, raw (uncalibrated) | 0.1375 |
-| ECE, temperature-scaled | 0.0412 |
-| Learned temperature | 1.5739 |
+| ECE, temperature-scaled | 0.0407 |
+| Learned temperature | 1.5860 |
 | Conformal (APS) coverage at 90% target (n=5,500) | 0.9827 |
-| Conformal average prediction set size | 17.31 / 151 classes |
-| Conformal median / max / min set size | 12 / 74 / 1 |
+| Conformal average prediction set size | 17.27 / 151 classes |
+| Conformal median / max / min set size | 12 / 73 / 1 |
 | Clean-test typo-robustness accuracy (n=5,500) | 0.7180 |
 | Typo-perturbed accuracy | 0.4504 |
-| Clean confidence | 0.7514 |
-| Typo-perturbed confidence | 0.5615 |
+| Clean confidence | 0.7489 |
+| Typo-perturbed confidence | 0.5583 |
+
+(Correction, 2026-11-12: the first version of this file used a
+temperature fitter that did not converge (FINDINGS.md §10).
+`clinc150_pipeline.py` and `clinc150_oos_threshold.py` were re-run with
+the fixed fitter. Accuracy reproduced exactly; the temperature-dependent
+numbers moved slightly: temperature 1.5739 → 1.5860, scaled ECE 0.0412 →
+0.0407, conformal set size 17.31 → 17.27 (max 74 → 73; coverage unchanged
+at 0.9827), clean / typo confidence 0.7514 / 0.5615 → 0.7489 / 0.5583,
+threshold-rule results below 0.7653 → 0.7655 overall. The numbers in this
+file are the re-run's.)
 
 ## Finding 1: the typo-miscalibration gap generalizes
 
@@ -61,7 +71,7 @@ tokenizer:
 
 - **Accuracy** dropped 0.7180 → 0.4504 (a 26.8-point / ~37% relative
   collapse).
-- **Confidence** dropped only 0.7514 → 0.5615 (a 19.0-point / ~25%
+- **Confidence** dropped only 0.7489 → 0.5583 (a 19.1-point / ~25%
   relative drop).
 
 This is the same qualitative pattern found on BANKING77 (81.9%→51.2%
@@ -104,7 +114,7 @@ also contains 1,000 oos queries versus 30 per intent.
 
 **The confidence score carries most of the missing signal**
 (`clinc150_oos_threshold.py`). On the test split, the model's top-class
-probability averages 0.82 on in-scope queries but 0.44 on out-of-scope
+probability averages 0.82 on in-scope queries but 0.43 on out-of-scope
 ones, and (1 - top probability) separates the two with AUROC 0.88. Using
 the CLINC150 paper's standard remedy, answering "oos" whenever the top
 probability is below a threshold tau chosen on the validation split only
@@ -112,10 +122,10 @@ probability is below a threshold tau chosen on the validation split only
 
 | Test metric (n=5,500) | Argmax only | Threshold rejection (tau = 0.67) |
 |---|---|---|
-| In-scope accuracy (n=4,500) | 0.8418 | 0.7449 |
-| Out-of-scope recall (n=1,000) | 0.1610 | **0.8570** |
-| Out-of-scope precision | 0.8895 | 0.4612 |
-| Overall accuracy | 0.7180 | 0.7653 |
+| In-scope accuracy (n=4,500) | 0.8418 | 0.7442 |
+| Out-of-scope recall (n=1,000) | 0.1610 | **0.8610** |
+| Out-of-scope precision | 0.8895 | 0.4607 |
+| Overall accuracy | 0.7180 | 0.7655 |
 
 So the model does, in a usable sense, "know when it doesn't know" more
 often than its argmax answer suggests. But the separation is far from
@@ -123,7 +133,7 @@ clean. Catching 86% of out-of-scope queries also rejects enough real
 in-scope queries to cost almost 10 points of in-scope accuracy, and more
 than half of all "oos" answers are then wrong. Moving tau trades one
 against the other (on test: tau 0.4 gives 82.4% in-scope accuracy and
-60.3% oos recall; tau 0.8 gives 68.4% and 92.7%). The fixed schema
+61.0% oos recall; tau 0.8 gives 68.0% and 93.0%). The fixed schema
 guarantees a well-formed answer; how often the answer means "I don't
 know" when it should is a tunable tradeoff, not a property you get for
 free.
@@ -146,7 +156,7 @@ project's rules require flagging rather than glossing over.
 Coverage (98.27%) comfortably exceeds the 90% target — the guarantee
 holds, consistent with Workstream A's other results, all of which
 over-covered rather than under-covered (a conservative, not a broken,
-result). But the average prediction set size (17.31 of 151 classes,
+result). But the average prediction set size (17.27 of 151 classes,
 ~11.5%) is proportionally similar to BANKING77's Choice result (avg ~7 of
 77, ~9%) — in both cases, guaranteeing 90% coverage over a many-class
 softmax with real per-class ambiguity requires a set that's too wide to
@@ -164,7 +174,7 @@ contradicted.
   used as one more softmax output catches only 16.1% of out-of-scope
   queries, even though training is balanced. The confidence score
   separates oos from in-scope reasonably well (AUROC 0.88), and a
-  validation-tuned threshold raises oos recall to 85.7%, at a cost of
+  validation-tuned threshold raises oos recall to 86.1%, at a cost of
   about 10 points of in-scope accuracy. This is a measured version of the
   "cannot hallucinate ≠ knows what it doesn't know" gap in FINDINGS.md §5:
   the signal exists, but using it is a tradeoff.
