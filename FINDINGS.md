@@ -221,11 +221,14 @@ Reviews Score task, not STS-B.
 
 ## 3. Where the calibration numbers are trustworthy vs. not
 
-*Every temperature-scaled number in sections 1-8 was fitted with
-temperature code that did not converge (§10). For the multitask
-transformer, the corrected fit moves Choice ECE from 0.0371 to 0.0303,
-Noul ECE from 0.0046 to 0.0090, and overconfidence under typos up by
-0.012-0.013; the qualitative conclusions below hold, except that Noul's
+*Every temperature-scaled number in sections 1-8 was first fitted with
+temperature code that did not converge (§10). Most have since been re-run
+with the fixed fit and are shown that way, with the old values noted. The
+exceptions are the bootstrap intervals in this section (`bootstrap_ci.py`)
+and §8's self-pretrained column, which are still old-fit values. For the
+multitask transformer, the corrected fit moves Choice ECE from 0.0371 to
+0.0303, Noul ECE from 0.0046 to 0.0090, and overconfidence under typos up
+by 0.012-0.013; the qualitative conclusions below hold, except that Noul's
 temperature scaling looks less good than stated, and the first bullet's "held across every run" was never true for the transformer's Choice head: there temperature scaling leaves test ECE worse than raw with either fit (raw 0.0210; old fit 0.0371, fixed fit 0.0303) (§10).*
 
 **Trustworthy, with the stated caveats:**
@@ -601,22 +604,26 @@ identical text:
 
 | Noise (2 edits unless noted) | In training? | Baseline acc / ECE | Augmented acc / ECE | Acc gain |
 |---|---|---|---|---|
-| none (clean) | - | 0.8188 / 0.037 | 0.8347 / 0.034 | +0.016 |
-| adjacent swap | yes | 0.5000 / 0.112 | 0.6718 / 0.032 | +0.172 |
-| adjacent swap ×4 | same kind, heavier | 0.3276 / 0.202 | 0.5295 / 0.095 | +0.202 |
-| keyboard-neighbor substitution | no | 0.5276 / 0.094 | 0.6558 / 0.035 | +0.128 |
-| deletion | no | 0.5503 / 0.092 | 0.6870 / 0.026 | +0.137 |
-| insertion | no | 0.5899 / 0.062 | 0.7026 / 0.024 | +0.113 |
-| substitution + deletion + insertion | no | 0.4461 / 0.139 | 0.5958 / 0.066 | +0.150 |
+| none (clean) | - | 0.8188 / 0.030 | 0.8347 / 0.032 | +0.016 |
+| adjacent swap | yes | 0.5000 / 0.124 | 0.6718 / 0.038 | +0.172 |
+| adjacent swap ×4 | same kind, heavier | 0.3276 / 0.215 | 0.5295 / 0.100 | +0.202 |
+| keyboard-neighbor substitution | no | 0.5276 / 0.106 | 0.6558 / 0.040 | +0.128 |
+| deletion | no | 0.5503 / 0.099 | 0.6870 / 0.029 | +0.137 |
+| insertion | no | 0.5899 / 0.074 | 0.7026 / 0.025 | +0.113 |
+| substitution + deletion + insertion | no | 0.4461 / 0.152 | 0.5958 / 0.071 | +0.150 |
 
 (The baseline's swap accuracy here, 0.5000, differs slightly from the
-0.5052 above because the swaps are a different random draw.) On every
+0.5052 above because the swaps are a different random draw. ECEs are from
+the 2026-11-12 re-run with the fixed temperature fit, §10; accuracies
+reproduced exactly, and with the old fit the baseline / augmented ECEs
+were 0.037 / 0.034 clean and 0.094 / 0.035, 0.092 / 0.026, 0.062 / 0.024
+and 0.139 / 0.066 on the four held-out corruptions.) On every
 held-out corruption the augmented model is 11-15 points more accurate
 and its ECE falls by roughly half or more, so the fix is not limited to
 the exact noise it was trained on. It is still not a cure: accuracy
 under held-out noise stays 13-24 points below clean accuracy, the model
 remains overconfident under every corruption (mean confidence exceeds
-accuracy by 0.9-9.5 points), and none of these synthetic corruptions is
+accuracy by 1.3-10.0 points; 0.9-9.5 with the old fit), and none of these synthetic corruptions is
 a substitute for testing on real user-typed text.
 
 **Does the typo-miscalibration finding generalize past BANKING77? Yes —
@@ -982,9 +989,22 @@ everywhere: Noul (`calibrate.py`, `calibrate_multitask.py`,
 `seed_variation_sweep.py`, `conformal.py`), Choice
 (`calibrate_multitask.py`, `multiseed_sweep.py`, `self_pretrain.py`,
 `conformal.py`, `conformal_typo.py`, `augment_and_retrain.py`), Phase 4
-(`calibration_sweep.py`), CLINC150 (`clinc150_pipeline.py`) and §9; `augment_and_retrain.py` fits Noul too. Numbers computed from the temperatures these scripts store in the calibrated checkpoints inherit the old fit as well: `ood_stress_test.py` (Phase 5), `adversarial_stress_test.py` (Phase 5b), `heldout_noise_test.py`, `bootstrap_ci.py` and `clinc150_oos_threshold.py`. Of these, Phases 5 and 5b and `clinc150_oos_threshold.py` were re-run with the fixed fit (below); `heldout_noise_test.py` and `bootstrap_ci.py` were not.
+(`calibration_sweep.py`), CLINC150 (`clinc150_pipeline.py`) and §9; `augment_and_retrain.py` fits Noul too. Numbers computed from the temperatures these scripts store in the calibrated checkpoints inherit the old fit as well: `ood_stress_test.py` (Phase 5), `adversarial_stress_test.py` (Phase 5b), `heldout_noise_test.py`, `bootstrap_ci.py` and `clinc150_oos_threshold.py`. Of these, all but `bootstrap_ci.py` were re-run with the fixed fit (below).
 Accuracy, Score and argmax predictions do not depend on the temperature, except inside §9's ensembles, which average calibrated probabilities, and in CLINC150's out-of-scope rule (`clinc150_oos_threshold.py`), which thresholds the temperature-scaled top probability. That rule, and `clinc150_pipeline.py`, were re-run with the fixed fit (CLINC150.md, §5 and §11 now show the re-run); only §3's bootstrap interval for the rule's in-scope cost (−9.7 [−10.5, −8.9]; the point estimate is now −9.8) was not recomputed.
-Split-conformal coverage is guaranteed on exchangeable data for any score function fixed before calibration, and `conformal.py` fits the temperature on val_a and the conformal quantile on val_b, so the clean-test guarantee (at least 90%) holds with either fitter. The measured Choice figures in CONFORMAL.md (APS coverage 98.83%, the set sizes, and all coverage under typos, where exchangeability fails and no guarantee applies) depend on the temperature and were not recomputed. Noul's threshold sets are unaffected (the temperature rescales a single logit, a monotone change to the score), and the Score head has no temperature.
+Split-conformal coverage is guaranteed on exchangeable data for any score function fixed before calibration, and `conformal.py` fits the temperature on val_a and the conformal quantile on val_b, so the clean-test guarantee (at least 90%) holds with either fitter. The measured Choice figures in CONFORMAL.md (APS coverage 98.83%, the set sizes, and all coverage under typos, where exchangeability fails and no guarantee applies) depend on the temperature; `conformal.py` and `conformal_typo.py` were re-run, and every coverage moved by at most 0.1 point and every average set size by at most 0.07 classes (CONFORMAL.md shows the re-run). Noul's threshold sets are unaffected (the temperature rescales a single logit, a monotone change to the score), and the Score head has no temperature.
+
+**What was re-run.** Everything that produces a temperature-dependent
+number in this repo, except two scripts. The re-runs are:
+- §9's models, the transformer audit and the from-scratch transformer's
+  three seeds;
+- the single-task pipeline and its seed sweep, and Phases 3, 4, 5 and 5b;
+- `conformal.py` and `conformal_typo.py`;
+- the augmentation retrain and the held-out-noise test;
+- CLINC150.
+
+Every single-model accuracy reproduced exactly (the §9 ensembles average calibrated probabilities, so theirs moved slightly). Not re-run: `self_pretrain.py` (§8's
+self-pretrained column; about 2.5 hours) and `bootstrap_ci.py` (§3's
+intervals).
 
 **How much it mattered** (`temperature_audit.py`: old and fixed fits on
 the same validation logits, test n=3080 for Choice, 836 for Noul). The
@@ -1038,6 +1058,11 @@ What changes in the conclusions:
   calibration moved more. Means over 3 seeds, Choice test n=3080: mixed-typo
   overconfidence went from +0.0039 to +0.0106, and clean ECE from 0.0158 to
   0.0141 (§9).
+- **The typo augmentation (§5) was re-run** (`augment_and_retrain.py`,
+  `heldout_noise_test.py`; n=3080). Accuracies reproduced exactly; the
+  confidences moved by about 0.01, and the augmented model still cuts
+  ECE by half or more on every held-out corruption (§5 shows the
+  re-run).
 - **Phases 5 and 5b were re-run** with the fixed fit
   (`calibrate_multitask.py`, which reproduced this audit's fixed
   temperatures and ECEs exactly, then `ood_stress_test.py` and

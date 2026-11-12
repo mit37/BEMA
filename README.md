@@ -62,17 +62,15 @@ one forward pass — no token generation.
   section below for that real uncertainty range.
 - **Correction, 2026-11-12 (FINDINGS.md §10):** every temperature in this
   repo had been fitted with code that did not converge; all scripts now
-  use a fixed fitter. Re-run with it so far: the single-task Noul result
-  above and its 3-seed sweep, §9's linear / n-gram / ensemble models, the from-scratch
-  transformer's Choice calibration (3 seeds), Phases 3, 4, 5 and 5b,
-  and CLINC150. Accuracies,
-  Score metrics and Noul's conformal sets do not depend on the
-  temperature. Phases 3, 4, 5 and 5b and `conformal.py` were re-run and
-  show both values. Still old-fit values in this README: the augmentation
-  calibration figures and conformal coverage under typos. Where re-measured, the fix made the
-  multitask Noul ECE worse (0.0046 → 0.0090) and the transformer's typo
-  overconfidence slightly larger (mixed typos, 3-seed mean: +0.1395 →
-  +0.1507).
+  use a fixed fitter. Everything temperature-dependent was then re-run
+  except the self-pretraining comparison and the bootstrap intervals, and
+  this README shows the re-run values with the old ones noted. Every
+  single-model accuracy and Score metric reproduced exactly (only the §9
+  ensembles' accuracies, which average calibrated probabilities, moved
+  slightly). Two changes matter here: the multitask Noul ECE got worse
+  (0.0046 → 0.0090), and the transformer's typo overconfidence got
+  slightly larger (mixed typos, 3-seed mean:
+  +0.1395 → +0.1507).
 - **A real, current error worth knowing about**: this same calibrated model
   misclassifies "Free entry in 2 a wkly comp to win FA Cup final tkts, text
   FA to 87121" — a textbook spam message, verbatim from this dataset — as

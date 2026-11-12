@@ -215,18 +215,20 @@ typos (n=3080) and do not show that large overconfidence.
 conformal's guarantee assumes calibration and test data are exchangeable,
 which calibrating on clean text and serving typo'd text breaks. Same
 protocol as above (temperature on val_a, APS on val_b, test n=3080);
-the baseline row on clean text matched the 98.83% / 7.07 result (both
-with the old temperature fitter, FINDINGS.md §10; not re-run).
+the baseline row on clean text matches the 98.83% / 7.00 result above.
+(Re-run 2026-11-12 with the fixed temperature fit, FINDINGS.md §10; with
+the old fit every coverage below moved by at most 0.1 point and every set
+size by at most 0.07 classes, and the conclusions are the same.)
 
 | Model | Calibrated on | Test text | Coverage | Avg set size |
 |---|---|---|---|---|
-| baseline | clean | clean | 0.9883 | 7.07 |
-| baseline | clean | 2 swaps | 0.9172 | 13.34 |
-| baseline | clean | 2 keyboard typos | 0.9247 | 12.95 |
-| baseline | clean | mixed (sub+del+ins) | **0.8903** | 14.51 |
-| baseline | matching typos | mixed | 0.9094 | 16.55 |
-| augmented | clean | clean | 0.9906 | 7.30 |
-| augmented | clean | mixed | 0.9682 | 12.90 |
+| baseline | clean | clean | 0.9883 | 7.00 |
+| baseline | clean | 2 swaps | 0.9169 | 13.28 |
+| baseline | clean | 2 keyboard typos | 0.9244 | 12.89 |
+| baseline | clean | mixed (sub+del+ins) | **0.8909** | 14.45 |
+| baseline | matching typos | mixed | 0.9104 | 16.60 |
+| augmented | clean | clean | 0.9906 | 7.32 |
+| augmented | clean | mixed | 0.9682 | 12.96 |
 | augmented | matching typos | mixed | 0.9614 | 11.24 |
 
 (Full grid, including the swap and keyboard rows for every setting, is
@@ -237,11 +239,11 @@ printed by the script.)
   set sees that the model is less sure.
 - **The guarantee is not formally kept, but nearly.** Non-randomized
   APS over-covers clean text, and that slack absorbs most of the shift:
-  coverage stays at 91.7-92.5% on swap and keyboard typos and dips to
-  89.0% only on the mixed corruption (about 1.8 standard errors below
+  coverage stays at 91.7-92.4% on swap and keyboard typos and dips to
+  89.1% only on the mixed corruption (about 1.7 standard errors below
   90% at n=3080). Calibrating on typo'd validation text, i.e. on data
-  that looks like deployment, restores coverage above 90% (90.9% on
+  that looks like deployment, restores coverage above 90% (91.0% on
   mixed), as exchangeability predicts.
 - **Typo augmentation helps here too.** The augmented model keeps 96-98%
   coverage under every corruption, with smaller sets than the baseline
-  (9.5-11 classes when calibrated on matching noise, vs 12-17).
+  (9.4-11 classes when calibrated on matching noise, vs 12-17).
