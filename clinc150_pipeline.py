@@ -34,7 +34,7 @@ from torch.utils.data import DataLoader, Dataset
 from tokenizers import ByteLevelBPETokenizer
 
 from model import JevCloneEncoder
-from calib_utils import aps_prediction_set_sizes_and_coverage, aps_score, conformal_quantile, ece, split_val
+from calib_utils import aps_prediction_set_sizes_and_coverage, aps_score, conformal_quantile, ece, fit_temperature, split_val
 
 SEED = 42
 random.seed(SEED)
@@ -225,20 +225,7 @@ def conf_correct(logits, labels, T=1.0):
 raw_conf, raw_correct, raw_acc = conf_correct(test_logits, test_labels, T=1.0)
 raw_ece = ece(raw_conf, raw_correct)
 
-T = nn.Parameter(torch.ones(1) * 1.5)
-opt = torch.optim.LBFGS([T], lr=0.01, max_iter=200)
-ce = nn.CrossEntropyLoss()
-
-
-def closure():
-    opt.zero_grad()
-    loss = ce(val_logits / T, val_labels)
-    loss.backward()
-    return loss
-
-
-opt.step(closure)
-T_val = T.item()
+T_val = fit_temperature(val_logits, val_labels)
 print(f"\nLearned temperature T = {T_val:.4f}")
 
 cal_conf, cal_correct, cal_acc = conf_correct(test_logits, test_labels, T=T_val)
@@ -264,19 +251,7 @@ val_a_loader = DataLoader(ChoiceDataset(val_a_rows), batch_size=64)
 val_b_loader = DataLoader(ChoiceDataset(val_b_rows), batch_size=64)
 
 val_a_logits, val_a_labels = collect_logits(val_a_loader)
-T2 = nn.Parameter(torch.ones(1) * 1.5)
-opt2 = torch.optim.LBFGS([T2], lr=0.01, max_iter=200)
-
-
-def closure2():
-    opt2.zero_grad()
-    loss = ce(val_a_logits / T2, val_a_labels)
-    loss.backward()
-    return loss
-
-
-opt2.step(closure2)
-T_conformal = T2.item()
+T_conformal = fit_temperature(val_a_logits, val_a_labels)
 print(f"Temperature refit on val_a only (leakage-safe, n={len(val_a_rows)}): T = {T_conformal:.4f}")
 
 val_b_logits, val_b_labels = collect_logits(val_b_loader)

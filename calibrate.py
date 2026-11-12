@@ -7,10 +7,10 @@ split, which the temperature was never fit on, and report before/after.
 """
 import pickle
 import torch
-import torch.nn as nn
 from torch.utils.data import DataLoader
 
 from model import JevCloneEncoder
+from calib_utils import fit_temperature_binary
 from train import SpamDataset, data, vocab_size, max_len, device
 
 model = JevCloneEncoder(vocab_size=vocab_size, max_len=max_len).to(device)
@@ -33,20 +33,7 @@ val_labels = torch.cat(val_labels)
 
 # Fit temperature T by minimizing NLL on validation set (standard
 # temperature-scaling calibration method, Guo et al. 2017)
-temperature = nn.Parameter(torch.ones(1) * 1.5)
-optimizer = torch.optim.LBFGS([temperature], lr=0.01, max_iter=200)
-criterion = nn.BCEWithLogitsLoss()
-
-
-def closure():
-    optimizer.zero_grad()
-    loss = criterion(val_logits / temperature, val_labels)
-    loss.backward()
-    return loss
-
-
-optimizer.step(closure)
-learned_T = temperature.item()
+learned_T = fit_temperature_binary(val_logits, val_labels)
 print(f"Learned temperature T = {learned_T:.4f}")
 
 model.temperature.data = torch.tensor([learned_T])

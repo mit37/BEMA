@@ -20,11 +20,11 @@ from datetime import datetime, timezone
 
 import numpy as np
 import torch
-import torch.nn as nn
 from sklearn.isotonic import IsotonicRegression
 from sklearn.linear_model import LogisticRegression
 from torch.utils.data import DataLoader
 
+from calib_utils import fit_temperature as _fit_temperature, fit_temperature_binary as _fit_temperature_binary
 from model import JevCloneEncoder
 from train_multitask import TaskDataset, data, vocab_size, max_len, num_choice_classes, device
 
@@ -85,37 +85,15 @@ def softmax(x):
 
 
 def fit_temperature_binary(val_logits, val_labels):
-    T = nn.Parameter(torch.ones(1) * 1.5)
-    opt = torch.optim.LBFGS([T], lr=0.01, max_iter=200)
     vl = torch.tensor(val_logits, dtype=torch.float)
     vy = torch.tensor(val_labels, dtype=torch.float)
-    bce = nn.BCEWithLogitsLoss()
-
-    def closure():
-        opt.zero_grad()
-        loss = bce(vl / T, vy)
-        loss.backward()
-        return loss
-
-    opt.step(closure)
-    return T.item()
+    return _fit_temperature_binary(vl, vy)
 
 
 def fit_temperature_multiclass(val_logits, val_labels):
-    T = nn.Parameter(torch.ones(1) * 1.5)
-    opt = torch.optim.LBFGS([T], lr=0.01, max_iter=200)
     vl = torch.tensor(val_logits, dtype=torch.float)
     vy = torch.tensor(val_labels, dtype=torch.long)
-    ce = nn.CrossEntropyLoss()
-
-    def closure():
-        opt.zero_grad()
-        loss = ce(vl / T, vy)
-        loss.backward()
-        return loss
-
-    opt.step(closure)
-    return T.item()
+    return _fit_temperature(vl, vy)
 
 
 def evaluate_binary(logits, labels, get_conf):

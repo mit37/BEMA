@@ -30,6 +30,7 @@ import torch.nn as nn
 from torch.utils.data import Dataset, DataLoader
 from tokenizers import Tokenizer
 
+from calib_utils import fit_temperature as _fit_temperature, fit_temperature_binary as _fit_temperature_binary
 from model import JevCloneEncoder
 
 SEED = 42
@@ -251,18 +252,7 @@ def fit_temperature_binary(loader):
             logits.append(model.forward(ids, mask).cpu())
             labels.append(label)
     logits, labels = torch.cat(logits), torch.cat(labels)
-    T = nn.Parameter(torch.ones(1) * 1.5)
-    opt = torch.optim.LBFGS([T], lr=0.01, max_iter=200)
-    bce = nn.BCEWithLogitsLoss()
-
-    def closure():
-        opt.zero_grad()
-        loss = bce(logits / T, labels)
-        loss.backward()
-        return loss
-
-    opt.step(closure)
-    return T.item()
+    return _fit_temperature_binary(logits, labels)
 
 
 def fit_temperature_multiclass(loader):
@@ -274,18 +264,7 @@ def fit_temperature_multiclass(loader):
             logits.append(model.choice_head(pooled).cpu())
             labels.append(label)
     logits, labels = torch.cat(logits), torch.cat(labels)
-    T = nn.Parameter(torch.ones(1) * 1.5)
-    opt = torch.optim.LBFGS([T], lr=0.01, max_iter=200)
-    ce = nn.CrossEntropyLoss()
-
-    def closure():
-        opt.zero_grad()
-        loss = ce(logits / T, labels)
-        loss.backward()
-        return loss
-
-    opt.step(closure)
-    return T.item()
+    return _fit_temperature(logits, labels)
 
 
 model.temperature.data = torch.tensor([fit_temperature_binary(noul_val_loader)])
